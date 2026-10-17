@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <!-- Assiette -->
+  <circle cx="256" cy="264" r="145" fill="#ffffff" opacity="0.95" />
+  <circle cx="256" cy="264" r="110" fill="none" stroke="#10b981" stroke-width="6" stroke-dasharray="14 10" opacity="0.4" />
+  <!-- Feuille Healthy -->
+  <path d="M256 185 C295 185 325 215 325 255 C325 295 285 330 256 340 C227 330 187 295 187 255 C187 215 217 185 256 185 Z" fill="#10b981" opacity="0.2" />
+  <path d="M256 325 C256 260 295 210 315 195 C265 205 225 235 215 285 C210 260 220 230 240 210" fill="none" stroke="#059669" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Étoile Plaisir / Keep -->
+  <circle cx="370" cy="145" r="46" fill="url(#accent)" />
+  <path d="M370 117 L378 136 L398 138 L383 151 L387 171 L370 160 L353 171 L357 151 L342 138 L362 136 Z" fill="#ffffff" />
+</svg>
