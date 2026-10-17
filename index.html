@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#059669" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="MenuSemaine" />
+  <title>Mon Menu Semaine & Courses Google Keep</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="apple-touch-icon" href="assets/icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- EN-TÊTE PRINCIPAL -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="assets/icon.svg" alt="Icône MenuSemaine" class="brand-icon" />
+        <div>
+          <div class="brand-title">MenuSemaine &amp; Keep</div>
+          <div class="brand-subtitle">Semaine (Déjeuners &amp; Dîners) • Week-end (2 Plaisir + desserts)</div>
+        </div>
+      </div>
+
+      <!-- Navigation Ordinateur -->
+      <nav class="desktop-nav" aria-label="Navigation principale">
+        <button class="nav-btn active" data-view="planner" onclick="switchView('planner')">
+          📅 Menu Semaine
+        </button>
+        <button class="nav-btn" data-view="shopping" onclick="switchView('shopping')">
+          🛒 Liste &amp; Keep <span id="nav-shopping-count" class="badge-count">0</span>
+        </button>
+        <button class="nav-btn" data-view="history" onclick="switchView('history')">
+          ❤️ Favoris &amp; Historique
+        </button>
+        <button class="nav-btn" data-view="studio" onclick="switchView('studio')">
+          ✨ IA &amp; Mobile
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <a id="local-admin-btn" href="admin.html" class="btn btn-outline btn-sm" style="display: none; border-color: #0f172a; color: #0f172a; font-weight: 700;" title="Ouvrir l'interface d'administration locale">
+          ⚙️ Admin (Local)
+        </a>
+        <button class="btn btn-outline btn-sm" onclick="regenerateUnvalidatedMeals()" title="Proposer de nouvelles idées pour les repas non validés">
+          🔄 Nouvelles idées
+        </button>
+        <button class="btn btn-keep btn-sm" onclick="handleGenerateShoppingListClick()">
+          📝 Générer la liste de courses
+        </button>
+      </div>
+    </div>
+
+    <!-- Barre de statut : Date de début de semaine (Lundi + numéro jour + année) & Validation -->
+    <div class="status-bar">
+      <div class="status-bar-inner">
+        <div class="validation-progress">
+          <div class="progress-track">
+            <div id="validation-progress-bar" class="progress-fill"></div>
+          </div>
+          <span id="validation-progress-text" class="progress-text">0 / 14 repas validés</span>
+          <button id="btn-validate-all" class="btn btn-outline btn-sm" onclick="toggleValidateAllMeals()">
+            ✓ Tout valider
+          </button>
+          <span id="total-week-cost-badge" class="meta-pill" style="background: #fef9c3; color: #854d0e; border: 1px solid #fde047; font-size: 0.82rem; padding: 4px 10px;">
+            💶 Total semaine : -- €
+          </span>
+        </div>
+
+        <div class="global-controls">
+          <label for="week-start-date" style="font-size: 0.84rem; font-weight: 700; color: var(--text-main);">
+            📅 Début de semaine :
+          </label>
+          <button class="btn btn-outline btn-sm" onclick="shiftWeekStart(-7)" title="Semaine précédente">◀</button>
+          <input
+            type="date"
+            id="week-start-date"
+            class="input-field"
+            style="width: auto; padding: 4px 10px; font-weight: 700;"
+            onchange="handleWeekStartDateChange(this.value)"
+          />
+          <button class="btn btn-outline btn-sm" onclick="shiftWeekStart(7)" title="Semaine suivante">▶</button>
+          <span id="week-start-formatted" class="meta-pill healthy-pill" style="font-size: 0.85rem; padding: 5px 12px;">
+            Lundi 19 octobre 2026
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENU PRINCIPAL -->
+  <main class="main-container">
+
+    <!-- =====================================================================
+         VUE 1 : PLANIFICATEUR DE LA SEMAINE
+         ===================================================================== -->
+    <section id="view-planner" class="view-section active">
+
+      <!-- Semaine : Lundi à Vendredi (5 déjeuners + 5 dîners) -->
+      <div class="section-banner">
+        <div>
+          <h2>🥗 Menus Semaine : 5 Déjeuners &amp; 5 Dîners (Lundi à Vendredi)</h2>
+          <p>
+            Équilibrés, healthy &amp; rapides — possibilité de basculer en <strong>Menu Plaisir 🌟</strong> ou de <strong>supprimer / comptabiliser</strong> chaque déjeuner ou dîner.
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Début de semaine :</label>
+          <input
+            type="text"
+            id="weekday-monday-field"
+            class="input-field"
+            style="width: 210px; padding: 5px 10px; font-weight: 700; background: var(--primary-soft); border-color: var(--primary); color: var(--primary-hover);"
+            readonly
+            onclick="document.getElementById('week-start-date').showPicker && document.getElementById('week-start-date').showPicker()"
+            title="Cliquez pour choisir le lundi de début de semaine"
+          />
+          <span id="weekday-pleasure-pill" class="meta-pill healthy-pill">10 Healthy • 0 Plaisir</span>
+        </div>
+      </div>
+
+      <div id="weekday-meals-grid" class="days-stack"></div>
+
+      <!-- Week-end : Samedi et Dimanche (2 déjeuners + 2 dîners) -->
+      <div class="section-banner weekend-banner">
+        <div>
+          <h2>🌟 Menus Week-end : 2 Déjeuners &amp; 2 Dîners + Propositions de desserts</h2>
+          <p>
+            Inclut <strong>2 Menus Plaisir</strong> (simplicité moyenne, durée moyenne) et un dessert pour chaque repas du week-end (<span id="weekend-banner-dates" style="font-weight: 600;"></span>).
+          </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--pleasure-hover);">Début de semaine :</label>
+          <input
+            type="text"
+            id="weekend-monday-field"
+            class="input-field"
+            style="width: 210px; padding: 5px 10px; font-weight: 700; background: var(--pleasure-light); border-color: #f59e0b; color: var(--pleasure-hover);"
+            readonly
+            onclick="document.getElementById('week-start-date').showPicker && document.getElementById('week-start-date').showPicker()"
+            title="Cliquez pour choisir le lundi de début de semaine"
+          />
+          <span id="pleasure-counter-pill" class="meta-pill pleasure-pill">2 Menus Plaisir sélectionnés</span>
+        </div>
+      </div>
+
+      <div id="weekend-meals-grid" class="days-stack"></div>
+
+      <!-- Appel à l'action bas de page -->
+      <div class="card-panel" style="margin-top: 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; background: linear-gradient(135deg, #ecfdf5 0%, #fef9c3 100%); border-color: #a7f3d0;">
+        <div>
+          <h3 style="font-size: 1.1rem; font-weight: 800;">Prêt à générer votre liste de courses ?</h3>
+          <p style="font-size: 0.86rem; color: var(--text-muted);">
+            Une fois vos curseurs de parts ajustés et vos menus validés, générez la liste groupée par rayon pour <strong>Google Keep</strong>.
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-outline" onclick="saveCurrentWeekToHistory()">
+            💾 Sauvegarder la semaine
+          </button>
+          <button class="btn btn-keep" onclick="handleGenerateShoppingListClick()" style="padding: 12px 20px; font-size: 0.95rem;">
+            🛒 Générer la liste de courses (Google Keep)
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =====================================================================
+         VUE 2 : LISTE DE COURSES & EXPORT GOOGLE KEEP
+         ===================================================================== -->
+    <section id="view-shopping" class="view-section">
+      <div class="section-banner" style="border-left-color: #eab308;">
+        <div>
+          <h2>🛒 Liste de courses de la semaine &amp; Export Google Keep</h2>
+          <p>Décochez les ingrédients déjà en stock chez vous : seuls les ingrédients cochés seront envoyés dans votre note Google Keep.</p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline btn-sm" onclick="checkAllIngredients(true)">Tout cocher (À acheter)</button>
+          <button class="btn btn-outline btn-sm" onclick="checkAllIngredients(false)">Tout décocher (En stock)</button>
+        </div>
+      </div>
+
+      <div id="unvalidated-warning" class="card-panel" style="display: none; margin-bottom: 16px; background: #fffbeb; border-color: #fde047;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <span id="unvalidated-warning-text" style="font-size: 0.88rem; font-weight: 600; color: #854d0e;">
+            ℹ️ La liste de courses contient uniquement les ingrédients des repas validés.
+          </span>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-outline btn-sm" onclick="switchView('planner')">
+              📅 Retour aux menus
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="validateAllAndRefreshShopping()">
+              ✓ Valider tous les repas comptabilisés
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="shopping-layout">
+        <!-- Colonne gauche : Ingrédients par rayon avec cases à cocher -->
+        <div class="card-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 1.05rem; font-weight: 800;">
+              Ingrédients par rayon (<span id="to-buy-count">0</span> à acheter • <span id="in-stock-count">0</span> en stock)
+            </h3>
+          </div>
+
+          <!-- Ajout libre d'un article -->
+          <div class="add-custom-row">
+            <input type="text" id="custom-item-name" class="input-field" placeholder="Ajouter un produit libre (ex: Café, Essuie-tout, Lait...)" onkeydown="if(event.key==='Enter') addCustomShoppingItem()" />
+            <input type="text" id="custom-item-qty" class="input-field" style="max-width: 120px;" placeholder="Quantité" onkeydown="if(event.key==='Enter') addCustomShoppingItem()" />
+            <button class="btn btn-primary" onclick="addCustomShoppingItem()">+ Ajouter</button>
+          </div>
+
+          <div id="shopping-aisles-container"></div>
+        </div>
+
+        <!-- Colonne droite : Aperçu et envoi vers Mon NotesKeep de Google -->
+        <div class="keep-preview-card">
+          <div class="keep-header">
+            <div class="keep-logo-title">
+              <span>💡</span>
+              <span>Mon Google Keep (NotesKeep)</span>
+            </div>
+            <span class="meta-pill" style="background: #fef08a; color: #713f12;">Prêt à exporter</span>
+          </div>
+
+          <p style="font-size: 0.82rem; color: #713f12; margin-bottom: 10px;">
+            Aperçu de la note générée (les ingrédients décochés car déjà en stock sont automatiquement retirés) :
+          </p>
+
+          <div id="keep-note-preview" class="keep-note-box"></div>
+
+          <div class="keep-actions">
+            <button class="btn btn-keep" onclick="shareToGoogleKeepMobile()" style="width: 100%; padding: 12px; font-size: 0.95rem;">
+              📲 Envoyer vers l'app Google Keep (Mobile)
+            </button>
+
+            <button class="btn btn-primary" onclick="copyAndOpenGoogleKeep()" style="width: 100%; padding: 11px;">
+              📋 Copier la liste &amp; Ouvrir Google Keep Web
+            </button>
+
+            <button class="btn btn-outline" onclick="copyKeepListOnly()" style="width: 100%;">
+              📄 Copier uniquement le texte
+            </button>
+          </div>
+
+          <div style="margin-top: 14px; padding: 10px; background: rgba(255,255,255,0.7); border-radius: 8px; font-size: 0.78rem; color: #713f12;">
+            <strong>Astuce Google Keep :</strong><br />
+            • <strong>Sur téléphone :</strong> Cliquez sur <em>"Envoyer vers l'app Google Keep"</em> et choisissez l'icône <strong>Keep Notes</strong> : la note se crée toute seule !<br />
+            • <strong>Sur ordinateur :</strong> Cliquez sur <em>"Copier &amp; Ouvrir Google Keep"</em>, collez (<kbd>Ctrl+V</kbd>) dans une nouvelle note Keep puis cliquez sur <strong>⋮ &rarr; Afficher les cases à cocher</strong>.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VUE 3 : FAVORIS & HISTORIQUE DES SEMAINES
+         ===================================================================== -->
+    <section id="view-history" class="view-section">
+      <div class="section-banner">
+        <div>
+          <h2>❤️ Mes Plats Favoris &amp; Historique des Semaines</h2>
+          <p>Retrouvez vos recettes coup de cœur et rechargez vos menus des semaines précédentes en un clic.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveCurrentWeekToHistory()">
+          💾 Enregistrer la semaine actuelle
+        </button>
+      </div>
+
+      <div class="shopping-layout">
+        <div class="card-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px;">⭐ Mes Recettes Favorites</h3>
+          <div id="favorites-list-container"></div>
+        </div>
+
+        <div class="card-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px;">🗓️ Historique des Semaines Validées</h3>
+          <div id="history-list-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         VUE 4 : STUDIO HYBRIDE (IA / AJOUT DE RECETTE) & APPLICATION MOBILE
+         ===================================================================== -->
+    <section id="view-studio" class="view-section">
+      <div class="section-banner">
+        <div>
+          <h2>✨ Mode Hybride (IA &amp; Recettes Perso) &amp; Application Mobile Gratuite</h2>
+          <p>Enrichissez le catalogue avec l'Intelligence Artificielle ou vos propres recettes, et installez l'application gratuitement sur votre téléphone.</p>
+        </div>
+      </div>
+
+      <div class="shopping-layout">
+        <!-- Génération IA ou Ajout Manuel -->
+        <div class="card-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 8px;">🤖 Générer une idée sur-mesure par IA (Optionnel)</h3>
+          <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 14px;">
+            L'application fonctionne 100% gratuitement hors-ligne grâce à son large catalogue intégré. Si vous souhaitez générer de nouvelles recettes sur-mesure par IA, renseignez une clé API gratuite Google Gemini (AI Studio).
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-md);">
+            <label style="font-size: 0.82rem; font-weight: 700;">Clé API Google Gemini (stockée uniquement sur votre appareil) :</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="password" id="gemini-api-key" class="input-field" placeholder="AIzaSy..." />
+              <button class="btn btn-outline" onclick="saveGeminiKey()">Enregistrer</button>
+            </div>
+            <label style="font-size: 0.82rem; font-weight: 700; margin-top: 6px;">Que souhaitez-vous générer ?</label>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <select id="ai-meal-type" class="input-field" style="flex: 1;">
+                <option value="weekday">Dîner de semaine (Healthy, rapide, bon marché)</option>
+                <option value="weekend-pleasure">Menu Plaisir du week-end (Gourmand, durée moyenne)</option>
+                <option value="weekend-balanced">Repas de week-end équilibré</option>
+              </select>
+            </div>
+            <input type="text" id="ai-custom-prompt" class="input-field" placeholder="Envie particulière ? (ex: avec du brocoli, sans lactose, inspiration asiatique...)" />
+            <button id="btn-generate-ai" class="btn btn-primary" onclick="generateRecipeWithAI()">
+              ✨ Générer et ajouter au catalogue
+            </button>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid var(--border-color); margin: 18px 0;" />
+
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 10px;">➕ Ajouter votre propre recette au catalogue</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <input type="text" id="manual-title" class="input-field" placeholder="Nom du plat (ex: Gratin de courgettes au chèvre)" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <select id="manual-type" class="input-field">
+                <option value="weekday">Dîner Semaine (Healthy &amp; Économique)</option>
+                <option value="weekend-pleasure">Menu Plaisir Week-end</option>
+                <option value="weekend-balanced">Repas Week-end Équilibré</option>
+              </select>
+              <input type="text" id="manual-time" class="input-field" placeholder="Temps (ex: 15 min)" value="15 min" />
+            </div>
+            <textarea id="manual-ingredients" class="input-field" rows="3" placeholder="Ingrédients pour 2 adultes (1 par ligne : Nom | Quantité | Unité)&#10;Ex: Courgettes | 2 | pièces&#10;Chèvre frais | 100 | g"></textarea>
+            <textarea id="manual-steps" class="input-field" rows="3" placeholder="Étapes de la recette (1 étape par ligne)"></textarea>
+            <button class="btn btn-outline" onclick="addManualRecipe()">+ Enregistrer dans mes recettes</button>
+          </div>
+        </div>
+
+        <!-- Application Mobile Gratuite (PWA) -->
+        <div class="card-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 10px;">📱 Application Mobile Gratuite (Android &amp; iPhone)</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
+            Cette application est conçue avec la technologie <strong>PWA (Progressive Web App)</strong> : elle est <strong>100% gratuite</strong>, sans publicité, fonctionne hors-ligne et s'installe directement sur l'écran d'accueil de votre smartphone comme une application native.
+          </p>
+
+          <div id="pwa-install-banner" style="display: none; margin-bottom: 16px;">
+            <button class="btn btn-primary" onclick="triggerPwaInstall()" style="width: 100%; padding: 12px;">
+              📲 Installer l'application sur cet appareil
+            </button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.86rem;">
+            <div style="padding: 12px; background: var(--primary-soft); border-radius: var(--radius-sm); border-left: 4px solid var(--primary);">
+              <strong>🤖 Sur Android (Chrome) :</strong>
+              <ol style="margin-left: 18px; margin-top: 4px;">
+                <li>Ouvrez l'application dans Chrome sur votre téléphone.</li>
+                <li>Appuyez sur le menu <strong>⋮</strong> en haut à droite puis sur <strong>"Ajouter à l'écran d'accueil"</strong> ou <strong>"Installer l'application"</strong>.</li>
+                <li>Utilisez ensuite le bouton <em>"Envoyer vers l'app Google Keep"</em> pour transférer votre liste de courses en 1 tap vers votre application Google Keep !</li>
+              </ol>
+            </div>
+
+            <div style="padding: 12px; background: var(--weekend-light); border-radius: var(--radius-sm); border-left: 4px solid var(--weekend);">
+              <strong>🍎 Sur iPhone / iPad (Safari) :</strong>
+              <ol style="margin-left: 18px; margin-top: 4px;">
+                <li>Ouvrez l'application dans Safari.</li>
+                <li>Appuyez sur le bouton <strong>Partager</strong> (carré avec une flèche vers le haut en bas de l'écran).</li>
+                <li>Choisissez <strong>"Sur l'écran d'accueil"</strong>.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODALE DE RECETTE DÉTAILLÉE -->
+  <div id="recipe-modal" class="modal-overlay" onclick="if(event.target===this) closeRecipeModal()">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeRecipeModal()" aria-label="Fermer">✕</button>
+      <div id="recipe-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- BARRE DE NAVIGATION MOBILE FIXE EN BAS -->
+  <nav class="mobile-bottom-nav" aria-label="Navigation mobile">
+    <button class="mobile-nav-item active" data-view="planner" onclick="switchView('planner')">
+      <span class="mobile-nav-icon">📅</span>
+      <span>Semaine</span>
+    </button>
+    <button class="mobile-nav-item" data-view="shopping" onclick="switchView('shopping')">
+      <span class="mobile-nav-icon">🛒</span>
+      <span>Courses Keep</span>
+    </button>
+    <button class="mobile-nav-item" data-view="history" onclick="switchView('history')">
+      <span class="mobile-nav-icon">❤️</span>
+      <span>Favoris</span>
+    </button>
+    <button class="mobile-nav-item" data-view="studio" onclick="switchView('studio')">
+      <span class="mobile-nav-icon">✨</span>
+      <span>IA &amp; App</span>
+    </button>
+  </nav>
+
+  <!-- NOTIFICATION TOAST -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- SCRIPTS -->
+  <script src="data/config.js"></script>
+  <script src="data/recipes.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
