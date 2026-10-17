@@ -927,3 +927,114 @@ body {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* =========================================================================
+   NAVIGATION JOUR PAR JOUR (UNE PAGE PAR JOURNÉE SUR SMARTPHONE)
+   ========================================================================= */
+.day-pager-card {
+  background: #ffffff;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.day-pager-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.day-tabs-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.day-tab-btn {
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  border-radius: 10px;
+  padding: 7px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  color: var(--text-main);
+  position: relative;
+}
+
+.day-tab-btn.is-weekend-tab {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.day-tab-btn.active {
+  background: var(--primary);
+  border-color: var(--primary-hover);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3);
+  transform: translateY(-1px);
+}
+
+.day-tab-btn.is-weekend-tab.active {
+  background: #d97706;
+  border-color: #b45309;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.3);
+}
+
+.day-tab-short {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.day-tab-num {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.day-tab-status {
+  font-size: 0.68rem;
+  line-height: 1;
+  min-height: 12px;
+}
+
+.day-pager-arrows {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-subtle);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.day-pager-current-label {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+}
+
+.day-bottom-pager {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
