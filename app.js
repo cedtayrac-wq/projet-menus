@@ -1784,19 +1784,120 @@ function setupPwaSupport() {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
+  // Masquer le bouton d'installation uniquement si l'application est DÉJÀ ouverte en mode installé (standalone)
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  const headerInstallBtn = document.getElementById('install-pwa-header-btn');
+  const studioBanner = document.getElementById('pwa-install-banner');
+
+  if (isStandalone) {
+    if (headerInstallBtn) headerInstallBtn.style.display = 'none';
+    if (studioBanner) studioBanner.style.display = 'none';
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPwaPrompt = e;
-    const banner = document.getElementById('pwa-install-banner');
-    if (banner) banner.style.display = 'block';
+    if (headerInstallBtn && !isStandalone) {
+      headerInstallBtn.style.display = 'inline-flex';
+    }
+    if (studioBanner && !isStandalone) {
+      studioBanner.style.display = 'block';
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPwaPrompt = null;
+    if (headerInstallBtn) headerInstallBtn.style.display = 'none';
+    if (studioBanner) studioBanner.style.display = 'none';
+    closeInstallModal();
+    showToast('🎉 Application installée sur votre écran d\'accueil !');
   });
 }
 
-async function triggerPwaInstall() {
-  if (!deferredPwaPrompt) return;
-  deferredPwaPrompt.prompt();
-  await deferredPwaPrompt.userChoice;
-  deferredPwaPrompt = null;
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'none';
+async function handleInstallAppClick() {
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    const choice = await deferredPwaPrompt.userChoice;
+    if (choice && choice.outcome === 'accepted') {
+      deferredPwaPrompt = null;
+    }
+    return;
+  }
+
+  // Si le navigateur ne déclenche pas la fenêtre native (ex: iPhone Safari, ou Chrome ayant déjà installé l'app),
+  // afficher la fenêtre d'aide visuelle adaptée à l'appareil :
+  const modal = document.getElementById('pwa-install-modal');
+  const body = document.getElementById('pwa-install-modal-body');
+  if (!modal || !body) return;
+
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/i.test(ua);
+
+  body.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+      <img src="assets/icon-192.png" alt="MenuSemaine" style="width: 48px; height: 48px; border-radius: 12px;" />
+      <div>
+        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;">📲 Installer MenuSemaine</h2>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin: 2px 0 0 0;">Ajoutez l'icône sur l'écran d'accueil de votre téléphone</p>
+      </div>
+    </div>
+
+    ${
+      isIOS
+        ? `
+      <div style="padding: 14px; background: #fffbeb; border-radius: 10px; border: 2px solid #f59e0b; margin-bottom: 14px; font-size: 0.92rem;">
+        <strong>🍎 Vous êtes sur iPhone / iPad :</strong>
+        <ol style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <li>Appuyez sur le bouton <strong>Partager</strong> <span style="display:inline-block; padding:1px 6px; background:#e2e8f0; border-radius:4px; font-weight:700;">⬆️</span> tout en bas de Safari.</li>
+          <li>Faites défiler vers le bas et appuyez sur <strong>« Sur l'écran d'accueil »</strong> (➕).</li>
+          <li>Appuyez sur <strong>« Ajouter »</strong> en haut à droite.</li>
+        </ol>
+      </div>
+      `
+        : isAndroid
+        ? `
+      <div style="padding: 14px; background: #ecfdf5; border-radius: 10px; border: 2px solid #059669; margin-bottom: 14px; font-size: 0.92rem;">
+        <strong>🤖 Vous êtes sur Android :</strong>
+        <ol style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <li>Appuyez sur les <strong>3 petits points ⋮</strong> tout en haut à droite de votre navigateur Chrome.</li>
+          <li>Appuyez sur <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+          <li>Confirmez en appuyant sur <strong>« Installer »</strong>.</li>
+        </ol>
+      </div>
+      `
+        : `
+      <div style="padding: 14px; background: #ecfdf5; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 14px; font-size: 0.9rem;">
+        <strong>💻 Sur Ordinateur (Chrome / Edge) :</strong>
+        <p style="margin-top: 6px;">Cliquez sur l'icône d'installation <strong>📲</strong> située à droite dans la barre d'adresse de votre navigateur (en haut), puis cliquez sur <strong>Installer</strong>.</p>
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 14px; font-size: 0.86rem;">
+        <strong>📱 Sur Smartphone (Android &amp; iPhone) :</strong>
+        <ul style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+          <li><strong>Android (Chrome) :</strong> Menu <strong>⋮</strong> en haut à droite &rarr; <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+          <li><strong>iPhone (Safari) :</strong> Bouton <strong>Partager ⬆️</strong> en bas &rarr; <strong>« Sur l'écran d'accueil »</strong>.</li>
+        </ul>
+      </div>
+      `
+    }
+
+    <button class="btn btn-primary" onclick="closeInstallModal()" style="width: 100%; justify-content: center;">
+      J'ai compris
+    </button>
+  `;
+
+  modal.classList.add('open');
 }
+
+function closeInstallModal() {
+  const modal = document.getElementById('pwa-install-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+async function triggerPwaInstall() {
+  return handleInstallAppClick();
+}
+
