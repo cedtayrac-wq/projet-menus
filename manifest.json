@@ -1,0 +1,19 @@
+{
+  "name": "Semainier & Courses Keep",
+  "short_name": "MenuSemaine",
+  "description": "Planificateur de menus hebdomadaires équilibrés & plaisir avec génération de liste de courses pour Google Keep.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "orientation": "portrait-primary",
+  "lang": "fr-FR",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
