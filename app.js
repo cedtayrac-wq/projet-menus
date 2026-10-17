@@ -1405,9 +1405,66 @@ function generateGoogleKeepNoteText(grouped, sortedAisles) {
   return lines.join('\n');
 }
 
+function ensureNoteReadyForKeepExport() {
+  const activeSlots = state.slots.filter((s) => s.active !== false);
+  const validatedSlots = activeSlots.filter((s) => s.validated);
+
+  // Si aucun repas n'était encore validé au moment d'envoyer vers Keep, valider automatiquement les repas comptabilisés
+  if (validatedSlots.length === 0 && state.customItems.length === 0 && activeSlots.length > 0) {
+    state.slots.forEach((s) => {
+      if (s.active !== false) s.validated = true;
+    });
+    saveStateToStorage();
+    renderAll();
+    showToast('✓ Repas validés automatiquement pour remplir votre liste Keep !');
+  }
+
+  return document.getElementById('keep-note-preview')?.textContent || '';
+}
+
+function openGoogleKeepAndroidDirect() {
+  const noteText = ensureNoteReadyForKeepExport();
+  const title = `🛒 Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
+
+  // Copier aussi dans le presse-papiers par sécurité
+  fallbackCopyText(noteText);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(noteText).catch(() => {});
+  }
+
+  const ua = navigator.userAgent || '';
+  const isAndroid = /Android/i.test(ua);
+
+  if (isAndroid) {
+    // Lien Intent natif Android qui ouvre directement l'application Google Keep (com.google.android.keep) avec la note pré-remplie !
+    const intentUrl =
+      `intent://#Intent;` +
+      `action=android.intent.action.SEND;` +
+      `type=text/plain;` +
+      `package=com.google.android.keep;` +
+      `S.android.intent.extra.SUBJECT=${encodeURIComponent(title)};` +
+      `S.android.intent.extra.TEXT=${encodeURIComponent(noteText)};` +
+      `S.browser_fallback_url=${encodeURIComponent('https://keep.google.com/')};` +
+      `end`;
+
+    showToast('🚀 Ouverture directe de l\'application Google Keep...');
+    window.location.href = intentUrl;
+    return;
+  }
+
+  // Si cliqué depuis un iPhone ou un PC, basculer automatiquement sur le partage mobile ou l'ouverture Web
+  shareToGoogleKeepMobile();
+}
+
 async function shareToGoogleKeepMobile() {
-  const noteText = document.getElementById('keep-note-preview')?.textContent || '';
-  const title = `Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
+  const noteText = ensureNoteReadyForKeepExport();
+  const title = `🛒 Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
+
+  // Toujours copier en parallèle dans le presse-papiers
+  fallbackCopyText(noteText);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(noteText).catch(() => {});
+  }
 
   if (navigator.share) {
     try {
@@ -1415,36 +1472,37 @@ async function shareToGoogleKeepMobile() {
         title: title,
         text: noteText
       });
-      showToast('Partage ouvert : sélectionnez Google Keep !');
+      showToast('Choisissez l\'icône jaune "Keep Notes" puis Enregistrer !');
       return;
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn('Partage annulé ou non supporté, copie de secours :', err);
-      } else {
+      if (err.name === 'AbortError') {
         return;
       }
+      console.warn('Partage non supporté, bascule vers copie + Keep Web :', err);
     }
   }
 
-  await copyAndOpenGoogleKeep();
+  copyAndOpenGoogleKeep();
 }
 
-async function copyAndOpenGoogleKeep() {
-  const noteText = document.getElementById('keep-note-preview')?.textContent || '';
-  try {
-    await navigator.clipboard.writeText(noteText);
-    showToast('Liste copiée ! Ouverture de Google Keep...');
-  } catch (e) {
-    fallbackCopyText(noteText);
-    showToast('Liste copiée ! Ouverture de Google Keep...');
+function copyAndOpenGoogleKeep() {
+  const noteText = ensureNoteReadyForKeepExport();
+
+  // 1. Copie synchrone immédiate (pour ne pas bloquer l'ouverture de l'onglet Keep)
+  fallbackCopyText(noteText);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(noteText).catch(() => {});
   }
-  setTimeout(() => {
-    window.open('https://keep.google.com/', '_blank', 'noopener');
-  }, 450);
+
+  // 2. Ouverture synchrone de Google Keep (évite le blocage de pop-up du navigateur)
+  window.open('https://keep.google.com/', '_blank', 'noopener');
+
+  // 3. Afficher une indication claire pour coller la note dans Google Keep Web
+  showToast('📋 Liste copiée ! Cliquez sur "Créer une note..." dans Keep puis Coller (Ctrl+V)');
 }
 
 async function copyKeepListOnly() {
-  const noteText = document.getElementById('keep-note-preview')?.textContent || '';
+  const noteText = ensureNoteReadyForKeepExport();
   try {
     await navigator.clipboard.writeText(noteText);
     showToast('Liste de courses copiée dans le presse-papiers 📋');
@@ -1457,9 +1515,13 @@ async function copyKeepListOnly() {
 function fallbackCopyText(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
   document.body.appendChild(ta);
   ta.select();
-  document.execCommand('copy');
+  try {
+    document.execCommand('copy');
+  } catch (e) {}
   document.body.removeChild(ta);
 }
 
