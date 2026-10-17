@@ -240,12 +240,16 @@
           <div id="keep-note-preview" class="keep-note-box"></div>
 
           <div class="keep-actions">
-            <button class="btn btn-keep" onclick="shareToGoogleKeepMobile()" style="width: 100%; padding: 12px; font-size: 0.95rem;">
-              📲 Envoyer vers l'app Google Keep (Mobile)
+            <button class="btn btn-keep" onclick="openGoogleKeepAndroidDirect()" style="width: 100%; padding: 12px; font-size: 0.95rem;">
+              🚀 Ouvrir directement dans l'appli Keep (Android)
             </button>
 
-            <button class="btn btn-primary" onclick="copyAndOpenGoogleKeep()" style="width: 100%; padding: 11px;">
-              📋 Copier la liste &amp; Ouvrir Google Keep Web
+            <button class="btn btn-primary" onclick="shareToGoogleKeepMobile()" style="width: 100%; padding: 12px; font-size: 0.92rem;">
+              📲 Partager vers Keep Notes (Menu téléphone Android / iPhone)
+            </button>
+
+            <button class="btn btn-outline" onclick="copyAndOpenGoogleKeep()" style="width: 100%; padding: 11px; border-color: #eab308; color: #713f12; background: #fffbeb; font-weight: 700;">
+              💻 Copier &amp; Ouvrir Google Keep (Ordinateur / Coller)
             </button>
 
             <button class="btn btn-outline" onclick="copyKeepListOnly()" style="width: 100%;">
@@ -254,9 +258,10 @@
           </div>
 
           <div style="margin-top: 14px; padding: 10px; background: rgba(255,255,255,0.7); border-radius: 8px; font-size: 0.78rem; color: #713f12;">
-            <strong>Astuce Google Keep :</strong><br />
-            • <strong>Sur téléphone :</strong> Cliquez sur <em>"Envoyer vers l'app Google Keep"</em> et choisissez l'icône <strong>Keep Notes</strong> : la note se crée toute seule !<br />
-            • <strong>Sur ordinateur :</strong> Cliquez sur <em>"Copier &amp; Ouvrir Google Keep"</em>, collez (<kbd>Ctrl+V</kbd>) dans une nouvelle note Keep puis cliquez sur <strong>⋮ &rarr; Afficher les cases à cocher</strong>.
+            <strong>Comment ça marche :</strong><br />
+            • <strong>Bouton 1 (Android direct) :</strong> Ouvre directement l'application <strong>Google Keep</strong> avec la note déjà remplie, cliquez juste sur <em>Enregistrer</em> !<br />
+            • <strong>Bouton 2 (Partager) :</strong> Ouvre le menu de partage du téléphone &rarr; choisissez l'icône jaune <strong>Keep Notes</strong>.<br />
+            • <strong>Bouton 3 (Ordinateur) :</strong> Copie la liste et ouvre <em>keep.google.com</em> &rarr; cliquez sur <em>"Créer une note..."</em> puis faites <kbd>Ctrl+V</kbd> (Coller).
           </div>
         </div>
       </div>
