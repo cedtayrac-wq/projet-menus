@@ -32,13 +32,15 @@ const SLOTS_DEFINITION = [
 ];
 
 let state = {
-  weekStartDate: '',  // Format YYYY-MM-DD (toujours calé sur un Lundi)
-  slots: [],          // Les 14 créneaux de la semaine (avec active: true/false pour comptabiliser ou supprimer)
-  inStockKeys: {},    // { "nom_ingredient|unite": true } si décoché (déjà en stock)
-  customItems: [],    // [{ id, name, qty, inStock }]
-  favorites: [],      // [recipeId, ...]
-  history: [],        // [{ id, dateLabel, weekStartDate, slots }]
-  customRecipes: []   // Recettes ajoutées via IA ou manuellement
+  weekStartDate: '',      // Format YYYY-MM-DD (toujours calé sur un Lundi)
+  selectedDayOffset: 0,   // 0 = Lundi ... 6 = Dimanche (pour la vue 1 page par journée)
+  plannerViewMode: 'day', // 'day' (1 page par journée : Déjeuner + Dîner) ou 'week' (toute la semaine)
+  slots: [],              // Les 14 créneaux de la semaine (avec active: true/false pour comptabiliser ou supprimer)
+  inStockKeys: {},        // { "nom_ingredient|unite": true } si décoché (déjà en stock)
+  customItems: [],        // [{ id, name, qty, inStock }]
+  favorites: [],          // [recipeId, ...]
+  history: [],            // [{ id, dateLabel, weekStartDate, slots }]
+  customRecipes: []       // Recettes ajoutées via IA ou manuellement
 };
 
 let deferredPwaPrompt = null;
@@ -162,7 +164,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderAll();
   setupPwaSupport();
+  setupDaySwipeGestures();
 });
+
+function setupDaySwipeGestures() {
+  const plannerEl = document.getElementById('view-planner');
+  if (!plannerEl) return;
+
+  let startX = 0;
+  let startY = 0;
+  let ignoreSwipe = false;
+
+  plannerEl.addEventListener(
+    'touchstart',
+    (e) => {
+      if (state.plannerViewMode !== 'day') return;
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.closest('.servings-control') || target.closest('.day-global-servings'))) {
+        ignoreSwipe = true;
+        return;
+      }
+      ignoreSwipe = false;
+      startX = e.changedTouches[0].clientX;
+      startY = e.changedTouches[0].clientY;
+    },
+    { passive: true }
+  );
+
+  plannerEl.addEventListener(
+    'touchend',
+    (e) => {
+      if (ignoreSwipe || state.plannerViewMode !== 'day') return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      // Glissement horizontal franc (> 75px) et plus horizontal que vertical
+      if (Math.abs(dx) > 75 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+        if (dx < 0 && state.selectedDayOffset < 6) {
+          stepPlannerDay(1);
+        } else if (dx > 0 && state.selectedDayOffset > 0) {
+          stepPlannerDay(-1);
+        }
+      }
+    },
+    { passive: true }
+  );
+}
 
 function applyAppConfigAndAccessControl() {
   const cfg = window.APP_CONFIG || {};
@@ -923,6 +969,155 @@ function createMealCardHTML(slot) {
   `;
 }
 
+const DAY_NAMES_LIST = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const DAY_SHORT_LIST = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+function selectPlannerDay(dayOffset) {
+  const clamped = Math.max(0, Math.min(6, Number(dayOffset) || 0));
+  state.selectedDayOffset = clamped;
+  renderPlannerCards();
+}
+
+function stepPlannerDay(delta) {
+  const next = state.selectedDayOffset + delta;
+  if (next < 0 || next > 6) return;
+  state.selectedDayOffset = next;
+  renderPlannerCards();
+  const pagerEl = document.getElementById('day-pager-container');
+  if (pagerEl) {
+    pagerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function togglePlannerViewMode() {
+  state.plannerViewMode = state.plannerViewMode === 'day' ? 'week' : 'day';
+  renderPlannerCards();
+  showToast(
+    state.plannerViewMode === 'day'
+      ? '📱 Mode 1 page par journée (Déjeuner & Dîner)'
+      : '🗓️ Mode Semaine complète (7 jours déroulants)'
+  );
+}
+
+function validateDayAndNext(dayOffset) {
+  const daySlots = state.slots.filter((s) => s.dayOffset === dayOffset && s.active !== false);
+  daySlots.forEach((s) => {
+    s.validated = true;
+  });
+  saveStateToStorage();
+
+  const dayName = DAY_NAMES_LIST[dayOffset] || 'Journée';
+  if (dayOffset < 6) {
+    state.selectedDayOffset = dayOffset + 1;
+    renderAll();
+    showToast(`✓ ${dayName} validé ! Passage à ${DAY_NAMES_LIST[dayOffset + 1]}`);
+    const pagerEl = document.getElementById('day-pager-container');
+    if (pagerEl) pagerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    renderAll();
+    showToast(`✓ ${dayName} validé ! Toute la semaine est parcourue.`);
+  }
+}
+
+function renderDayPager() {
+  const container = document.getElementById('day-pager-container');
+  if (!container) return;
+
+  const isDayMode = state.plannerViewMode === 'day';
+  const curOffset = state.selectedDayOffset || 0;
+  const curDayName = DAY_NAMES_LIST[curOffset];
+  const curFullTitle = formatFullDayTitle(curDayName, curOffset);
+
+  const tabsHTML = [0, 1, 2, 3, 4, 5, 6]
+    .map((offset) => {
+      const d = addDaysToIso(state.weekStartDate, offset);
+      const dayNum = d.getDate();
+      const daySlots = state.slots.filter((s) => s.dayOffset === offset);
+      const activeSlots = daySlots.filter((s) => s.active !== false);
+      const validatedCount = activeSlots.filter((s) => s.validated).length;
+
+      let statusIcon = '⚪';
+      if (activeSlots.length === 0) {
+        statusIcon = '➖';
+      } else if (validatedCount === activeSlots.length) {
+        statusIcon = '✅';
+      } else if (validatedCount > 0) {
+        statusIcon = '🟡';
+      }
+
+      const isWeekend = offset >= 5;
+      const isActive = isDayMode && curOffset === offset;
+
+      return `
+        <button
+          type="button"
+          class="day-tab-btn ${isWeekend ? 'is-weekend-tab' : ''} ${isActive ? 'active' : ''}"
+          onclick="if(state.plannerViewMode!=='day'){state.plannerViewMode='day';} selectPlannerDay(${offset})"
+          title="${DAY_NAMES_LIST[offset]} ${dayNum}"
+        >
+          <span class="day-tab-short">${DAY_SHORT_LIST[offset]}${isWeekend ? '🌟' : ''}</span>
+          <span class="day-tab-num">${dayNum}</span>
+          <span class="day-tab-status">${statusIcon}</span>
+        </button>
+      `;
+    })
+    .join('');
+
+  container.innerHTML = `
+    <div class="day-pager-card">
+      <div class="day-pager-top-row">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 0.88rem; font-weight: 800; color: var(--primary-hover);">
+            ${isDayMode ? `📄 Page ${curOffset + 1} / 7 — ${curDayName}` : '🗓️ Vue Semaine complète (7 jours)'}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          onclick="togglePlannerViewMode()"
+          style="font-weight: 700; font-size: 0.78rem;"
+        >
+          ${isDayMode ? '🗓️ Voir toute la semaine' : '📱 Vue 1 Page / Jour'}
+        </button>
+      </div>
+
+      <div class="day-tabs-strip" role="tablist" aria-label="Jours de la semaine">
+        ${tabsHTML}
+      </div>
+
+      ${
+        isDayMode
+          ? `
+        <div class="day-pager-arrows">
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            onclick="stepPlannerDay(-1)"
+            ${curOffset === 0 ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
+          >
+            ◀ ${curOffset > 0 ? DAY_SHORT_LIST[curOffset - 1] : 'Début'}
+          </button>
+
+          <div class="day-pager-current-label">
+            📅 ${curFullTitle}
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            onclick="stepPlannerDay(1)"
+            ${curOffset === 6 ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
+          >
+            ${curOffset < 6 ? DAY_SHORT_LIST[curOffset + 1] : 'Fin'} ▶
+          </button>
+        </div>
+      `
+          : ''
+      }
+    </div>
+  `;
+}
+
 function createDayGroupHTML(dayOffset) {
   const daySlots = state.slots.filter((s) => s.dayOffset === dayOffset);
   if (!daySlots.length) return '';
@@ -931,7 +1126,60 @@ function createDayGroupHTML(dayOffset) {
   const fullDayTitle = formatFullDayTitle(dayName, dayOffset);
   const dayCost = evaluateDayCost(dayOffset);
   const dayServings = daySlots[0].servings || 2;
-  const activeCount = daySlots.filter((s) => s.active !== false).length;
+  const activeSlots = daySlots.filter((s) => s.active !== false);
+  const activeCount = activeSlots.length;
+  const allDayValidated = activeCount > 0 && activeSlots.every((s) => s.validated);
+  const isDayMode = state.plannerViewMode === 'day';
+
+  const bottomPagerHTML = isDayMode
+    ? `
+      <div class="day-bottom-pager">
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          onclick="stepPlannerDay(-1)"
+          ${dayOffset === 0 ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
+        >
+          ◀ ${dayOffset > 0 ? DAY_NAMES_LIST[dayOffset - 1] : 'Lundi'}
+        </button>
+
+        <button
+          type="button"
+          class="btn ${allDayValidated ? 'btn-outline' : 'btn-primary'} btn-sm"
+          onclick="validateDayAndNext(${dayOffset})"
+          style="font-weight: 800;"
+        >
+          ${
+            dayOffset < 6
+              ? `✓ Valider ${dayName} & passer à ${DAY_NAMES_LIST[dayOffset + 1]} ▶`
+              : `✓ Valider ${dayName}`
+          }
+        </button>
+
+        ${
+          dayOffset < 6
+            ? `
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            onclick="stepPlannerDay(1)"
+          >
+            ${DAY_NAMES_LIST[dayOffset + 1]} ▶
+          </button>
+        `
+            : `
+          <button
+            type="button"
+            class="btn btn-keep btn-sm"
+            onclick="handleGenerateShoppingListClick()"
+          >
+            🛒 Voir Liste Keep ▶
+          </button>
+        `
+        }
+      </div>
+    `
+    : '';
 
   return `
     <div class="day-group">
@@ -968,20 +1216,47 @@ function createDayGroupHTML(dayOffset) {
       <div class="day-meals-pair">
         ${daySlots.map(createMealCardHTML).join('')}
       </div>
+
+      ${bottomPagerHTML}
     </div>
   `;
 }
 
 function renderPlannerCards() {
+  renderDayPager();
+
+  const weekdayBanner = document.getElementById('weekday-section-banner');
+  const weekendBanner = document.getElementById('weekend-section-banner');
   const weekdayGrid = document.getElementById('weekday-meals-grid');
   const weekendGrid = document.getElementById('weekend-meals-grid');
 
-  if (weekdayGrid) {
-    weekdayGrid.innerHTML = [0, 1, 2, 3, 4].map(createDayGroupHTML).join('');
-  }
+  if (state.plannerViewMode === 'day') {
+    const curOffset = state.selectedDayOffset || 0;
+    const isWeekendDay = curOffset >= 5;
 
-  if (weekendGrid) {
-    weekendGrid.innerHTML = [5, 6].map(createDayGroupHTML).join('');
+    if (weekdayBanner) weekdayBanner.style.display = isWeekendDay ? 'none' : 'flex';
+    if (weekdayGrid) {
+      weekdayGrid.style.display = isWeekendDay ? 'none' : 'flex';
+      weekdayGrid.innerHTML = isWeekendDay ? '' : createDayGroupHTML(curOffset);
+    }
+
+    if (weekendBanner) weekendBanner.style.display = isWeekendDay ? 'flex' : 'none';
+    if (weekendGrid) {
+      weekendGrid.style.display = isWeekendDay ? 'flex' : 'none';
+      weekendGrid.innerHTML = isWeekendDay ? createDayGroupHTML(curOffset) : '';
+    }
+  } else {
+    if (weekdayBanner) weekdayBanner.style.display = 'flex';
+    if (weekdayGrid) {
+      weekdayGrid.style.display = 'flex';
+      weekdayGrid.innerHTML = [0, 1, 2, 3, 4].map(createDayGroupHTML).join('');
+    }
+
+    if (weekendBanner) weekendBanner.style.display = 'flex';
+    if (weekendGrid) {
+      weekendGrid.style.display = 'flex';
+      weekendGrid.innerHTML = [5, 6].map(createDayGroupHTML).join('');
+    }
   }
 }
 
