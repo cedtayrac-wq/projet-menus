@@ -10,7 +10,7 @@
   <title>Mon Menu Semaine & Courses Google Keep</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
-  <link rel="apple-touch-icon" href="assets/icon.svg" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -46,6 +46,9 @@
         <a id="local-admin-btn" href="admin.html" class="btn btn-outline btn-sm" style="display: none; border-color: #0f172a; color: #0f172a; font-weight: 700;" title="Ouvrir l'interface d'administration locale">
           ⚙️ Admin (Local)
         </a>
+        <button id="install-pwa-header-btn" class="btn btn-primary btn-sm" onclick="handleInstallAppClick()" title="Installer l'application sur l'écran d'accueil">
+          📲 Installer l'App
+        </button>
         <button class="btn btn-outline btn-sm" onclick="regenerateUnvalidatedMeals()" title="Proposer de nouvelles idées pour les repas non validés">
           🔄 Nouvelles idées
         </button>
@@ -351,8 +354,8 @@
             Cette application est conçue avec la technologie <strong>PWA (Progressive Web App)</strong> : elle est <strong>100% gratuite</strong>, sans publicité, fonctionne hors-ligne et s'installe directement sur l'écran d'accueil de votre smartphone comme une application native.
           </p>
 
-          <div id="pwa-install-banner" style="display: none; margin-bottom: 16px;">
-            <button class="btn btn-primary" onclick="triggerPwaInstall()" style="width: 100%; padding: 12px;">
+          <div id="pwa-install-banner" style="margin-bottom: 16px;">
+            <button class="btn btn-primary" onclick="handleInstallAppClick()" style="width: 100%; padding: 12px;">
               📲 Installer l'application sur cet appareil
             </button>
           </div>
@@ -362,7 +365,7 @@
               <strong>🤖 Sur Android (Chrome) :</strong>
               <ol style="margin-left: 18px; margin-top: 4px;">
                 <li>Ouvrez l'application dans Chrome sur votre téléphone.</li>
-                <li>Appuyez sur le menu <strong>⋮</strong> en haut à droite puis sur <strong>"Ajouter à l'écran d'accueil"</strong> ou <strong>"Installer l'application"</strong>.</li>
+                <li>Appuyez sur le bouton <strong>"📲 Installer l'App"</strong> en haut de l'écran (ou sur le menu <strong>⋮</strong> en haut à droite $\rightarrow$ <strong>"Ajouter à l'écran d'accueil"</strong> / <strong>"Installer l'application"</strong>).</li>
                 <li>Utilisez ensuite le bouton <em>"Envoyer vers l'app Google Keep"</em> pour transférer votre liste de courses en 1 tap vers votre application Google Keep !</li>
               </ol>
             </div>
@@ -387,6 +390,14 @@
     <div class="modal-content">
       <button class="modal-close" onclick="closeRecipeModal()" aria-label="Fermer">✕</button>
       <div id="recipe-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MODALE D'INSTALLATION MOBILE (PWA) -->
+  <div id="pwa-install-modal" class="modal-overlay" onclick="if(event.target===this) closeInstallModal()">
+    <div class="modal-content" style="max-width: 480px;">
+      <button class="modal-close" onclick="closeInstallModal()" aria-label="Fermer">✕</button>
+      <div id="pwa-install-modal-body"></div>
     </div>
   </div>
 
