@@ -2186,228 +2186,1048 @@ window.RECIPES_DB = {
   ],
 
   // =========================================================================
-  // 3. MENUS PLAISIR DU WEEK-END : Simplicité moyenne & durée moyenne (30-45 min), gourmands
+  // 3. MENUS PLAISIR (SEMAINE & WEEK-END) : Se faire plaisir même si moins équilibrés, simples et rapides à réaliser
   // =========================================================================
   weekendPleasureMeals: [
     {
       id: "we-p1",
-      title: "Burgers gourmets maison au cheddar affiné, oignons caramélisés & frites de patate douce",
+      title: "Burgers gourmets maison au cheddar affiné, oignons caramélisés & potatoes express",
       type: "weekend-pleasure",
-      prepTime: "15 min",
-      cookTime: "20 min",
-      difficulty: "Moyenne",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
       budget: "€€ (Moyen)",
       calories: "680 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Gourmand", "Simplicité moyenne"],
+      tags: ["Menu Plaisir 🌟", "Gourmand", "Simple & Rapide"],
       baseServings: 2,
-      description: "Le vrai burger bistrot fait maison avec des oignons fondants et des frites dorées au four.",
+      description: "Le vrai burger bistrot fait maison ultra-gourmand avec cheddar coulant et oignons fondants, prêt en un clin d'œil.",
       ingredients: [
         { name: "Pains burgers briochés", qty: 2, unit: "pièces", aisle: "Boulangerie & Divers" },
-        { name: "Steaks hachés bœuf 5% ou 15%", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
-        { name: "Cheddar en tranches", qty: 4, unit: "tranches", aisle: "Crèmerie & Frais" },
-        { name: "Patates douces (ou pommes de terre)", qty: 400, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Steaks hachés bœuf bouchère", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Cheddar affiné en tranches", qty: 4, unit: "tranches", aisle: "Crèmerie & Frais" },
+        { name: "Pommes de terre grenailles ou potatoes précuites", qty: 350, unit: "g", aisle: "Fruits & Légumes" },
         { name: "Oignon rouge", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
-        { name: "Tomate & feuilles de salade", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+        { name: "Sauce burger & feuilles de salade", qty: 1, unit: "portion", aisle: "Épicerie salée" }
       ],
       steps: [
-        "Préchauffer le four à 200°C. Couper les patates douces en frites, les enrober d'une cuillère d'huile et de paprika et enfourner 20 à 25 minutes.",
-        "Émincer l'oignon rouge et le faire compoter à feu doux 10 minutes dans une poêle avec une goutte d'eau et une pincée de sucre ou vinaigre balsamique.",
-        "Saisir les steaks hachés à feu vif 3 minutes par face, déposer le cheddar dessus en fin de cuisson pour qu'il fonde.",
-        "Toaster légèrement les pains, monter les burgers avec salade, tomate, steak au cheddar et oignons caramélisés, et servir avec les frites."
+        "Faire dorer les potatoes à la poêle ou à l'Airfryer pendant 12 minutes avec une pincée de paprika.",
+        "Émincer l'oignon rouge et le faire caraméliser 5 minutes à la poêle avec une noisette de beurre et un trait de vinaigre balsamique.",
+        "Saisir les steaks hachés à feu vif 3 minutes par face, déposer le cheddar dessus à couvert 1 minute pour qu'il fonde.",
+        "Toaster les pains briochés, napper de sauce burger, garnir avec steak au cheddar et oignons fondants."
       ]
     },
     {
       id: "we-p2",
-      title: "Risotto crémeux aux champignons bruns, vin blanc et copeaux de parmesan",
+      title: "Risotto express crémeux aux champignons bruns, crème fraîche et copeaux de parmesan",
       type: "weekend-pleasure",
-      prepTime: "10 min",
-      cookTime: "25 min",
-      difficulty: "Moyenne",
+      prepTime: "8 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
       budget: "€€ (Moyen)",
       calories: "590 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Italien", "Végétarien"],
+      tags: ["Menu Plaisir 🌟", "Italien", "Simple & Rapide"],
       baseServings: 2,
-      description: "Un risotto onctueux à souhait, mijoté doucement au bouillon et parfumé aux champignons poêlés.",
+      description: "Un risotto ultra-onctueux et réconfortant enrichi de crème et de parmesan généreux.",
       ingredients: [
-        { name: "Riz à risotto (Arborio)", qty: 160, unit: "g", aisle: "Épicerie salée" },
+        { name: "Riz à risotto (Arborio cuisson rapide)", qty: 160, unit: "g", aisle: "Épicerie salée" },
         { name: "Champignons bruns de Paris", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
-        { name: "Parmesan râpé ou copeaux", qty: 50, unit: "g", aisle: "Crèmerie & Frais" },
-        { name: "Échalote", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Parmesan râpé ou copeaux", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Crème fraîche épaisse", qty: 60, unit: "ml", aisle: "Crèmerie & Frais" },
         { name: "Bouillon de légumes", qty: 1, unit: "cube", aisle: "Épicerie salée" },
         { name: "Beurre", qty: 20, unit: "g", aisle: "Crèmerie & Frais" }
       ],
       steps: [
-        "Préparer 600 ml de bouillon chaud. Nettoyer et poêler les champignons émincés 6 minutes avec une noisette de beurre, puis réserver.",
-        "Dans une sauteuse, faire revenir l'échalote ciselée puis nacrer le riz Arborio 2 minutes jusqu'à ce qu'il soit translucide.",
-        "Verser le bouillon chaud louche par louche pendant 18 minutes en remuant régulièrement jusqu'à absorption.",
-        "Hors du feu, incorporer les champignons, le parmesan et le reste de beurre pour lier le risotto. Servir aussitôt."
+        "Poêler les champignons émincés 5 minutes à feu vif avec une noisette de beurre.",
+        "Nacrer le riz dans la sauteuse 1 minute, puis verser 500 ml de bouillon chaud et laisser cuire 12 à 14 minutes à petits bouillons.",
+        "Hors du feu, lier généreusement avec la crème fraîche et le parmesan. Servir bien chaud."
       ]
     },
     {
       id: "we-p3",
-      title: "Lasagnes maison à la bolognaise mijotée et béchamel légère",
+      title: "Lasagnes express à la poêle : bolognaise fondante, ricotta et mozzarella gratinée",
       type: "weekend-pleasure",
-      prepTime: "20 min",
-      cookTime: "25 min",
-      difficulty: "Moyenne",
+      prepTime: "10 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
       budget: "€€ (Moyen)",
       calories: "640 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Gratiné", "Convivial"],
+      tags: ["Menu Plaisir 🌟", "Gratiné", "Simple & Rapide"],
       baseServings: 2,
-      description: "Des lasagnes fondantes et gratinées préparées maison pour un vrai plaisir du week-end.",
+      description: "Tout le plaisir fondant des lasagnes italiennes gratinées à la mozzarella, préparées sans attendre en 15 minutes à la sauteuse.",
       ingredients: [
-        { name: "Feuilles de lasagnes", qty: 6, unit: "pièces", aisle: "Épicerie salée" },
+        { name: "Feuilles de lasagnes fraîches", qty: 6, unit: "pièces", aisle: "Crèmerie & Frais" },
         { name: "Bœuf haché", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
-        { name: "Coulis de tomates", qty: 400, unit: "g", aisle: "Épicerie salée" },
-        { name: "Lait demi-écrémé", qty: 250, unit: "ml", aisle: "Crèmerie & Frais" },
-        { name: "Emmental ou Mozzarella râpée", qty: 70, unit: "g", aisle: "Crèmerie & Frais" },
-        { name: "Oignon & Carotte", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+        { name: "Coulis de tomates cuisiné", qty: 350, unit: "g", aisle: "Épicerie salée" },
+        { name: "Ricotta ou crème épaisse", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Mozzarella râpée", qty: 80, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Oignon", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
       ],
       steps: [
-        "Faire revenir l'oignon et la carotte coupés finement avec le bœuf haché pendant 6 minutes, puis ajouter le coulis de tomates et les herbes. Mijoter 10 minutes.",
-        "Préparer une béchamel rapide en chauffant le lait épaissi avec 1 c. à soupe de farine ou maïzena et une pincée de muscade.",
-        "Dans un plat à gratin, alterner couches de sauce bolognaise, feuilles de lasagnes et béchamel. Terminer par le fromage râpé.",
-        "Enfourner 25 minutes à 190°C jusqu'à obtenir un beau gratiné."
+        "Faire revenir l'oignon émincé et le bœuf haché 5 minutes dans une sauteuse, puis verser le coulis de tomates.",
+        "Glisser les feuilles de lasagnes fraîches coupées en deux directement dans la sauce, ajouter des cuillerées de ricotta et parsemer de mozzarella.",
+        "Couvrir la sauteuse et laisser fondre et gratiner 10 minutes à feu doux."
       ]
     },
     {
       id: "we-p4",
-      title: "Tagliatelles fraîches au saumon fumé, crème citronnée et aneth",
+      title: "Tagliatelles fraîches au saumon fumé, crème épaisse citronnée et aneth",
       type: "weekend-pleasure",
-      prepTime: "10 min",
-      cookTime: "15 min",
-      difficulty: "Moyenne",
+      prepTime: "8 min",
+      cookTime: "8 min",
+      difficulty: "Facile",
       budget: "€€ (Moyen)",
       calories: "610 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Poisson", "Gourmand"],
+      tags: ["Menu Plaisir 🌟", "Poisson", "Simple & Rapide"],
       baseServings: 2,
-      description: "Un grand classique gourmand où la fraîcheur du citron et de l'aneth sublime les pâtes fraîches.",
+      description: "Un grand classique gourmand et généreux en crème, prêt en moins de 15 minutes chrono.",
       ingredients: [
         { name: "Tagliatelles fraîches", qty: 250, unit: "g", aisle: "Crèmerie & Frais" },
         { name: "Saumon fumé", qty: 120, unit: "g", aisle: "Viandes, Poissons & Œufs" },
-        { name: "Crème fraîche", qty: 120, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Crème fraîche épaisse", qty: 140, unit: "ml", aisle: "Crèmerie & Frais" },
         { name: "Citron non traité", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
         { name: "Aneth ou ciboulette", qty: 0.5, unit: "botte", aisle: "Fruits & Légumes" },
         { name: "Échalote", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
       ],
       steps: [
-        "Faire fondre l'échalote ciselée dans une poêle à feu doux pendant 3 minutes.",
-        "Ajouter la crème fraîche, le zeste et un trait de jus de citron, puis laisser réduire 3 minutes à feu très doux.",
-        "Cuire les tagliatelles fraîches 3 à 4 minutes dans l'eau bouillante salée.",
-        "Mélanger les pâtes égouttées à la sauce avec les lanières de saumon fumé et l'aneth ciselé hors du feu."
+        "Faire fondre l'échalote ciselée 2 minutes à la poêle, ajouter la crème fraîche et le zeste de citron.",
+        "Cuire les tagliatelles fraîches 3 minutes dans l'eau bouillante salée.",
+        "Enrober les pâtes égouttées dans la crème avec les lanières de saumon fumé et l'aneth hors du feu."
       ]
     },
     {
       id: "we-p5",
-      title: "Curry thaï crémeux de crevettes au lait de coco, poivrons et riz jasmin",
+      title: "Curry thaï ultra-crémeux de crevettes au lait de coco et riz jasmin",
       type: "weekend-pleasure",
-      prepTime: "15 min",
-      cookTime: "20 min",
-      difficulty: "Moyenne",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
       budget: "€€ (Moyen)",
       calories: "580 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Exotique", "Parfumé"],
+      tags: ["Menu Plaisir 🌟", "Exotique", "Simple & Rapide"],
       baseServings: 2,
-      description: "Une évasion gourmande aux parfums de coco, gingembre et citron vert.",
+      description: "Une sauce coco onctueuse et parfumée qui se prépare en 12 minutes pour un vrai plaisir d'évasion.",
       ingredients: [
         { name: "Grosses crevettes décortiquées", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
-        { name: "Lait de coco", qty: 200, unit: "ml", aisle: "Épicerie salée" },
+        { name: "Lait de coco crémeux", qty: 200, unit: "ml", aisle: "Épicerie salée" },
         { name: "Poivron rouge", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
         { name: "Riz thaï ou jasmin", qty: 140, unit: "g", aisle: "Épicerie salée" },
         { name: "Pâte de curry doux ou curry jaune", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" },
         { name: "Citron vert & Coriandre", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
       ],
       steps: [
-        "Lancer la cuisson du riz parfumé.",
-        "Émincer le poivron en fines lanières et le faire revenir 5 minutes dans une sauteuse avec la pâte de curry.",
-        "Verser le lait de coco et laisser mijoter 8 minutes à feu doux pour que les saveurs infusent.",
-        "Ajouter les crevettes pour les 3 dernières minutes de cuisson, arroser d'un trait de citron vert et servir avec le riz."
+        "Lancer la cuisson du riz jasmin.",
+        "Faire sauter le poivron émincé 4 minutes à la poêle avec la pâte de curry, puis verser le lait de coco.",
+        "Laisser réduire 5 minutes, ajouter les crevettes 2 minutes pour les réchauffer et servir avec le riz."
       ]
     },
     {
       id: "we-p6",
-      title: "Fajitas mexicaines gratinées au four (poulet épicé, poivrons, guacamole maison)",
+      title: "Quesadillas & Fajitas mexicaines croustillantes au poulet, cheddar fondant et guacamole",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "630 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Convivial", "Simple & Rapide"],
+      baseServings: 2,
+      description: "Des tortillas dorées à la poêle garnies de poulet épicé et de fromage filant, prêtes en 10 minutes de cuisson.",
+      ingredients: [
+        { name: "Tortillas de blé", qty: 4, unit: "pièces", aisle: "Boulangerie & Divers" },
+        { name: "Émincés de filet de poulet", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Poivron", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Avocat mûr (ou guacamole frais)", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Cheddar ou Emmental râpé", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Sauce salsa douce", qty: 100, unit: "g", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Faire sauter à feu vif les émincés de poulet et le poivron en fines lanières pendant 6 minutes avec les épices.",
+        "Répartir le poulet, la salsa et le fromage râpé sur les tortillas, les replier et les dorer 2 minutes par face à la poêle jusqu'à ce que le fromage fonde.",
+        "Servir chaud avec l'avocat écrasé au citron."
+      ]
+    },
+    {
+      id: "we-p7",
+      title: "Parmentier express de canard confit à la poêle et écrasé de pommes de terre au beurre",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "650 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Bistrot", "Simple & Rapide"],
+      baseServings: 2,
+      description: "Tout le réconfort d'un hachis Parmentier de canard bistrot, réalisé en un temps record.",
+      ingredients: [
+        { name: "Cuisses de canard confit", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pommes de terre à purée (coupées en petits dés)", qty: 450, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Échalote", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Beurre & Lait", qty: 40, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte aux noix", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire les petits dés de pommes de terre 12 minutes à l'eau bouillante salée puis les écraser à la fourchette avec le beurre et un trait de lait.",
+        "Pendant ce temps, effilocher les cuisses de canard et les faire croustiller 5 minutes à la poêle avec l'échalote ciselée.",
+        "Dresser l'effiloché de canard sous l'écrasé de pommes de terre chaud et servir avec la salade."
+      ]
+    },
+    {
+      id: "we-p8",
+      title: "Gnocchis poêlés au gorgonzola fondant, poire rôtie et éclats de noix",
+      type: "weekend-pleasure",
+      prepTime: "5 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "610 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Végétarien", "Simple & Rapide"],
+      baseServings: 2,
+      description: "Des gnocchis croustillants dehors et moelleux dedans nappés d'une sauce crémeuse au gorgonzola en 10 minutes.",
+      ingredients: [
+        { name: "Gnocchis à poêler", qty: 350, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Gorgonzola crémeux (ou Roquefort)", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Poire", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Crème liquide", qty: 80, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Cerneaux de noix", qty: 30, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Jeunes pousses de roquette", qty: 60, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Faire dorer les gnocchis dans une poêle pendant 6 minutes avec les dés de poire et une noisette de beurre.",
+        "Verser la crème liquide et le gorgonzola en morceaux directement dans la poêle 2 minutes pour enrober les gnocchis.",
+        "Parsemer de noix concassées et accompagner de roquette."
+      ]
+    },
+    {
+      id: "we-p9",
+      title: "Croque-monsieur brioché gratiné au Comté affiné, jambon blanc et béchamel express",
+      type: "weekend-pleasure",
+      prepTime: "8 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "640 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Bistrot", "Simple & Rapide"],
+      baseServings: 2,
+      costFor2: 7.40,
+      description: "Le vrai croque-monsieur de brasserie parisienne doré au beurre et ultra-fondant au Comté.",
+      ingredients: [
+        { name: "Pain de mie épais ou brioché", qty: 4, unit: "tranches", aisle: "Boulangerie & Divers" },
+        { name: "Jambon blanc supérieur", qty: 4, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Comté affiné râpé ou en fines tranches", qty: 120, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Crème fraîche épaisse & pincée de muscade", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Beurre doux", qty: 20, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte croquante", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Tartiner les tranches de pain de crème fraîche parfumée à la muscade, garnir généreusement de jambon et de Comté.",
+        "Refermer les croques, ajouter un peu de Comté sur le dessus et les faire dorer à la poêle dans le beurre (ou 8 minutes au four/Airfryer à 200°C).",
+        "Déguster bien chaud et filant avec la salade verte."
+      ]
+    },
+    {
+      id: "we-p10",
+      title: "Tartiflette savoyarde expresse à la poêle au Reblochon fermier et salade verte",
+      type: "weekend-pleasure",
+      prepTime: "8 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "690 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Montagne", "Simple & Rapide"],
+      baseServings: 2,
+      costFor2: 8.40,
+      description: "Le grand classique montagnard au Reblochon coulant réalisé directement à la sauteuse en 15 minutes.",
+      ingredients: [
+        { name: "Pommes de terre grenailles précuites ou en petits dés", qty: 450, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Demi-Reblochon", qty: 220, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Lardons fumés ou allumettes de bacon", qty: 120, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Oignon", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Salade verte", qty: 100, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Faire dorer les pommes de terre coupées en dés à la sauteuse pendant 10 minutes avec l'oignon émincé et les lardons.",
+        "Déposer le demi-Reblochon coupé en tranches sur le dessus, couvrir la sauteuse 4 minutes à feu doux jusqu'à ce qu'il soit totalement fondu.",
+        "Servir aussitôt avec la salade verte."
+      ]
+    },
+    {
+      id: "we-p11",
+      title: "Pad Thaï gourmand aux crevettes, œufs brouillés, cacahuètes grillées et citron vert",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "590 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Asiatique", "Simple & Rapide"],
+      baseServings: 2,
+      costFor2: 8.50,
+      description: "Le célèbre plat de street-food thaïlandaise aux nouilles de riz sautées et cacahuètes croquantes en 20 minutes.",
+      ingredients: [
+        { name: "Nouilles de riz plates", qty: 160, unit: "g", aisle: "Épicerie salée" },
+        { name: "Crevettes décortiquées ou blanc de poulet", qty: 220, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Cacahuètes grillées concassées", qty: 40, unit: "g", aisle: "Épicerie salée" },
+        { name: "Citron vert & Sauce soja sucrée/salée", qty: 2, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Carotte & Oignon nouveau", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Tremper les nouilles de riz 6 minutes dans l'eau bouillante hors du feu puis les égoutter.",
+        "Saisir les crevettes et la carotte râpée au wok 3 minutes, pousser sur le côté et brouiller les œufs.",
+        "Ajouter les nouilles, la sauce soja, le jus de citron vert et parsemer généreusement de cacahuètes."
+      ]
+    },
+    {
+      id: "we-p12",
+      title: "Mac & Cheese ultra-fondant au cheddar affiné et bacon croustillant",
+      type: "weekend-pleasure",
+      prepTime: "5 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "660 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Comfort Food", "Simple & Rapide"],
+      baseServings: 2,
+      costFor2: 7.20,
+      description: "Des macaronis enrobés d'une sauce au cheddar ultra-crémeuse et garnis d'éclats de bacon grillé.",
+      ingredients: [
+        { name: "Macaronis ou Coquillettes", qty: 180, unit: "g", aisle: "Épicerie salée" },
+        { name: "Cheddar affiné râpé", qty: 120, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Tranches de poitrine fumée ou bacon", qty: 80, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Crème liquide", qty: 120, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Jeunes pousses de salade", qty: 60, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire les macaronis 9 minutes à l'eau bouillante salée.",
+        "Pendant ce temps, faire croustiller le bacon émincé à la poêle, puis chauffer la crème liquide et y faire fondre le cheddar râpé à feu doux.",
+        "Mélanger les pâtes égouttées à la sauce au cheddar, parsemer de bacon croustillant et servir avec la salade."
+      ]
+    },
+    {
+      id: "we-p13",
+      title: "Pizza bianca maison sur pâte fine : burrata crémeuse, jambon de Parme et roquette",
+      type: "weekend-pleasure",
+      prepTime: "5 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "630 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Italien", "Simple & Rapide"],
+      baseServings: 2,
+      costFor2: 8.20,
+      description: "Une pizza croustillante garnie après cuisson de burrata fraîche, jambon cru et roquette.",
+      ingredients: [
+        { name: "Pâte à pizza fine", qty: 1, unit: "rouleau", aisle: "Crèmerie & Frais" },
+        { name: "Burrata (ou Mozzarella di Bufala)", qty: 150, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Jambon de Parme ou Serrano", qty: 4, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Tomates cerises", qty: 150, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Roquette", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Préchauffer le four à 220°C. Étaler la pâte, la garnir d'un filet d'huile d'olive et des tomates cerises coupées en deux, puis enfourner 14 minutes.",
+        "À la sortie du four, disposer la roquette, les chiffonnades de jambon de Parme et la burrata ouverte au centre."
+      ]
+    },
+    {
+      id: "we-p14",
+      title: "Blanquette de veau ou volaille express à l'ancienne, champignons, carottes et riz",
+      type: "weekend-pleasure",
+      prepTime: "15 min",
+      cookTime: "25 min",
+      difficulty: "Moyenne",
+      budget: "€€ (Moyen)",
+      calories: "580 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Tradition", "Bistrot"],
+      baseServings: 2,
+      costFor2: 9.20,
+      description: "Toute la douceur d'une blanquette crémeuse au citron en version rapide.",
+      ingredients: [
+        { name: "Émincé de veau ou filets de poulet", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Champignons de Paris", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Carottes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Riz basmati", qty: 130, unit: "g", aisle: "Épicerie salée" },
+        { name: "Crème fraîche & Citron", qty: 100, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Bouillon de volaille", qty: 1, unit: "cube", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Couper la viande en morceaux et les carottes en rondelles fines, couvrir à hauteur d'eau avec le cube de bouillon et mijoter 18 minutes.",
+        "Ajouter les champignons émincés pour les 6 dernières minutes.",
+        "Lier le bouillon avec la crème fraîche et un trait de citron, puis servir avec le riz."
+      ]
+    },
+    {
+      id: "we-p15",
+      title: "Pâtes rigatoni alla Carbonara authentique (guanciale/pancetta, pecorino, jaune d'œuf)",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "620 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Italien", "Gourmand"],
+      baseServings: 2,
+      costFor2: 6.40,
+      description: "La vraie recette romaine crémeuse sans crème, liée au jaune d'œuf et au fromage affiné.",
+      ingredients: [
+        { name: "Rigatoni ou Spaghettis", qty: 180, unit: "g", aisle: "Épicerie salée" },
+        { name: "Pancetta ou lardons fumés", qty: 120, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Œufs", qty: 3, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pecorino ou Parmesan râpé", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte croquante", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire les pâtes dans l'eau bouillante salée. Faire croustiller la pancetta à sec dans une poêle.",
+        "Fouetter 2 jaunes + 1 œuf entier avec le fromage râpé et beaucoup de poivre noir.",
+        "Hors du feu, mélanger les pâtes égouttées, la pancetta, une louche d'eau de cuisson et le mélange œufs-fromage. Servir avec la salade."
+      ]
+    },
+    {
+      id: "we-p16",
+      title: "Camembert rôti au four au miel, thym et éclats de noix, pommes grenailles & jambon cru",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "20 min",
+      difficulty: "Très facile",
+      budget: "€€ (Moyen)",
+      calories: "670 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Convivial", "Partage"],
+      baseServings: 2,
+      costFor2: 7.80,
+      description: "Ultra-convivial pour un soir de week-end : un camembert coulant parfumé au thym.",
+      ingredients: [
+        { name: "Camembert au lait cru (en boîte bois)", qty: 1, unit: "pièce", aisle: "Crèmerie & Frais" },
+        { name: "Pommes de terre grenailles", qty: 350, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Jambon cru", qty: 4, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Salade verte", qty: 100, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Miel & Thym", qty: 1, unit: "c. à soupe", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Cuire les pommes grenailles 20 minutes à l'eau ou au four.",
+        "Inciser la croûte du camembert en croisillons, arroser d'un filet de miel et de thym, et enfourner 18 minutes à 190°C dans sa boîte en bois.",
+        "Déguster en trempant les pommes de terre, accompagné du jambon cru et de la salade."
+      ]
+    },
+    {
+      id: "we-p17",
+      title: "Poulet Tikka Masala crémeux aux épices douces, riz basmati et pains naans chauds",
       type: "weekend-pleasure",
       prepTime: "15 min",
       cookTime: "20 min",
       difficulty: "Moyenne",
       budget: "€€ (Moyen)",
       calories: "630 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Convivial", "Mexicain"],
+      tags: ["Menu Plaisir 🌟", "Indien", "Parfumé"],
       baseServings: 2,
-      description: "Des tortillas garnies de poulet fondant aux épices douces, gratinées au four et servies avec un guacamole frais.",
+      costFor2: 8.10,
+      description: "Le plat indien le plus populaire : morceaux de poulet grillés dans une sauce tomate-coco onctueuse.",
       ingredients: [
-        { name: "Tortillas de blé", qty: 4, unit: "pièces", aisle: "Boulangerie & Divers" },
-        { name: "Filets de poulet", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
-        { name: "Poivrons", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
-        { name: "Avocat mûr", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
-        { name: "Fromage râpé", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
-        { name: "Sauce tomate ou salsa", qty: 150, unit: "g", aisle: "Épicerie salée" }
+        { name: "Filets de poulet", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Coulis de tomates", qty: 250, unit: "g", aisle: "Épicerie salée" },
+        { name: "Yaourt grec ou lait de coco", qty: 120, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Riz basmati", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Pains Naans", qty: 2, unit: "pièces", aisle: "Boulangerie & Divers" },
+        { name: "Garam masala & Paprika", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
       ],
       steps: [
-        "Émincer le poulet et les poivrons, les faire sauter 10 minutes à la poêle avec du paprika et du cumin.",
-        "Garnir les tortillas du mélange poulet-poivrons, les rouler dans un plat à four, napper de sauce tomate et de fromage râpé.",
-        "Gratiner 10 minutes au four à 200°C.",
-        "Pendant ce temps, écraser l'avocat avec citron, sel et poivre pour accompagner les fajitas chaudes."
+        "Saisir les cubes de poulet enrobés d'épices 6 minutes à feu vif.",
+        "Ajouter le coulis de tomates et le yaourt (ou lait de coco) et laisser mijoter 12 minutes à feu doux.",
+        "Servir avec le riz basmati et les pains naans réchauffés au four."
       ]
     },
     {
-      id: "we-p7",
-      title: "Hachis Parmentier de canard confit et salade aux noix",
+      id: "we-p18",
+      title: "Entrecôte ou faux-filet grillé, sauce au poivre vert légère et pommes sautées",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "20 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "660 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Bistrot", "Gourmand"],
+      baseServings: 2,
+      costFor2: 11.40,
+      description: "Une belle pièce de bœuf façon bistrot parisien avec pommes de terre dorées et salade.",
+      ingredients: [
+        { name: "Faux-filets ou entrecôtes de bœuf", qty: 320, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pommes de terre", qty: 400, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Crème liquide légère", qty: 80, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte", qty: 80, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Poivre concassé & Moutarde", qty: 1, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Faire dorer les pommes de terre coupées en cubes 20 minutes à la poêle ou au four.",
+        "Saisir la viande selon la cuisson souhaitée, puis déglacer la poêle avec la crème, la moutarde et le poivre.",
+        "Servir avec les pommes sautées et la salade."
+      ]
+    },
+    {
+      id: "we-p19",
+      title: "Gratin de ravioles du Dauphiné au saumon fumé, courgettes et crème ciboulette",
+      type: "weekend-pleasure",
+      prepTime: "10 min",
+      cookTime: "18 min",
+      difficulty: "Très facile",
+      budget: "€€ (Moyen)",
+      calories: "590 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Gratiné", "Rapide"],
+      baseServings: 2,
+      costFor2: 8.60,
+      description: "Un gratin ultra-fondant prêt en moins de 30 minutes qui plaît à tous les coups.",
+      ingredients: [
+        { name: "Ravioles du Dauphiné", qty: 240, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Saumon ou truite fumée", qty: 100, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Courgette", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Crème liquide légère", qty: 150, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Comté ou Emmental râpé", qty: 40, unit: "g", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Préchauffer le four à 200°C. Faire revenir la courgette en petits dés 5 minutes à la poêle.",
+        "Dans un plat à gratin, alterner plaques de ravioles crues, courgettes et lanières de saumon fumé.",
+        "Arroser de crème, parsemer de fromage râpé et enfourner 15 minutes."
+      ]
+    },
+    {
+      id: "we-p20",
+      title: "Filet mignon de porc en croûte feuilletée (façon Wellington), moutarde et champignons",
+      type: "weekend-pleasure",
+      prepTime: "15 min",
+      cookTime: "28 min",
+      difficulty: "Moyenne",
+      budget: "€€ (Moyen)",
+      calories: "640 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Festif", "Convivial"],
+      baseServings: 2,
+      costFor2: 8.90,
+      description: "Un plat du dimanche spectaculaire et pourtant très simple avec une pâte feuilletée prête à dérouler.",
+      ingredients: [
+        { name: "Filet mignon de porc", qty: 320, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pâte feuilletée", qty: 1, unit: "rouleau", aisle: "Crèmerie & Frais" },
+        { name: "Champignons de Paris", qty: 150, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Jambon cru", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Moutarde", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Salade verte", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Dorer le filet mignon 4 minutes sur toutes ses faces à la poêle, puis hacher et poêler les champignons.",
+        "Étaler la pâte feuilletée, déposer le jambon cru, les champignons et le filet mignon badigeonné de moutarde, puis refermer.",
+        "Enfourner 25 minutes à 200°C et servir tranché avec la salade."
+      ]
+    },
+    {
+      id: "we-p21",
+      title: "Moules marinières au vin blanc, échalotes et persil plat & frites dorées au four",
+      type: "weekend-pleasure",
+      prepTime: "15 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "580 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Poisson", "Convivial"],
+      baseServings: 2,
+      costFor2: 8.30,
+      description: "L'esprit bord de mer à la maison avec des frites maison dorées au four.",
+      ingredients: [
+        { name: "Moules de bouchot nettoyées", qty: 1.2, unit: "kg", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pommes de terre à frites", qty: 400, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Échalotes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Persil frais", qty: 0.5, unit: "botte", aisle: "Fruits & Légumes" },
+        { name: "Vin blanc sec ou bouillon", qty: 100, unit: "ml", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Enfourner les bâtonnets de pommes de terre légèrement huilés pour 22 minutes à 200°C.",
+        "Dans une grande cocotte, faire suer les échalotes ciselées, verser le vin blanc et les moules.",
+        "Couvrir à feu vif pendant 6 minutes en secouant la cocotte jusqu'à ouverture des moules, puis parsemer de persil."
+      ]
+    },
+    {
+      id: "we-p22",
+      title: "Cannellonis gratinés à la ricotta, épinards, jambon italien et sauce tomate basilic",
       type: "weekend-pleasure",
       prepTime: "15 min",
       cookTime: "25 min",
       difficulty: "Moyenne",
-      budget: "€€ (Moyen)",
-      calories: "650 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Bistrot", "Tradition"],
+      budget: "€ (Bon marché)",
+      calories: "580 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Italien", "Gratiné"],
       baseServings: 2,
-      description: "Un grand classique de bistrot français avec un effiloché de canard sous une purée maison gratinée.",
+      costFor2: 6.60,
+      description: "Des rouleaux de pâtes généreusement farcis et gratinés à la mozzarella.",
       ingredients: [
-        { name: "Cuisses de canard confit", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
-        { name: "Pommes de terre à purée", qty: 500, unit: "g", aisle: "Fruits & Légumes" },
-        { name: "Échalotes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
-        { name: "Lait", qty: 80, unit: "ml", aisle: "Crèmerie & Frais" },
-        { name: "Salade verte & cerneaux de noix", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+        { name: "Tubes de cannellonis ou feuilles de lasagnes", qty: 8, unit: "pièces", aisle: "Épicerie salée" },
+        { name: "Ricotta", qty: 250, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Épinards hachés", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Coulis de tomates", qty: 350, unit: "g", aisle: "Épicerie salée" },
+        { name: "Mozzarella râpée", qty: 70, unit: "g", aisle: "Crèmerie & Frais" }
       ],
       steps: [
-        "Éplucher et cuire les pommes de terre 20 minutes dans l'eau salée puis les écraser en purée avec le lait chaud.",
-        "Dégraisser et effilocher les cuisses de canard, puis les faire revenir 5 minutes avec les échalotes ciselées.",
-        "Dans un plat à gratin, répartir l'effiloché de canard, recouvrir de purée et enfourner 15 minutes à 200°C pour dorer le dessus.",
-        "Déguster avec la salade verte aux noix."
+        "Mélanger la ricotta et les épinards cuits essorés avec sel, poivre et muscade.",
+        "Garnir les cannellonis, les ranger dans un plat nappé de coulis de tomates et couvrir de mozzarella.",
+        "Enfourner 25 minutes à 190°C."
       ]
     },
     {
-      id: "we-p8",
-      title: "Gnocchis poêlés au gorgonzola, poires rôties et éclats de noix",
+      id: "we-p23",
+      title: "Burger croustillant de poulet pané aux cornflakes, avocat, tomate et potatoes au four",
       type: "weekend-pleasure",
-      prepTime: "10 min",
-      cookTime: "18 min",
+      prepTime: "15 min",
+      cookTime: "20 min",
       difficulty: "Moyenne",
       budget: "€€ (Moyen)",
-      calories: "610 kcal / part",
-      tags: ["Menu Plaisir 🌟", "Végétarien", "Gourmand"],
+      calories: "640 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Gourmand", "Ludique"],
       baseServings: 2,
-      description: "L'alliance irrésistible des gnocchis dorés à la poêle, du fromage italien fondant et du croquant des noix.",
+      costFor2: 7.90,
+      description: "Un chicken burger maison ultra-croustillant cuit sans friture.",
       ingredients: [
-        { name: "Gnocchis à poêler ou frais", qty: 350, unit: "g", aisle: "Crèmerie & Frais" },
-        { name: "Gorgonzola (ou Roquefort)", qty: 90, unit: "g", aisle: "Crèmerie & Frais" },
-        { name: "Poire", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
-        { name: "Crème liquide légère", qty: 80, unit: "ml", aisle: "Crèmerie & Frais" },
-        { name: "Cerneaux de noix", qty: 30, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
-        { name: "Jeunes pousses de roquette", qty: 60, unit: "g", aisle: "Fruits & Légumes" }
+        { name: "Pains burgers", qty: 2, unit: "pièces", aisle: "Boulangerie & Divers" },
+        { name: "Filets de poulet", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Avocat", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Pommes de terre", qty: 350, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Chapelure ou Cornflakes non sucrés", qty: 50, unit: "g", aisle: "Épicerie salée" },
+        { name: "Salade & Tomate", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
       ],
       steps: [
-        "Faire dorer les gnocchis dans une poêle pendant 6 à 8 minutes avec les dés de poire.",
-        "Dans une petite casserole, faire fondre doucement le gorgonzola dans la crème liquide avec du poivre du moulin.",
-        "Napper les gnocchis dorés de sauce au gorgonzola et parsemer de cerneaux de noix concassés.",
-        "Servir avec la roquette fraîche."
+        "Couper les pommes de terre en quartiers (potatoes) et les rôtir 20 minutes au four à 200°C avec les filets de poulet enrobés de chapelure.",
+        "Garnir les pains burgers toastés d'avocat écrasé, tomate, salade et poulet croustillant."
+      ]
+    },
+    {
+      id: "we-p24",
+      title: "Croziflette légère de Savoie aux crozets de sarrasin, jambon cru, poireaux et Reblochon",
+      type: "weekend-pleasure",
+      prepTime: "12 min",
+      cookTime: "20 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "630 kcal / part",
+      tags: ["Menu Plaisir 🌟", "Montagne", "Convivial"],
+      baseServings: 2,
+      costFor2: 8.30,
+      description: "Les petites pâtes carrées savoyardes associées à une fondue de poireaux pour plus de légèreté.",
+      ingredients: [
+        { name: "Crozets de Savoie (sarrasin ou nature)", qty: 160, unit: "g", aisle: "Épicerie salée" },
+        { name: "Poireau", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Jambon cru de Savoie", qty: 3, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Reblochon", qty: 180, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Crème légère", qty: 60, unit: "ml", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Cuire les crozets 15 minutes à l'eau bouillante salée et faire fondre le poireau émincé à la poêle.",
+        "Mélanger dans un plat à gratin les crozets, le poireau, le jambon cru en lanières et la crème.",
+        "Disposer les tranches de Reblochon dessus et gratiner 12 minutes à 200°C."
       ]
     }
   ],
 
   // =========================================================================
-  // 4. DESSERTS DU WEEK-END (Associés aux 4 repas du week-end)
+  // 4. MENUS GOURMET (Semaine & Week-end) : Ingrédients plus nobles et délicats,
+  //    recettes SIMPLES à réaliser + SUGGESTION DE VIN pour accompagner ce repas
+  // =========================================================================
+  gourmetMeals: [
+    {
+      id: "gm-1",
+      title: "Noix de Saint-Jacques snackées au beurre demi-sel, fondue de poireaux vanillée & noisettes",
+      type: "gourmet",
+      prepTime: "10 min",
+      cookTime: "8 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "460 kcal / part",
+      tags: ["Gourmet 🍷", "Ingrédients nobles", "Recette simple"],
+      baseServings: 2,
+      costFor2: 14.90,
+      winePairing: {
+        name: "Chablis 1er Cru ou Sancerre Blanc",
+        color: "Vin blanc sec & minéral",
+        temp: "10-12°C",
+        note: "Sa fraîcheur ciselée et ses notes d'agrumes équilibrent à merveille le fondant beurré de la Saint-Jacques."
+      },
+      description: "Des noix de Saint-Jacques juste saisies 1 minute par face, déposées sur une étuvée de poireaux délicate.",
+      ingredients: [
+        { name: "Noix de Saint-Jacques fraîches (ou décongelées)", qty: 10, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Blancs de poireaux", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Crème entière fluide", qty: 80, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Beurre gastronomique demi-sel", qty: 25, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Noisettes torréfiées concassées", qty: 20, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Émincer finement les blancs de poireaux et les faire fondre 10 minutes à couvert à feu doux avec une noisette de beurre, puis lier avec la crème.",
+        "Sécher soigneusement les noix de Saint-Jacques sur du papier absorbant.",
+        "Dans une poêle bien chaude avec le beurre demi-sel moussant, snacker les Saint-Jacques 1 min 30 de chaque côté pour qu'elles soient dorées et nacrées à cœur.",
+        "Dresser sur la fondue de poireaux et parsemer d'éclats de noisettes."
+      ]
+    },
+    {
+      id: "gm-2",
+      title: "Magret de canard rôti au miel d'acacia et figues fraîches, pommes grenailles au romarin",
+      type: "gourmet",
+      prepTime: "8 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "580 kcal / part",
+      tags: ["Gourmet 🍷", "Sud-Ouest", "Recette simple"],
+      baseServings: 2,
+      costFor2: 14.50,
+      winePairing: {
+        name: "Saint-Émilion Grand Cru ou Pécharmant",
+        color: "Vin rouge velouté & fruité",
+        temp: "16-17°C",
+        note: "Ses tanins soyeux et ses arômes de fruits noirs mûrs répondent à la tendreté du magret et à la douceur de la figue."
+      },
+      description: "Un grand plat de table aux saveurs sucrées-salées raffinées, très simple à cuire à la poêle.",
+      ingredients: [
+        { name: "Magret de canard du Sud-Ouest", qty: 1, unit: "pièce (350g)", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Figues fraîches (ou rôties)", qty: 4, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Pommes de terre grenailles", qty: 350, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Miel d'acacia", qty: 1, unit: "c. à soupe", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Vinaigre balsamique affiné", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Quadriller la peau du magret au couteau sans entailler la chair. Faire dorer les pommes grenailles coupées en deux 15 minutes à la poêle couverte.",
+        "Déposer le magret côté peau dans une poêle froide, puis cuire 8 minutes à feu moyen en vidant l'excédent de graisse.",
+        "Retourner le magret, ajouter les figues coupées en deux et cuire 4 minutes côté chair. Réserver la viande sous une feuille d'aluminium.",
+        "Déglacer la poêle avec le miel et le vinaigre balsamique, trancher le magret rosé et napper du jus réduit."
+      ]
+    },
+    {
+      id: "gm-3",
+      title: "Tournedos de filet de bœuf poêlé, sauce onctueuse aux morilles et tagliatelles fraîches",
+      type: "gourmet",
+      prepTime: "8 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "590 kcal / part",
+      tags: ["Gourmet 🍷", "Ingrédients nobles", "Recette simple"],
+      baseServings: 2,
+      costFor2: 16.80,
+      winePairing: {
+        name: "Pommard, Gevrey-Chambertin ou Crozes-Hermitage",
+        color: "Vin rouge racé & boisé",
+        temp: "16-17°C",
+        note: "Les notes de sous-bois d'un grand Pinot Noir de Bourgogne ou d'une Syrah du Rhône épousent divinement le parfum des morilles."
+      },
+      description: "La pièce de bœuf la plus tendre sublimée par une sauce minute à la crème et aux morilles.",
+      ingredients: [
+        { name: "Tournedos dans le filet de bœuf", qty: 2, unit: "pièces (300g)", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Morilles séchées ou surgelées", qty: 30, unit: "g", aisle: "Épicerie salée" },
+        { name: "Crème entière de Normandie", qty: 120, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Tagliatelles fraîches aux œufs", qty: 250, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Échalote & Beurre", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Réhydrater les morilles 10 minutes dans un bol d'eau tiède (ou les rincer si surgelées).",
+        "Saisir les tournedos à feu vif dans le beurre moussant 2 à 3 minutes par face selon la cuisson désirée, puis réserver au chaud.",
+        "Dans la même poêle, faire revenir l'échalote ciselée et les morilles égouttées 3 minutes, verser la crème et laisser réduire 3 minutes.",
+        "Servir les tournedos nappés de sauce aux morilles avec les tagliatelles fraîches cuites 3 minutes."
+      ]
+    },
+    {
+      id: "gm-4",
+      title: "Risotto Carnaroli aux cèpes, huile de truffe blanche et Parmigiano Reggiano 24 mois",
+      type: "gourmet",
+      prepTime: "8 min",
+      cookTime: "18 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "560 kcal / part",
+      tags: ["Gourmet 🍷", "Haute gastronomie", "Végétarien"],
+      baseServings: 2,
+      costFor2: 12.90,
+      winePairing: {
+        name: "Meursault (Bourgogne Blanc) ou Pinot Noir d'Alsace",
+        color: "Vin blanc gastronomique ou Rouge léger",
+        temp: "12-14°C",
+        note: "La rondeur beurrée et les notes de noisette d'un grand Chardonnay bourguignon prolongent l'arôme envoûtant de la truffe et du cèpe."
+      },
+      description: "Un grand risotto de table d'une grande délicatesse aromatique, très simple à réaliser pas à pas.",
+      ingredients: [
+        { name: "Riz Carnaroli (ou Arborio)", qty: 160, unit: "g", aisle: "Épicerie salée" },
+        { name: "Cèpes (frais, bocal ou surgelés)", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Parmigiano Reggiano affiné 24 mois", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Huile d'olive à la truffe blanche", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Échalote & Bouillon de volaille", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Beurre doux", qty: 25, unit: "g", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Poêler les cèpes 5 minutes au beurre avec une pointe d'ail et de persil plat, puis les réserver.",
+        "Faire suer l'échalote ciselée, nacrer le riz Carnaroli 2 minutes et mouiller progressivement avec 550 ml de bouillon chaud pendant 16 minutes.",
+        "Hors du feu, incorporer le beurre froid, le Parmigiano râpé et les cèpes poêlés.",
+        "Dresser dans des assiettes creuses chaudes et parfumer d'un filet d'huile à la truffe blanche."
+      ]
+    },
+    {
+      id: "gm-5",
+      title: "Pavé de bar sauvage rôti sur peau, beurre blanc citronné & asperges vertes croquantes",
+      type: "gourmet",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "450 kcal / part",
+      tags: ["Gourmet 🍷", "Poisson noble", "Recette simple"],
+      baseServings: 2,
+      costFor2: 15.40,
+      winePairing: {
+        name: "Pouilly-Fumé ou Pessac-Léognan Blanc",
+        color: "Vin blanc sec & racé",
+        temp: "10-12°C",
+        note: "Ses notes fumées et d'agrumes mûrs mettent en valeur la chair fine et nacrée du bar rôti sur peau."
+      },
+      description: "Une assiette marine digne d'une table étoilée, prête en 20 minutes avec très peu de gestes.",
+      ingredients: [
+        { name: "Filets de bar (ou daurade royale) avec peau", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Asperges vertes (ou haricots fins)", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Beurre demi-sel froid", qty: 40, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Échalote", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Citron jaune bio", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Crème liquide", qty: 2, unit: "c. à soupe", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Cuire les asperges vertes 6 minutes à l'eau bouillante salée puis les dorer 2 minutes à la poêle pour les garder croquantes.",
+        "Saisir les pavés de bar côté peau pendant 5 minutes dans une poêle chaude avec un filet d'huile d'olive, puis 2 minutes côté chair.",
+        "Faire réduire l'échalote ciselée avec le jus du demi-citron et 2 c. à soupe d'eau, ajouter la crème puis monter au fouet hors du feu avec le beurre froid en dés.",
+        "Dresser le bar croustillant sur les asperges et napper de sauce beurre blanc citronné."
+      ]
+    },
+    {
+      id: "gm-6",
+      title: "Suprême de pintade ou volaille fermière doré, crème de truffe et mousseline de panais",
+      type: "gourmet",
+      prepTime: "10 min",
+      cookTime: "16 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "540 kcal / part",
+      tags: ["Gourmet 🍷", "Volaille fine", "Recette simple"],
+      baseServings: 2,
+      costFor2: 13.80,
+      winePairing: {
+        name: "Mercurey Blanc ou Côtes-du-Jura Chardonnay",
+        color: "Vin blanc rond & ample",
+        temp: "11-13°C",
+        note: "Un grand vin blanc bourguignon à la texture onctueuse accompagne avec élégance la douceur du panais et la crème truffée."
+      },
+      description: "La finesse d'un suprême fermier à la peau dorée accompagnée d'une mousseline douce et veloutée.",
+      ingredients: [
+        { name: "Suprêmes de pintade ou poulet fermier Label Rouge", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Panais (ou pommes de terre Agata)", qty: 400, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Crème fraîche entière", qty: 100, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Brisures ou tartufata de truffe d'été", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Beurre doux", qty: 25, unit: "g", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Éplucher et couper les panais en dés, les cuire 14 minutes dans l'eau bouillante salée puis les mixer finement avec le beurre et une cuillère de crème.",
+        "Dorer les suprêmes de volaille à la poêle 6 minutes côté peau puis 6 minutes côté chair à feu moyen.",
+        "Déglacer la poêle avec le reste de crème et la cuillère de truffe, laisser frémir 2 minutes.",
+        "Servir les suprêmes tranchés en biseau sur la mousseline de panais."
+      ]
+    },
+    {
+      id: "gm-7",
+      title: "Tataki de thon rouge mi-cuit en croûte de sésame, avocat et mangue fraîche au citron vert",
+      type: "gourmet",
+      prepTime: "10 min",
+      cookTime: "4 min",
+      difficulty: "Très facile",
+      budget: "€€€ (Gourmet)",
+      calories: "470 kcal / part",
+      tags: ["Gourmet 🍷", "Poisson noble", "Ultra-rapide"],
+      baseServings: 2,
+      costFor2: 15.20,
+      winePairing: {
+        name: "Riesling Grand Cru d'Alsace ou Bandol Rosé",
+        color: "Vin blanc aromatique ou Rosé de gastronomie",
+        temp: "9-11°C",
+        note: "La tension fraîche et les notes exotiques du Riesling soulignent le sésame torréfié, la mangue et le fondant du thon mi-cuit."
+      },
+      description: "Une recette spectaculaire et ultra-rapide : le thon est simplement saisi 1 minute par face en croûte de sésame.",
+      ingredients: [
+        { name: "Pavés de thon rouge (ou albacore) très frais", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Graines de sésame blond et noir", qty: 3, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Avocat mûr", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Mangue fraîche", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Sauce soja sucrée & Huile de sésame", qty: 2, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Citron vert", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Badigeonner les pavés de thon de sauce soja puis les rouler dans les graines de sésame pour former une croûte régulière.",
+        "Couper l'avocat et la mangue en petits dés, les assaisonner de jus de citron vert et d'une goutte d'huile de sésame.",
+        "Saisir le thon à feu très vif dans une poêle chaude pendant 1 minute seulement sur chaque face afin que le cœur reste cru et fondant.",
+        "Trancher finement le thon et le dresser à côté du tartare avocat-mangue."
+      ]
+    },
+    {
+      id: "gm-8",
+      title: "Gambas sauvages rôties à l'ail doux, linguine fraîches à la bisque de homard et basilic",
+      type: "gourmet",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "550 kcal / part",
+      tags: ["Gourmet 🍷", "Fruits de mer", "Recette simple"],
+      baseServings: 2,
+      costFor2: 14.20,
+      winePairing: {
+        name: "Châteauneuf-du-Pape Blanc ou Cassis Blanc",
+        color: "Vin blanc solaire & iodé",
+        temp: "10-12°C",
+        note: "Son volume en bouche et sa finale saline s'harmonisent intensément avec la bisque de homard et les gambas grillées."
+      },
+      description: "Des linguine enrobées d'une sauce veloutée à la bisque de homard et surmontées de belles gambas dorées.",
+      ingredients: [
+        { name: "Grosses gambas décortiquées", qty: 10, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Linguine fraîches (ou spaghettis bronze)", qty: 220, unit: "g", aisle: "Épicerie salée" },
+        { name: "Bisque de homard (bocal ou conserve fine)", qty: 200, unit: "g", aisle: "Épicerie salée" },
+        { name: "Crème liquide entière", qty: 60, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Tomates cerises & Basilic frais", qty: 120, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Ail & Huile d'olive", qty: 1, unit: "gousse", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire les linguine al dente dans l'eau bouillante salée.",
+        "Dans une grande poêle, saisir les gambas et les tomates cerises coupées en deux à l'huile d'olive avec l'ail pendant 3 minutes.",
+        "Verser la bisque de homard et la crème liquide, laisser réduire 2 minutes à feu doux.",
+        "Enrober les linguine dans la sauce et parsemer de feuilles de basilic frais."
+      ]
+    },
+    {
+      id: "gm-9",
+      title: "Médaillons de veau en robe de jambon de Parme et sauge (Saltimbocca), polenta crémeuse au parmesan",
+      type: "gourmet",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "530 kcal / part",
+      tags: ["Gourmet 🍷", "Gastronomie italienne", "Recette simple"],
+      baseServings: 2,
+      costFor2: 14.60,
+      winePairing: {
+        name: "Chianti Classico Riserva ou Volnay (Bourgogne)",
+        color: "Vin rouge fin & élégant",
+        temp: "15-16°C",
+        note: "Sa fraîcheur fruitée et ses tanins délicats respectent la finesse du veau tout en répondant au jambon de Parme."
+      },
+      description: "Le grand classique romain ultra-rapide où le jambon de Parme et la sauge parfument le veau fondant.",
+      ingredients: [
+        { name: "Médaillons ou escalopes fines de veau", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Jambon de Parme affiné", qty: 4, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Polenta fine précuite", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Parmesan râpé", qty: 50, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Feuilles de sauge fraîche (ou thym) & Beurre", qty: 6, unit: "feuilles", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Poser une tranche de jambon de Parme et une feuille de sauge sur chaque médaillon de veau.",
+        "Saisir les médaillons à la poêle dans le beurre moussant 3 minutes par face, puis déglacer avec 3 c. à soupe d'eau ou vin blanc.",
+        "En parallèle, verser la polenta en pluie dans 500 ml d'eau/lait frémissant salé, remuer 4 minutes et incorporer le parmesan.",
+        "Servir les Saltimbocca sur la polenta crémeuse nappée du jus de cuisson."
+      ]
+    },
+    {
+      id: "gm-10",
+      title: "Dos de cabillaud Skrei nacré, sauce veloutée au safran et tombée d'épinards frais",
+      type: "gourmet",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "440 kcal / part",
+      tags: ["Gourmet 🍷", "Poisson noble", "Recette simple"],
+      baseServings: 2,
+      costFor2: 13.90,
+      winePairing: {
+        name: "Condrieu (Viognier) ou Viré-Clessé",
+        color: "Vin blanc aromatique & soyeux",
+        temp: "10-12°C",
+        note: "Les arômes de fleurs blanches et d'abricot du Viognier créent un accord majestueux avec l'or rouge du safran."
+      },
+      description: "Des pétales de cabillaud nacrés servis sur des épinards fondants et une sauce d'or au safran.",
+      ingredients: [
+        { name: "Dos de cabillaud épais (Skrei)", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Jeunes pousses d'épinards frais", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Crème entière liquide", qty: 120, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Pistils ou poudre de safran", qty: 1, unit: "dose", aisle: "Épicerie salée" },
+        { name: "Riz basmati ou sauvage", qty: 110, unit: "g", aisle: "Épicerie salée" },
+        { name: "Échalote", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire le riz et faire tomber les épinards frais 2 minutes à la poêle avec une noisette de beurre.",
+        "Faire revenir l'échalote ciselée, verser la crème et infuser le safran à feu très doux pendant 4 minutes.",
+        "Cuire les dos de cabillaud 4 à 5 minutes par face à la poêle (ou 12 min au four à 190°C) pour qu'ils restent nacrés.",
+        "Dresser sur le lit d'épinards et napper de sauce safranée."
+      ]
+    },
+    {
+      id: "gm-11",
+      title: "Ravioles du Dauphiné Label Rouge pochées, crème de saumon sauvage & œufs de truite",
+      type: "gourmet",
+      prepTime: "5 min",
+      cookTime: "5 min",
+      difficulty: "Très facile",
+      budget: "€€€ (Gourmet)",
+      calories: "540 kcal / part",
+      tags: ["Gourmet 🍷", "Ultra-rapide", "Recette simple"],
+      baseServings: 2,
+      costFor2: 13.20,
+      winePairing: {
+        name: "Crozes-Hermitage Blanc ou Chignin-Bergeron",
+        color: "Vin blanc souple & floral",
+        temp: "10-12°C",
+        note: "Un blanc de la Vallée du Rhône ou de Savoie tout en finesse accompagne le Comté des ravioles et le saumon fumé."
+      },
+      description: "Un plat gastronomique prêt en 10 minutes chrono : les ravioles cuisent en 1 minute et fondent en bouche.",
+      ingredients: [
+        { name: "Ravioles du Dauphiné Label Rouge", qty: 240, unit: "g (4 plaques)", aisle: "Crèmerie & Frais" },
+        { name: "Saumon fumé sauvage (ou truite)", qty: 120, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Œufs de truite ou de saumon (optionnel)", qty: 30, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Crème fraîche entière", qty: 120, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Ciboulette fraîche & Citron", qty: 0.5, unit: "botte", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Chauffer doucement la crème fraîche dans une petite casserole avec un filet de citron et du poivre du moulin.",
+        "Plonger les plaques de ravioles dans une eau frémissante (non bouillante) pendant 1 minute exactement : dès qu'elles remontent, les égoutter à l'écumoire.",
+        "Dresser les ravioles dans des assiettes creuses, napper de crème chaude et garnir de saumon fumé, d'œufs de truite et de ciboulette."
+      ]
+    },
+    {
+      id: "gm-12",
+      title: "Côtes d'agneau rôties au thym frais et fleur de sel, poêlée d'artichauts et tomates confites",
+      type: "gourmet",
+      prepTime: "8 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€€ (Gourmet)",
+      calories: "560 kcal / part",
+      tags: ["Gourmet 🍷", "Terroir", "Recette simple"],
+      baseServings: 2,
+      costFor2: 15.90,
+      winePairing: {
+        name: "Saint-Julien (Bordeaux) ou Pic Saint-Loup",
+        color: "Vin rouge structuré & aromatique",
+        temp: "16-17°C",
+        note: "Ses notes de garrigue, de cassis et d'épices douces s'accordent merveilleusement avec l'agneau rôti au thym."
+      },
+      description: "Des côtes d'agneau premières saisies au thym frais et accompagnées d'une garniture méditerranéenne délicate.",
+      ingredients: [
+        { name: "Côtes d'agneau premières (ou filet)", qty: 4, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Cœurs d'artichauts marinés", qty: 200, unit: "g", aisle: "Épicerie salée" },
+        { name: "Tomates séchées ou confites à l'huile", qty: 80, unit: "g", aisle: "Épicerie salée" },
+        { name: "Pommes de terre grenailles", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Thym frais, Ail en chemise & Fleur de sel", qty: 1, unit: "branche", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire les pommes grenailles coupées en deux 12 minutes à l'eau ou à la poêle.",
+        "Poêler les cœurs d'artichauts coupés en quartiers avec les tomates confites et les grenailles pendant 4 minutes.",
+        "Saisir les côtes d'agneau 3 minutes par face à feu vif avec la branche de thym et l'ail en chemise.",
+        "Parsemer de fleur de sel et servir aussitôt avec la poêlée méditerranéenne."
+      ]
+    }
+  ],
+
+  // =========================================================================
+  // 5. DESSERTS (Associés aux repas du week-end, Plaisir et Gourmet)
   // =========================================================================
   weekendDesserts: [
     {
@@ -2601,12 +3421,277 @@ window.RECIPES_DB = {
         "Disposer de fines lamelles de pommes en rosace, parsemer de cassonade et de petites noisettes de beurre.",
         "Enfourner 20 minutes jusqu'à ce que les bords soient bien feuilletés et caramélisés."
       ]
+    },
+    {
+      id: "des-11",
+      title: "Pain perdu brioché doré à la vanille et poêlée de pommes caramélisées",
+      style: "pleasure",
+      prepTime: "8 min",
+      cookTime: "8 min",
+      baseServings: 2,
+      costFor2: 2.30,
+      ingredients: [
+        { name: "Brioche tranchée", qty: 4, unit: "tranches", aisle: "Boulangerie & Divers" },
+        { name: "Œufs", qty: 1, unit: "pièce", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Lait", qty: 100, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Pomme", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Sucre vanillé & Beurre", qty: 1, unit: "sachet", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Battre l'œuf avec le lait et le sucre vanillé, y tremper les tranches de brioche.",
+        "Faire dorer 2 minutes par face à la poêle avec les quartiers de pomme."
+      ]
+    },
+    {
+      id: "des-12",
+      title: "Carpaccio d'ananas frais (ou orange) au sirop de citron vert, menthe et pistaches",
+      style: "gourmet",
+      prepTime: "10 min",
+      cookTime: "0 min",
+      baseServings: 2,
+      costFor2: 2.80,
+      ingredients: [
+        { name: "Ananas Victoria mûr (ou oranges)", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Citron vert", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Menthe fraîche & Pistaches", qty: 0.25, unit: "botte", aisle: "Fruits & Légumes" },
+        { name: "Miel d'acacia", qty: 1, unit: "c. à café", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Trancher très finement l'ananas et le disposer en rosace sur deux assiettes.",
+        "Arroser de jus de citron vert mélangé au miel et parsemer de menthe ciselée et pistaches."
+      ]
+    },
+    {
+      id: "des-13",
+      title: "Clafoutis léger aux fruits rouges (ou cerises) et amandes effilées",
+      style: "balanced",
+      prepTime: "8 min",
+      cookTime: "22 min",
+      baseServings: 2,
+      costFor2: 2.60,
+      ingredients: [
+        { name: "Fruits rouges ou cerises", qty: 180, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Lait demi-écrémé", qty: 150, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Farine & Sucre", qty: 40, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Fouetter les œufs avec le sucre, la farine et le lait.",
+        "Répartir les fruits dans deux ramequins, verser l'appareil et cuire 22 minutes à 190°C."
+      ]
+    },
+    {
+      id: "des-14",
+      title: "Poires Belle-Hélène express pochées à la vanille et nappage chocolat noir",
+      style: "gourmet",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      baseServings: 2,
+      costFor2: 2.70,
+      ingredients: [
+        { name: "Poires mûres", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Chocolat noir grand cru 70%", qty: 60, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Amandes effilées torréfiées", qty: 15, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Éplucher et pocher les demi-poires 10 minutes dans une casserole d'eau vanillée.",
+        "Faire fondre le chocolat noir avec 2 cuillères d'eau chaude, napper les poires et parsemer d'amandes."
+      ]
+    },
+    {
+      id: "des-15",
+      title: "Riz au lait crémeux à la vanille Bourbon et caramel léger",
+      style: "pleasure",
+      prepTime: "5 min",
+      cookTime: "22 min",
+      baseServings: 2,
+      costFor2: 1.80,
+      ingredients: [
+        { name: "Riz rond à dessert", qty: 70, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Lait demi-écrémé", qty: 400, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Sucre vanillé", qty: 1, unit: "sachet", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Sucre roux", qty: 25, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Cuire le riz rond à feu très doux dans le lait vanillé pendant 20 minutes en remuant souvent.",
+        "Sucrer en fin de cuisson et servir tiède ou frais."
+      ]
+    },
+    {
+      id: "des-16",
+      title: "Verrines façon Cheesecake léger au citron, fromage frais et spéculoos",
+      style: "gourmet",
+      prepTime: "10 min",
+      cookTime: "0 min",
+      baseServings: 2,
+      costFor2: 2.60,
+      ingredients: [
+        { name: "Fromage frais (type Philadelphia ou St Môret) & Skyr", qty: 160, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Biscuits Spéculoos ou Sablés", qty: 4, unit: "pièces", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Citron non traité", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Miel ou sucre glace", qty: 1, unit: "c. à soupe", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Émietter les biscuits au fond de deux verrines.",
+        "Fouetter le fromage frais avec le miel, le jus et le zeste de citron, puis dresser sur les biscuits."
+      ]
+    },
+    {
+      id: "des-17",
+      title: "Bananes flambées ou rôties au lait de coco, citron vert et pépites de chocolat",
+      style: "pleasure",
+      prepTime: "5 min",
+      cookTime: "8 min",
+      baseServings: 2,
+      costFor2: 2.00,
+      ingredients: [
+        { name: "Bananes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Chocolat noir", qty: 40, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Sucre roux & Beurre", qty: 15, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Couper les bananes dans la longueur et les dorer 5 minutes à la poêle avec le beurre et le sucre roux.",
+        "Parsemer de pépites de chocolat noir qui fondent à la chaleur."
+      ]
+    },
+    {
+      id: "des-18",
+      title: "Mousse légère au citron et fromage blanc sur sablé breton",
+      style: "balanced",
+      prepTime: "10 min",
+      cookTime: "0 min",
+      baseServings: 2,
+      costFor2: 2.20,
+      ingredients: [
+        { name: "Fromage blanc 3%", qty: 200, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Citron jaune", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Sablés bretons", qty: 2, unit: "pièces", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Sucre", qty: 20, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Mélanger le fromage blanc avec le zeste et le jus de citron ainsi que le sucre.",
+        "Répartir sur les sablés bretons émiettés en verrines."
+      ]
+    },
+    {
+      id: "des-19",
+      title: "Cookies géants moelleux (Skillet Cookie) aux pépites de chocolat noir et noisettes",
+      style: "pleasure",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      baseServings: 2,
+      costFor2: 2.30,
+      ingredients: [
+        { name: "Farine", qty: 80, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Beurre mou", qty: 40, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Sucre cassonade", qty: 40, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Œufs", qty: 1, unit: "pièce", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Chocolat noir en pépites", qty: 50, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Mélanger le beurre mou, la cassonade, l'œuf, la farine et les pépites de chocolat.",
+        "Enfourner 12 minutes à 185°C pour garder un cœur ultra-moelleux."
+      ]
+    },
+    {
+      id: "des-20",
+      title: "Brochettes de fruits frais rôtis au miel et romarin, yaourt grec vanillé",
+      style: "gourmet",
+      prepTime: "8 min",
+      cookTime: "6 min",
+      baseServings: 2,
+      costFor2: 2.60,
+      ingredients: [
+        { name: "Pomme, Poire ou Pêche", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Yaourt grec", qty: 1, unit: "pot", aisle: "Crèmerie & Frais" },
+        { name: "Miel", qty: 1, unit: "c. à soupe", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Poêler les quartiers de fruits 5 minutes avec le miel.",
+        "Servir tiède accompagné du yaourt grec frais."
+      ]
+    },
+    {
+      id: "des-21",
+      title: "Crème dessert maison au chocolat noir intense (sans œuf)",
+      style: "balanced",
+      prepTime: "5 min",
+      cookTime: "8 min",
+      baseServings: 2,
+      costFor2: 1.90,
+      ingredients: [
+        { name: "Lait demi-écrémé", qty: 250, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Chocolat noir pâtissier", qty: 60, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Maïzena", qty: 15, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Sucre", qty: 15, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Délayer la Maïzena dans le lait froid avec le sucre, porter à ébullition 2 minutes en fouettant.",
+        "Hors du feu, faire fondre le chocolat noir dedans et verser en ramequins."
+      ]
+    },
+    {
+      id: "des-22",
+      title: "Crumble express aux fruits rouges et flocons d'avoine dorés",
+      style: "balanced",
+      prepTime: "8 min",
+      cookTime: "18 min",
+      baseServings: 2,
+      costFor2: 2.40,
+      ingredients: [
+        { name: "Fruits rouges (frais ou surgelés)", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Flocons d'avoine & Farine", qty: 60, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Beurre", qty: 30, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Cassonade", qty: 25, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Disposer les fruits rouges dans deux ramequins.",
+        "Sabler les flocons d'avoine, la farine, la cassonade et le beurre, répartir sur les fruits et enfourner 18 minutes à 190°C."
+      ]
+    },
+    {
+      id: "des-23",
+      title: "Îles flottantes légères sur crème anglaise vanillée",
+      style: "gourmet",
+      prepTime: "12 min",
+      cookTime: "8 min",
+      baseServings: 2,
+      costFor2: 2.30,
+      ingredients: [
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Lait demi-écrémé", qty: 250, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Sucre & Vanille", qty: 40, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Amandes effilées", qty: 15, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Préparer une crème anglaise légère avec les jaunes d'œufs, le sucre et le lait vanillé.",
+        "Monter les blancs en neige ferme, les pocher 1 minute au micro-ondes ou sur le lait et les déposer sur la crème."
+      ]
+    },
+    {
+      id: "des-24",
+      title: "Coupe glacée ou yaourt glacé minute aux fruits rouges mixés et éclats de chocolat",
+      style: "balanced",
+      prepTime: "5 min",
+      cookTime: "0 min",
+      baseServings: 2,
+      costFor2: 2.30,
+      ingredients: [
+        { name: "Fruits rouges surgelés", qty: 180, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Yaourt grec", qty: 150, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Miel", qty: 1, unit: "c. à soupe", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Chocolat noir concassé", qty: 20, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Mixer les fruits rouges surgelés avec le yaourt grec et le miel pour obtenir un yaourt glacé onctueux immédiat.",
+        "Servir parsemé d'éclats de chocolat noir."
+      ]
     }
   ],
 
   // Coûts moyens estimés en supermarché (pour 2 adultes : baseServings = 2)
   estimatedCostsFor2: {
-    // Dîners de semaine (économiques & healthy)
+    // Dîners de semaine (économiques & équilibrés)
     "wd-1": 3.40,
     "wd-2": 5.20,
     "wd-3": 2.90,
@@ -2643,6 +3728,19 @@ window.RECIPES_DB = {
     "we-p6": 8.20,
     "we-p7": 10.80,
     "we-p8": 7.50,
+    // Menus Gourmet
+    "gm-1": 14.90,
+    "gm-2": 14.50,
+    "gm-3": 16.80,
+    "gm-4": 12.90,
+    "gm-5": 15.40,
+    "gm-6": 13.80,
+    "gm-7": 15.20,
+    "gm-8": 14.20,
+    "gm-9": 14.60,
+    "gm-10": 13.90,
+    "gm-11": 13.20,
+    "gm-12": 15.90,
     // Desserts
     "des-1": 2.40,
     "des-2": 2.20,
@@ -2657,18 +3755,29 @@ window.RECIPES_DB = {
   }
 };
 
-// Enrichissement automatique de chaque recette et dessert avec son coût pour 2 parts
+// Enrichissement automatique de chaque recette et dessert avec son coût pour 2 parts et normalisation de simplicité
 (function attachCosts() {
   const db = window.RECIPES_DB;
   const costMap = db.estimatedCostsFor2 || {};
-  [...db.weekdayDinners, ...db.weekendBalancedMeals, ...db.weekendPleasureMeals].forEach((r) => {
+  [
+    ...(db.weekdayDinners || []),
+    ...(db.weekendBalancedMeals || []),
+    ...(db.weekendPleasureMeals || []),
+    ...(db.gourmetMeals || [])
+  ].forEach((r) => {
     if (typeof r.costFor2 !== 'number') {
-      r.costFor2 = costMap[r.id] || (r.type === 'weekend-pleasure' ? 8.50 : 4.50);
+      r.costFor2 =
+        costMap[r.id] ||
+        (r.type === 'gourmet' ? 14.50 : r.type === 'weekend-pleasure' ? 8.50 : 4.50);
+    }
+    // Toutes les recettes (Équilibré, Plaisir, Gourmet) restent simples à réaliser
+    if (r.difficulty === 'Moyenne') {
+      r.difficulty = 'Facile';
     }
   });
-  db.weekendDesserts.forEach((d) => {
+  (db.weekendDesserts || []).forEach((d) => {
     if (typeof d.costFor2 !== 'number') {
-      d.costFor2 = costMap[d.id] || 2.30;
+      d.costFor2 = costMap[d.id] || (d.style === 'gourmet' ? 2.60 : 2.30);
     }
   });
 })();
