@@ -3718,5 +3718,152 @@ body {
   }
 }
 
+/* =========================================================================
+   NAVIGATION HORIZONTALE DÉJEUNER (MIDI) <-> DÎNER (SOIR) & OPTIMISATION MOBILE
+   ========================================================================= */
+.meal-period-swipe-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.meal-nav-arrow {
+  width: 36px;
+  height: 38px;
+  padding: 0 !important;
+  justify-content: center;
+  border-radius: 10px !important;
+  flex-shrink: 0;
+  font-weight: 800 !important;
+}
+
+.meal-period-tabs {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--bg-subtle);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.meal-period-tab {
+  border: 1.5px solid transparent;
+  background: transparent;
+  border-radius: 9px;
+  padding: 7px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.meal-period-tab.lunch-tab.active {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #78350f;
+  border-color: #f59e0b;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.22);
+}
+
+.meal-period-tab.dinner-tab.active {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 2px 6px rgba(49, 46, 129, 0.28);
+}
+
+.day-group.day-group-compact {
+  padding: 10px;
+  border-radius: var(--radius-lg);
+}
+
+.day-meal-single-stage {
+  overflow: hidden;
+}
+
+.anim-slide-from-right {
+  animation: mealSlideFromRight 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.anim-slide-from-left {
+  animation: mealSlideFromLeft 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes mealSlideFromRight {
+  from {
+    opacity: 0.35;
+    transform: translateX(34px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mealSlideFromLeft {
+  from {
+    opacity: 0.35;
+    transform: translateX(-34px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .main-container {
+    margin: 8px auto;
+    padding: 0 8px;
+  }
+
+  .day-pager-card {
+    padding: 8px 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .day-group.day-group-compact {
+    padding: 8px;
+  }
+
+  .meal-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .meal-time-banner {
+    margin: -12px -12px 6px -12px;
+    padding: 8px 12px;
+  }
+
+  .meal-dish-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 1.25rem;
+  }
+
+  .meal-title {
+    font-size: 1.02rem;
+  }
+
+  .meal-desc {
+    font-size: 0.78rem;
+    margin-top: 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+
 
 
