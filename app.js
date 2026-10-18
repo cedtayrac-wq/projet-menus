@@ -4750,17 +4750,35 @@ function buildStepByStepVoiceSequence(ctx) {
 let cachedElevenLabsVoices = [];
 
 function getEffectiveElevenLabsApiKey() {
-  const saved = (localStorage.getItem(STORAGE_KEYS.ELEVENLABS_KEY) || '').trim();
-  if (saved) return saved;
-  const voiceKey = (localStorage.getItem(STORAGE_KEYS.VOICE_AI_KEY) || '').trim();
-  if (voiceKey && (voiceKey.startsWith('sk_') || voiceKey.startsWith('xi-'))) {
-    return voiceKey;
+  const cfg = window.APP_CONFIG || {};
+  const isLocal = isLocalAdminEnvironment();
+  const allowShared = isLocal || cfg.shareAiKeyWithGuests !== false;
+
+  if (cfg.aiVoiceEnabled === false && !isLocal) {
+    return '';
+  }
+
+  if (allowShared && cfg.aiVoiceEnabled !== false) {
+    const sharedXi = decodeSharedApiKey(cfg.elevenLabsApiKeyEncoded || cfg.elevenLabsApiKey || '');
+    if (sharedXi) return sharedXi;
+    const sharedVoice = decodeSharedApiKey(cfg.voiceApiKeyEncoded || cfg.voiceApiKey || '');
+    if (sharedVoice && (sharedVoice.startsWith('sk_') || sharedVoice.startsWith('xi-'))) {
+      return sharedVoice;
+    }
+  }
+
+  if (isLocal) {
+    const saved = (localStorage.getItem(STORAGE_KEYS.ELEVENLABS_KEY) || '').trim();
+    if (saved) return saved;
   }
   return '';
 }
 
 function getResolvedElevenLabsVoiceId(personaId) {
   const pId = personaId || state.voiceSettings?.persona || 'lignac';
+  const cfg = window.APP_CONFIG || {};
+  const adminCloneId = (cfg.clonedVoiceIds?.[pId] || '').trim();
+  if (adminCloneId) return adminCloneId;
   const customId = (state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim();
   if (customId) return customId;
   const p = VOICE_PERSONAS[pId] || VOICE_PERSONAS.lignac;
@@ -4769,7 +4787,8 @@ function getResolvedElevenLabsVoiceId(personaId) {
 
 function hasCustomVoiceClone(personaId) {
   const pId = personaId || state.voiceSettings?.persona || 'lignac';
-  return Boolean((state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim());
+  const cfg = window.APP_CONFIG || {};
+  return Boolean((cfg.clonedVoiceIds?.[pId] || state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim());
 }
 
 function setupVoiceGuide() {
