@@ -494,15 +494,43 @@
       <div class="section-banner">
         <div class="banner-text-col">
           <h2>⚙️ Paramètres de l'Application</h2>
-          <p>Choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe ou Voix IA neutres) et retrouvez les consignes d'installation.</p>
+          <p>Choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe ou Voix IA neutres), activez le micro et la caméra, et retrouvez les consignes d'installation.</p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" id="btn-header-enable-mic" class="btn btn-outline btn-sm" onclick="requestAppMicrophonePermission()">
+            🎙️ Activer le micro
+          </button>
+          <button type="button" id="btn-header-enable-camera" class="btn btn-outline btn-sm" onclick="requestAppCameraPermission()">
+            📹 Activer la caméra
+          </button>
           <button class="btn btn-outline btn-sm" onclick="testSelectedVoiceGuide()">
             🔊 Tester la voix choisie
           </button>
           <button class="btn btn-primary btn-sm" onclick="handleInstallAppClick()">
             📲 Installer l'application
           </button>
+        </div>
+      </div>
+
+      <!-- Bloc Autorisations Micro & Caméra pour l'application -->
+      <div class="card-panel" style="margin-bottom: 20px;">
+        <div class="shopping-panel-header" style="flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <h3 class="panel-cookbook-title" style="margin-bottom: 2px;">🎙️📹 Autorisations Micro &amp; Caméra</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Activez le <strong>microphone</strong> (pour les commandes vocales du guide cuisine et la dictée d'ingrédients) et la <strong>caméra</strong> (pour scanner votre frigo et votre placard).
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+          <button type="button" id="btn-settings-enable-mic" class="btn btn-primary" onclick="requestAppMicrophonePermission()">
+            🎙️ Activer le micro
+          </button>
+          <button type="button" id="btn-settings-enable-camera" class="btn btn-primary" onclick="requestAppCameraPermission()">
+            📹 Activer la caméra
+          </button>
+          <span id="settings-mic-status-pill" class="meta-pill">🎙️ Micro : À activer</span>
+          <span id="settings-camera-status-pill" class="meta-pill">📹 Caméra : À activer</span>
         </div>
       </div>
 
