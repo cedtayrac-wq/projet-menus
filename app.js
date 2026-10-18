@@ -6209,15 +6209,15 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 }
 
 // ============================================================================
-// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 6 VRAIS EXTRAITS STUDIO/INA/RADIO HAUTE-FIDÉLITÉ DES CHEFS)
+// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 6 VRAIS EXTRAITS STUDIO/INA/RADIO 100% SOLO VÉRIFIÉS DES CHEFS)
 // ============================================================================
 const FISH_AUDIO_CLONE_MODEL_IDS = {
-  maite: '8c120f8b266641859cbe9f327efbe85b',
-  lignac: '4a7855fe42544cdfaa577cb23d87bd67',
-  bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
-  marx: '45d2249a13fd4271b3c331b4932d5941',
-  etchebest: '700f68728d30402c9b27ea5fe2ea9ef5',
-  coffe: '357ab2a3e25d4d46b0f811f67420d4a5'
+  maite: 'cae9259cec4343e1b1c837c525f9d268',
+  lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
+  bocuse: '35bdc7c82ae24edb91bbb24507b5c1f3',
+  marx: '6df60779e006417f8ca9a300cc66f772',
+  etchebest: '6e01eb6afdc24c97983bdf3841651857',
+  coffe: 'bbaf5b5ace5b4ac6ab66c5b4dc52ec6b'
 };
 
 function getEffectiveFishAudioApiKey() {
@@ -6260,7 +6260,7 @@ async function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v205::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -6374,7 +6374,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=200`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=205`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
