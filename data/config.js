@@ -3,7 +3,7 @@ window.APP_CONFIG = {
   "appName": "MenuSemaine & Keep",
   "appSubtitle": "Semaine (Déjeuners & Dîners) • Week-end (2 Plaisir + desserts)",
   "version": "1.4.0",
-  "lastUpdated": "17/10/2026 à 20:23",
+  "lastUpdated": "18/10/2026 à 12:03",
   "publicUrl": "https://cedtayrac-wq.github.io/projet-menus/",
   "announcement": "",
   "requireAccessCode": false,
