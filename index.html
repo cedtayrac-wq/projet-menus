@@ -49,8 +49,8 @@
         <button class="nav-btn" data-view="history" onclick="switchView('history')">
           <span class="nav-emoji">❤️</span> Carnet &amp; Favoris
         </button>
-        <button class="nav-btn" data-view="app" onclick="switchView('app')">
-          <span class="nav-emoji">📲</span> App
+        <button class="nav-btn" data-view="settings" onclick="switchView('settings')">
+          <span class="nav-emoji">⚙️</span> Paramètres
         </button>
       </nav>
 
@@ -197,15 +197,12 @@
         <div class="banner-text-col">
           <h2>🗄️ Menus du Garde-manger <span class="banner-sub-badge">❄️ Frigo &amp; 🥫 Placard</span></h2>
           <p>
-            Filmez l'intérieur de votre <strong>frigo</strong> ou de votre <strong>placard</strong> : l'application reconnaît vos ingrédients, évalue leurs quantités, vous propose des menus sur-mesure et ajuste automatiquement la liste des courses de la semaine.
+            Scannez l'intérieur de votre <strong>frigo</strong> et de votre <strong>placard</strong> : l'application reconnaît vos ingrédients, évalue leurs quantités, vous propose des menus adaptés et ajuste la liste des courses de la semaine.
           </p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
           <button class="btn btn-primary btn-sm" onclick="syncPantryWithWeeklyShopping(true)">
             🔄 Ajuster la liste des courses de la semaine
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="switchView('shopping')">
-            🧺 Voir mon Panier
           </button>
         </div>
       </div>
@@ -221,7 +218,7 @@
           </div>
 
           <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 12px;">
-            Ouvrez la caméra de votre téléphone et filmez vos étagères : les ingrédients détectés et leurs quantités estimées s'ajoutent au fur et à mesure à votre liste.
+            Ouvrez la caméra du téléphone et filmez l'intérieur du frigo ou du placard pour détecter les ingrédients et leurs quantités au fur et à mesure.
           </p>
 
           <!-- Boutons principaux : Scan Frigo & Scan Placard -->
@@ -229,30 +226,18 @@
             <button type="button" id="btn-scan-fridge" class="btn btn-scan-zone btn-scan-fridge" onclick="startPantryCamera('fridge')">
               <span class="scan-zone-icon">❄️</span>
               <div class="scan-zone-text">
-                <strong>Scanner le Frigo</strong>
-                <small>Filmer produits frais, légumes, œufs, laitages...</small>
+                <strong>Scan Frigo</strong>
+                <small>Filmer l'intérieur du frigo</small>
               </div>
             </button>
 
             <button type="button" id="btn-scan-cupboard" class="btn btn-scan-zone btn-scan-cupboard" onclick="startPantryCamera('cupboard')">
               <span class="scan-zone-icon">🥫</span>
               <div class="scan-zone-text">
-                <strong>Scanner le Placard</strong>
-                <small>Filmer pâtes, riz, conserves, épices, épicerie...</small>
+                <strong>Scan Placard</strong>
+                <small>Filmer l'intérieur du placard</small>
               </div>
             </button>
-          </div>
-
-          <!-- Bouton secours : Photo directe ou Galerie -->
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center;">
-            <label class="btn btn-outline btn-sm" style="cursor: pointer; flex: 1; justify-content: center;">
-              📷 Prendre / Importer une photo (❄️ Frigo)
-              <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="handlePantryPhotoUpload(event, 'fridge')" />
-            </label>
-            <label class="btn btn-outline btn-sm" style="cursor: pointer; flex: 1; justify-content: center;">
-              📷 Prendre / Importer une photo (🥫 Placard)
-              <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="handlePantryPhotoUpload(event, 'cupboard')" />
-            </label>
           </div>
 
           <!-- Fenêtre Vidéo Live (affichée quand le scan Frigo ou Placard est actif) -->
@@ -272,50 +257,25 @@
               </div>
             </div>
 
-            <!-- Commandes pendant qu'on filme -->
+            <!-- Commandes simplifiées pendant qu'on filme -->
             <div class="pantry-camera-controls">
               <button type="button" id="btn-capture-shelf" class="btn btn-primary" onclick="captureAndAnalyzeCurrentFrame(true)">
-                📸 Analyser cette étagère maintenant
-              </button>
-              <button type="button" id="btn-toggle-autoscan" class="btn btn-outline btn-sm active-autoscan" onclick="togglePantryAutoScan()">
-                🔄 Scan continu auto : ON
+                📸 Analyser maintenant
               </button>
               <button type="button" id="btn-voice-scan" class="btn btn-outline btn-sm" onclick="togglePantryVoiceRecognition()">
-                🎙️ Dicter en filmant
+                🎙️ Dicter
               </button>
               <button type="button" class="btn btn-outline btn-sm" style="color: #b91c1c; border-color: #fecaca;" onclick="stopPantryCamera()">
-                ⏹️ Fermer caméra
+                ⏹️ Fermer
               </button>
             </div>
 
             <!-- Journal en direct des ingrédients ajoutés pendant le scan -->
             <div id="pantry-live-feed" class="pantry-live-feed">
-              <div class="pantry-live-feed-title">✨ Détections en direct :</div>
+              <div class="pantry-live-feed-title">✨ Ingrédients reconnus :</div>
               <div id="pantry-live-detections-list" class="pantry-live-chips">
-                <span style="font-size: 0.78rem; color: var(--text-muted);">Pointez la caméra vers vos aliments ou appuyez sur « Analyser cette étagère »...</span>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Filmez vos étagères : les ingrédients s'ajoutent ici au fur et à mesure...</span>
               </div>
-            </div>
-          </div>
-
-          <!-- Configuration rapide Clé IA Vision (pour reconnaissance visuelle automatique) -->
-          <div class="pantry-ai-config-bar">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-              <span style="font-size: 0.79rem; font-weight: 700; color: var(--text-main);">
-                🤖 Reconnaissance visuelle IA (Gemini Vision) + Code-barres :
-              </span>
-              <span id="pantry-ai-key-status" class="meta-pill" style="font-size: 0.72rem;">Vérification...</span>
-            </div>
-            <div id="pantry-ai-key-input-row" style="display: flex; gap: 6px; margin-top: 6px;">
-              <input
-                type="password"
-                id="pantry-gemini-key-input"
-                class="input-field"
-                style="font-size: 0.8rem; padding: 6px 10px;"
-                placeholder="Clé API Google Gemini (AIzaSy...) pour la vision caméra IA"
-              />
-              <button type="button" class="btn btn-outline btn-sm" onclick="saveGeminiKeyFromPantry()">
-                Activer IA
-              </button>
             </div>
           </div>
         </div>
@@ -323,14 +283,14 @@
         <!-- COLONNE DROITE : LISTE DÉDIÉE DU GARDE-MANGER (FRIGO & PLACARD) -->
         <div class="card-panel pantry-inventory-panel">
           <div class="shopping-panel-header">
-            <h3>🗄️ Contenu du Frigo &amp; du Placard</h3>
+            <h3>🗄️ Mes ingrédients (Frigo &amp; Placard)</h3>
             <div class="shopping-counters-pills">
-              <span class="meta-pill healthy-pill">❄️ <strong id="pantry-fridge-count">0</strong> au frigo</span>
-              <span class="meta-pill">🥫 <strong id="pantry-cupboard-count">0</strong> au placard</span>
+              <span class="meta-pill healthy-pill">❄️ <strong id="pantry-fridge-count">0</strong></span>
+              <span class="meta-pill">🥫 <strong id="pantry-cupboard-count">0</strong></span>
             </div>
           </div>
 
-          <!-- Filtres Frigo / Placard + Actions rapides -->
+          <!-- Filtres Frigo / Placard + Vider -->
           <div class="pantry-filter-bar">
             <div class="pantry-filter-tabs" role="tablist">
               <button type="button" class="pantry-tab-btn active" data-zone="all" onclick="setPantryZoneFilter('all')">
@@ -343,17 +303,12 @@
                 🥫 Placard
               </button>
             </div>
-            <div style="display: flex; gap: 6px;">
-              <button type="button" class="btn btn-outline btn-sm" onclick="loadSamplePantryStock()" title="Pré-remplir avec un exemple de frigo et placard">
-                ✨ Exemple
-              </button>
-              <button type="button" class="btn btn-outline btn-sm" style="color: #b91c1c; border-color: #fecaca;" onclick="clearPantryInventory()" title="Vider la liste du garde-manger">
-                🗑️ Vider
-              </button>
-            </div>
+            <button type="button" class="btn btn-outline btn-sm" style="color: #b91c1c; border-color: #fecaca;" onclick="clearPantryInventory()" title="Vider la liste du garde-manger">
+              🗑️ Vider
+            </button>
           </div>
 
-          <!-- Formulaire d'ajout / ajustement rapide d'un ingrédient -->
+          <!-- Ajout manuel simple d'un ingrédient -->
           <div class="pantry-add-row">
             <select id="pantry-new-zone" class="input-field pantry-zone-select" aria-label="Emplacement">
               <option value="fridge">❄️ Frigo</option>
@@ -363,7 +318,7 @@
               type="text"
               id="pantry-new-name"
               class="input-field"
-              placeholder="Ingrédient (ex: Œufs, Courgettes, Pâtes...)"
+              placeholder="Ajouter un ingrédient..."
               onkeydown="if(event.key==='Enter') addManualPantryItem()"
             />
             <input
@@ -379,32 +334,15 @@
             <select id="pantry-new-unit" class="input-field pantry-unit-select" aria-label="Unité">
               <option value="pièces">pièces</option>
               <option value="g">g</option>
-              <option value="ml">ml</option>
               <option value="cl">cl</option>
+              <option value="ml">ml</option>
               <option value="portion">portion</option>
               <option value="boîte">boîte</option>
               <option value="sachet">sachet</option>
-              <option value="tranches">tranches</option>
-              <option value="c.à.s">c.à.s</option>
             </select>
             <button type="button" class="btn btn-primary btn-sm" onclick="addManualPantryItem()">
-              + Ajouter
+              +
             </button>
-          </div>
-
-          <!-- Suggestions rapides en 1 clic -->
-          <div class="pantry-quick-chips-bar">
-            <span style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted);">Ajout 1-clic :</span>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Œufs', 6, 'pièces', 'fridge')">❄️ +6 Œufs</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Courgettes', 2, 'pièces', 'fridge')">❄️ +2 Courgettes</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Blancs de poulet', 300, 'g', 'fridge')">❄️ +300g Poulet</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Saumon frais', 2, 'pavés', 'fridge')">❄️ +2 Pavés saumon</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Crème fraîche', 20, 'cl', 'fridge')">❄️ +20cl Crème</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Comté', 150, 'g', 'fridge')">❄️ +150g Comté</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Pâtes', 400, 'g', 'cupboard')">🥫 +400g Pâtes</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Riz basmati', 300, 'g', 'cupboard')">🥫 +300g Riz</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Lentilles corail', 250, 'g', 'cupboard')">🥫 +250g Lentilles</button>
-            <button type="button" class="pantry-quick-chip" onclick="quickAddPantryStaple('Tomates concassées', 400, 'g', 'cupboard')">🥫 +400g Tomates</button>
           </div>
 
           <!-- Liste dédiée des ingrédients scannés avec ajustement des quantités -->
@@ -421,39 +359,23 @@
       <div class="card-panel pantry-suggestions-panel">
         <div class="pantry-suggestions-header">
           <div>
-            <h3>🍽️ Idées de Menus avec votre Garde-manger</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">
-              Menus sélectionnés et classés selon les ingrédients présents dans votre frigo et votre placard.
-            </p>
+            <h3>🍽️ Menus proposés selon votre Frigo &amp; Placard</h3>
           </div>
 
           <div class="pantry-suggestions-controls">
-            <!-- Ajustement du nombre de parts pour les menus du garde-manger -->
+            <!-- Ajustement du nombre de convives pour les menus du garde-manger -->
             <div class="servings-control pantry-servings-box">
               <span style="font-size: 0.8rem; font-weight: 800;">🍽️ Parts :</span>
               <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepPantryServings(-1)" aria-label="Moins une part">−</button>
-              <span id="pantry-servings-badge" class="servings-badge" style="min-width: 90px; text-align: center; padding: 3px 8px;">
+              <span id="pantry-servings-badge" class="servings-badge" style="min-width: 85px; text-align: center; padding: 3px 8px;">
                 2 parts
               </span>
               <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepPantryServings(1)" aria-label="Plus une part">+</button>
             </div>
 
-            <!-- Filtre style de menu -->
-            <select id="pantry-style-filter" class="input-field" style="width: auto; font-size: 0.82rem; padding: 6px 10px;" onchange="handlePantryStyleFilterChange(this.value)">
-              <option value="all">🍽️ Tous les styles</option>
-              <option value="balanced">🥗 Équilibré</option>
-              <option value="pleasure">🌟 Plaisir</option>
-              <option value="gourmet">🍷 Gourmet &amp; Vin</option>
-            </select>
-
             <!-- Bouton 'Autre idée' global -->
             <button type="button" class="btn btn-outline btn-sm btn-chef-spin" onclick="cyclePantryMenuSuggestions(event)">
               🎲 Autre idée
-            </button>
-
-            <!-- Bouton Recette IA sur-mesure avec les ingrédients du garde-manger -->
-            <button type="button" id="btn-pantry-ai-recipe" class="btn btn-primary btn-sm" onclick="generatePantryRecipeWithAI()">
-              ✨ Créer un menu IA avec ce stock
             </button>
           </div>
         </div>
@@ -550,65 +472,121 @@
     </section>
 
     <!-- =====================================================================
-         VUE 4 : APPLICATION (CONSIGNES D'INSTALLATION & À PROPOS)
+         VUE 4 : PARAMÈTRES (PRÉSENTATION, INSTALLATION & GUIDE VOCAL)
          ===================================================================== -->
-    <section id="view-app" class="view-section">
+    <section id="view-settings" class="view-section">
       <div class="section-banner">
         <div class="banner-text-col">
-          <h2>📲 Application &amp; À propos</h2>
-          <p>Retrouvez toutes les consignes pour installer l'application sur votre téléphone, tablette ou ordinateur et découvrez le fonctionnement de <strong>MenuSemaine &amp; Panier</strong>.</p>
+          <h2>⚙️ Paramètres de l'Application</h2>
+          <p>Choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe ou Voix IA neutres) et retrouvez les consignes d'installation.</p>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="handleInstallAppClick()">
-          📲 Installer l'application
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline btn-sm" onclick="testSelectedVoiceGuide()">
+            🔊 Tester la voix choisie
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="handleInstallAppClick()">
+            📲 Installer l'application
+          </button>
+        </div>
       </div>
 
-      <div class="shopping-layout">
-        <!-- Colonne 1 : Consignes d'installation de l'application (PWA) -->
-        <div class="card-panel">
-          <h3 class="panel-cookbook-title">📲 Consignes d'installation de l'application</h3>
-          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
-            Grâce au mode <strong>Application Mobile (PWA)</strong>, ajoutez l'icône <strong>MenuSemaine</strong> sur votre écran d'accueil pour ouvrir vos menus en plein écran sur le plan de travail ou cocher vos courses au supermarché, même sans réseau.
-          </p>
+      <!-- Bloc 1 : Choix de la Personnalité & Voix de l'Assistant Vocal -->
+      <div class="card-panel" style="margin-bottom: 20px;">
+        <div class="shopping-panel-header" style="flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 class="panel-cookbook-title" style="margin-bottom: 2px;">🎙️ Assistant Guide Vocal &amp; Choix de la Personnalité</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Sélectionnez le chef ou la voix IA qui vous guidera pas à pas dans la <strong>Fiche cuisine</strong> (annonce du plat, pesée des ingrédients, préchauffage du four, étapes validées à la voix par <em>« Suivant »</em> ou <em>« Répéter »</em>).
+            </p>
+          </div>
+          <span id="voice-guide-status-pill" class="meta-pill healthy-pill" style="font-size: 0.82rem; padding: 5px 12px;">
+            🎙️ Voix active : Cyril Lignac
+          </span>
+        </div>
 
-          <div id="pwa-install-banner" style="margin-bottom: 16px;">
-            <button class="btn btn-primary" onclick="handleInstallAppClick()" style="width: 100%; padding: 12px; justify-content: center;">
-              📲 Installer l'application sur cet appareil
-            </button>
+        <!-- Grille de sélection des 9 personnalités (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe, IA Homme, IA Femme) -->
+        <div id="voice-persona-grid" class="voice-persona-grid" style="margin-top: 14px; margin-bottom: 16px;"></div>
+
+        <div class="studio-form-box" style="margin-bottom: 0;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: end;">
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+                <label for="voice-persona-select" style="font-size: 0.84rem; font-weight: 800; color: var(--text-main);">
+                  👨‍🍳 Personnalité de l'Assistant Vocal :
+                </label>
+              </div>
+              <select id="voice-persona-select" class="input-field" style="font-weight: 700;" onchange="selectVoicePersona(this.value, true)">
+                <option value="maite">👩‍🌾 Maïté (Généreuse, Sud-Ouest &amp; bonne chère)</option>
+                <option value="lignac">👨‍🍳 Cyril Lignac (Gourmand, croquant &amp; joyeux)</option>
+                <option value="remy">🐭 Rémy - Ratatouille (Le Petit Chef passionné)</option>
+                <option value="bocuse">👑 Paul Bocuse (Monsieur Paul, tradition &amp; noblesse)</option>
+                <option value="marx">🥋 Thierry Marx (Esprit Zen, précision &amp; températures)</option>
+                <option value="etchebest">🔥 Philippe Etchebest (Chef de brigade énergique &amp; franc)</option>
+                <option value="coffe">👓 Jean-Pierre Coffe (Passion du vrai terroir &amp; franc-parler)</option>
+                <option value="ia_homme">🤖👨 Voix neutre IA Homme (Clair, sobre &amp; précis)</option>
+                <option value="ia_femme">🤖👩 Voix neutre IA Femme (Claire, douce &amp; précise)</option>
+              </select>
+            </div>
+
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
+                <label for="voice-guide-select" style="font-size: 0.84rem; font-weight: 800; color: var(--text-main);">
+                  🗣️ Timbre système (Synthèse vocale) :
+                </label>
+                <label style="font-size: 0.76rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; cursor: pointer;">
+                  <input type="checkbox" id="voice-french-only-checkbox" checked onchange="handleVoiceFilterToggle(this.checked)" />
+                  Voix FR uniquement
+                </label>
+              </div>
+              <select id="voice-guide-select" class="input-field" onchange="handleVoiceGuideSelectionChange(this.value)">
+                <option value="auto">🌟 Ajustement automatique selon la personnalité</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="voice-guide-rate" style="font-size: 0.84rem; font-weight: 800; color: var(--text-main); display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span>⏱️ Vitesse de lecture :</span>
+                <strong id="voice-rate-label" style="color: var(--primary);">1,0x (Normale)</strong>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="setVoiceGuideRate(0.85)">0,85x Calme</button>
+                <input
+                  type="range"
+                  id="voice-guide-rate"
+                  min="0.75"
+                  max="1.35"
+                  step="0.05"
+                  value="1"
+                  style="flex: 1; accent-color: var(--primary); cursor: pointer;"
+                  oninput="handleVoiceRateInput(this.value)"
+                />
+                <button type="button" class="btn btn-outline btn-sm" onclick="setVoiceGuideRate(1.0)">1,0x</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="setVoiceGuideRate(1.15)">1,15x</button>
+              </div>
+            </div>
           </div>
 
-          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.86rem;">
-            <div style="padding: 14px; background: var(--primary-soft); border-radius: var(--radius-md); border-left: 4px solid var(--primary);">
-              <strong>🤖 Sur Android (Chrome / Samsung Internet) :</strong>
-              <ol style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
-                <li>Ouvrez l'application dans <strong>Chrome</strong> sur votre smartphone.</li>
-                <li>Touchez le bouton <strong>« 📲 Installer l'App »</strong> en haut de l'écran (ou le menu <strong>⋮</strong> en haut à droite &rarr; <strong>« Installer l'application »</strong> / <strong>« Ajouter à l'écran d'accueil »</strong>).</li>
-                <li>Confirmez en appuyant sur <strong>« Installer »</strong> : l'application est prête sur votre écran d'accueil !</li>
-              </ol>
-            </div>
-
-            <div style="padding: 14px; background: var(--pleasure-soft); border-radius: var(--radius-md); border-left: 4px solid var(--pleasure);">
-              <strong>🍎 Sur iPhone / iPad (Safari) :</strong>
-              <ol style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
-                <li>Ouvrez l'application dans le navigateur <strong>Safari</strong>.</li>
-                <li>Touchez le bouton <strong>Partager ⬆️</strong> situé dans la barre en bas de l'écran.</li>
-                <li>Faites défiler et choisissez <strong>« Sur l'écran d'accueil » (➕)</strong>, puis appuyez sur <strong>« Ajouter »</strong> en haut à droite.</li>
-              </ol>
-            </div>
-
-            <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-md); border-left: 4px solid #64748b;">
-              <strong>💻 Sur Ordinateur (Windows, Mac, Chromebook) :</strong>
-              <ol style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
-                <li>Ouvrez l'application dans <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong>.</li>
-                <li>Cliquez sur l'icône d'installation <strong>📲</strong> à droite de la barre d'adresse (ou sur le bouton ci-dessus), puis validez avec <strong>« Installer »</strong>.</li>
-              </ol>
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+            <span id="voice-guide-summary" style="font-size: 0.8rem; color: var(--text-muted);">
+              💡 Commandes vocales en cuisine : dites <strong>« Suivant »</strong> pour passer à l'étape suivante ou <strong>« Répéter »</strong> pour réécouter. 📱 Le smartphone reste actif pendant tout le guidage.
+            </span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="testSelectedVoiceGuide()">
+                🔊 Écouter un extrait avec cette personnalité
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="stopVoiceGuide()">
+                ⏹️ Arrêter
+              </button>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Colonne 2 : À propos de l'application -->
+      <!-- Bloc 2 & 3 : Présentation de l'application + Consignes d'installation -->
+      <div class="shopping-layout">
+        <!-- Présentation de l'application -->
         <div class="card-panel">
-          <h3 class="panel-cookbook-title">ℹ️ À propos de MenuSemaine &amp; Panier</h3>
+          <h3 class="panel-cookbook-title">ℹ️ Présentation de l'application</h3>
           <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 14px;">
             <img src="assets/icon.svg" alt="Icône MenuSemaine" style="width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;" />
             <div>
@@ -648,6 +626,48 @@
               <p style="color: var(--text-muted); margin-top: 3px;">
                 Aucune création de compte ni publicité : vos menus, favoris, semaines archivées et listes de courses sont enregistrés localement sur votre appareil et restent accessibles partout.
               </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Consignes d'installation de l'application (PWA) -->
+        <div class="card-panel">
+          <h3 class="panel-cookbook-title">📲 Consignes d'installation de l'application</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
+            Grâce au mode <strong>Application Mobile (PWA)</strong>, ajoutez l'icône <strong>MenuSemaine</strong> sur votre écran d'accueil pour ouvrir vos menus en plein écran sur le plan de travail ou cocher vos courses au supermarché, même sans réseau.
+          </p>
+
+          <div id="pwa-install-banner" style="margin-bottom: 16px;">
+            <button class="btn btn-primary" onclick="handleInstallAppClick()" style="width: 100%; padding: 12px; justify-content: center;">
+              📲 Installer l'application sur cet appareil
+            </button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.86rem;">
+            <div style="padding: 14px; background: var(--primary-soft); border-radius: var(--radius-md); border-left: 4px solid var(--primary);">
+              <strong>🤖 Sur Android (Chrome / Samsung Internet) :</strong>
+              <ol style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
+                <li>Ouvrez l'application dans <strong>Chrome</strong> sur votre smartphone.</li>
+                <li>Touchez le bouton <strong>« 📲 Installer l'App »</strong> en haut de l'écran (ou le menu <strong>⋮</strong> en haut à droite &rarr; <strong>« Installer l'application »</strong> / <strong>« Ajouter à l'écran d'accueil »</strong>).</li>
+                <li>Confirmez en appuyant sur <strong>« Installer »</strong> : l'application est prête sur votre écran d'accueil !</li>
+              </ol>
+            </div>
+
+            <div style="padding: 14px; background: var(--pleasure-soft); border-radius: var(--radius-md); border-left: 4px solid var(--pleasure);">
+              <strong>🍎 Sur iPhone / iPad (Safari) :</strong>
+              <ol style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
+                <li>Ouvrez l'application dans le navigateur <strong>Safari</strong>.</li>
+                <li>Touchez le bouton <strong>Partager ⬆️</strong> situé dans la barre en bas de l'écran.</li>
+                <li>Faites défiler et choisissez <strong>« Sur l'écran d'accueil » (➕)</strong>, puis appuyez sur <strong>« Ajouter »</strong> en haut à droite.</li>
+              </ol>
+            </div>
+
+            <div style="padding: 14px; background: var(--bg-subtle); border-radius: var(--radius-md); border-left: 4px solid #64748b;">
+              <strong>💻 Sur Ordinateur (Windows, Mac, Chromebook) :</strong>
+              <ol style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 5px;">
+                <li>Ouvrez l'application dans <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong>.</li>
+                <li>Cliquez sur l'icône d'installation <strong>📲</strong> à droite de la barre d'adresse (ou sur le bouton ci-dessus), puis validez avec <strong>« Installer »</strong>.</li>
+              </ol>
             </div>
           </div>
         </div>
@@ -696,9 +716,9 @@
       <span class="mobile-nav-icon">❤️</span>
       <span>Carnet</span>
     </button>
-    <button class="mobile-nav-item" data-view="app" onclick="switchView('app')">
-      <span class="mobile-nav-icon">📲</span>
-      <span>App</span>
+    <button class="mobile-nav-item" data-view="settings" onclick="switchView('settings')">
+      <span class="mobile-nav-icon">⚙️</span>
+      <span>Paramètres</span>
     </button>
   </nav>
 
