@@ -5611,6 +5611,126 @@ function renderVoiceGuideSettings() {
     const desc = rateVal < 0.95 ? 'Calme' : rateVal > 1.08 ? 'Dynamique' : 'Normale';
     rateLabel.textContent = `${rateVal.toFixed(2).replace('.', ',').replace(/0$/, '')}x (${desc})`;
   }
+
+  renderDevicePermissionsStatus();
+}
+
+let appDevicePermissionsState = {
+  mic: localStorage.getItem('menusemaine_perm_mic_v1') || 'prompt',
+  camera: localStorage.getItem('menusemaine_perm_camera_v1') || 'prompt'
+};
+
+async function renderDevicePermissionsStatus() {
+  if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+    try {
+      const micPerm = await navigator.permissions.query({ name: 'microphone' });
+      if (micPerm && micPerm.state) {
+        appDevicePermissionsState.mic = micPerm.state;
+        micPerm.onchange = () => {
+          appDevicePermissionsState.mic = micPerm.state;
+          updateDevicePermissionsButtonsUI();
+        };
+      }
+    } catch (e) {}
+    try {
+      const camPerm = await navigator.permissions.query({ name: 'camera' });
+      if (camPerm && camPerm.state) {
+        appDevicePermissionsState.camera = camPerm.state;
+        camPerm.onchange = () => {
+          appDevicePermissionsState.camera = camPerm.state;
+          updateDevicePermissionsButtonsUI();
+        };
+      }
+    } catch (e) {}
+  }
+  updateDevicePermissionsButtonsUI();
+}
+
+function updateDevicePermissionsButtonsUI() {
+  const micGranted = appDevicePermissionsState.mic === 'granted';
+  const micDenied = appDevicePermissionsState.mic === 'denied';
+  const camGranted = appDevicePermissionsState.camera === 'granted';
+  const camDenied = appDevicePermissionsState.camera === 'denied';
+
+  const micPill = document.getElementById('settings-mic-status-pill');
+  if (micPill) {
+    micPill.textContent = micGranted
+      ? '🎙️ Micro : Activé ✓'
+      : micDenied
+      ? '🎙️ Micro : Bloqué par le navigateur'
+      : '🎙️ Micro : À activer';
+    micPill.className = micGranted ? 'meta-pill healthy-pill' : micDenied ? 'meta-pill pleasure-pill' : 'meta-pill';
+  }
+
+  const camPill = document.getElementById('settings-camera-status-pill');
+  if (camPill) {
+    camPill.textContent = camGranted
+      ? '📹 Caméra : Activée ✓'
+      : camDenied
+      ? '📹 Caméra : Bloquée par le navigateur'
+      : '📹 Caméra : À activer';
+    camPill.className = camGranted ? 'meta-pill healthy-pill' : camDenied ? 'meta-pill pleasure-pill' : 'meta-pill';
+  }
+
+  ['btn-settings-enable-mic', 'btn-header-enable-mic'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.textContent = micGranted ? '🎙️ Micro activé ✓' : '🎙️ Activer le micro';
+    }
+  });
+
+  ['btn-settings-enable-camera', 'btn-header-enable-camera'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.textContent = camGranted ? '📹 Caméra activée ✓' : '📹 Activer la caméra';
+    }
+  });
+}
+
+async function requestAppMicrophonePermission() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('⚠️ Le microphone n\'est pas pris en charge sur ce navigateur.');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    stream.getTracks().forEach((t) => t.stop());
+    appDevicePermissionsState.mic = 'granted';
+    localStorage.setItem('menusemaine_perm_mic_v1', 'granted');
+    updateDevicePermissionsButtonsUI();
+    showToast('🎙️ Microphone activé avec succès pour l\'application !');
+  } catch (err) {
+    appDevicePermissionsState.mic = 'denied';
+    updateDevicePermissionsButtonsUI();
+    showToast('⚠️ Accès au microphone refusé. Vérifiez les autorisations de votre navigateur.');
+  }
+}
+
+async function requestAppCameraPermission() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('⚠️ La caméra n\'est pas prise en charge sur ce navigateur.');
+    return;
+  }
+  try {
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+    } catch (e) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+    stream.getTracks().forEach((t) => t.stop());
+    appDevicePermissionsState.camera = 'granted';
+    localStorage.setItem('menusemaine_perm_camera_v1', 'granted');
+    updateDevicePermissionsButtonsUI();
+    showToast('📹 Caméra activée avec succès pour l\'application !');
+  } catch (err) {
+    appDevicePermissionsState.camera = 'denied';
+    updateDevicePermissionsButtonsUI();
+    showToast('⚠️ Accès à la caméra refusé. Vérifiez les autorisations de votre navigateur.');
+  }
 }
 
 function handleVoiceGuideSelectionChange(newVoiceURI) {
@@ -6434,10 +6554,6 @@ function renderActiveVoiceStageUI() {
   const item = seq[idx] || seq[0];
   if (!item) return;
 
-  const total = seq.length;
-  const pct = Math.round(((idx + 1) / total) * 100);
-  const isLastOutro = item.type === 'outro';
-  const isIngredientStep = item.type === 'ingredient';
   const isPaused = Boolean(voiceGuideSession.isPaused);
 
   // Mettre en évidence dans la fiche cuisine la section correspondante (Ingrédient X ou Étape N)
@@ -6446,69 +6562,10 @@ function renderActiveVoiceStageUI() {
   wrapper.innerHTML = `
     <div
       id="voice-character-stage"
-      class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''} ${isLastOutro ? 'is-celebrating' : ''}"
-      style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};"
+      class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''}"
+      style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder}; padding: 10px 12px;"
     >
-      <!-- Barre supérieure : Étape + Retour Micro + Bouton Quitter -->
-      <div class="voice-stage-topbar">
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span class="voice-stage-step-pill">${item.badge}</span>
-          <span id="voice-heard-command-pill" class="voice-heard-pill" style="display: none;">🎙️ « Suivant » reconnu ✓</span>
-          <span id="voice-live-transcript-preview" class="voice-wakelock-pill" style="display: ${voiceGuideSession.lastHeardTranscript ? 'inline-flex' : 'none'}; background: #e0f2fe; color: #0369a1;">
-            👂 Entendu : « ${voiceGuideSession.lastHeardTranscript || ''} »
-          </span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="stopVoiceGuide()" title="Quitter le mode guide vocal">
-            ✕ Quitter
-          </button>
-        </div>
-      </div>
-
-      <!-- Barre de progression pas-à-pas -->
-      <div class="voice-stage-progress-track">
-        <div class="voice-stage-progress-fill" style="width: ${pct}%;"></div>
-      </div>
-
-      <!-- Scène centrale : Bulle de Dialogue (sans photo icône, choix de la voix dans les Paramètres) -->
-      <div class="voice-stage-main" style="grid-template-columns: 1fr;">
-
-        <div class="voice-speech-bubble">
-          <div class="voice-speech-title">${item.title}</div>
-          ${
-            item.ovenTemp
-              ? `<div class="voice-oven-alert-box">🔥 <strong>Attention Préchauffage / Four :</strong> Réglez votre four sur <strong>${item.ovenTemp.replace('🔥 ', '')}</strong></div>`
-              : ''
-          }
-          <div class="voice-speech-text">${item.visualText}</div>
-
-          ${
-            !isLastOutro
-              ? `
-            <div id="voice-mic-prompt-box" class="voice-mic-prompt-box" style="${isPaused ? 'background:#fef3c7; border-color:#f59e0b; color:#92400e;' : ''}">
-              <span class="mic-pulse-dot" style="${isPaused ? 'background:#f59e0b;' : ''}"></span>
-              <span id="voice-mic-status-label">
-                ${
-                  isPaused
-                    ? `⏸️ <strong>Guide en pause :</strong> Dites <strong>« Reprendre »</strong> ou <strong>« Suivant »</strong> pour continuer`
-                    : voiceGuideSession.isSpeaking
-                    ? `🔊 <strong>${persona.name}</strong> vous guide... (vous pouvez dire <strong>« Pause »</strong> ou <strong>« Suivant »</strong>)`
-                    : `🎙️ <strong>Micro actif :</strong> Dites <strong>« Suivant »</strong>, <strong>« Répéter »</strong>, <strong>« Pause »</strong> ou <strong>« Reprendre »</strong>`
-                }
-              </span>
-            </div>
-          `
-              : `
-            <div class="voice-bon-appetit-banner">
-              🍽️ <strong>Bon appétit !</strong> Votre plat est terminé !
-            </div>
-          `
-          }
-        </div>
-      </div>
-
-      <!-- Commandes tactiles & vocales en bas de scène -->
-      <div class="voice-stage-controls">
+      <div class="voice-stage-controls" style="padding-top: 0; border-top: none;">
         <button
           type="button"
           class="btn btn-outline btn-sm"
@@ -6529,33 +6586,19 @@ function renderActiveVoiceStageUI() {
 
         <button
           type="button"
-          class="btn btn-outline btn-voice-repeat"
+          class="btn btn-outline btn-sm btn-voice-repeat"
           onclick="repeatCurrentVoiceGuideStep()"
         >
-          ${isIngredientStep ? "🔄 Répéter l'ingrédient" : "🔄 Répéter l'étape"}
+          🔄 Répéter l'étape
         </button>
 
-        ${
-          !isLastOutro
-            ? `
-          <button
-            type="button"
-            class="btn btn-primary btn-voice-next"
-            onclick="nextVoiceGuideStep()"
-          >
-            ${isIngredientStep ? '✓ Suivant (Ingrédient) ▶' : '✓ Suivant ▶'}
-          </button>
-        `
-            : `
-          <button
-            type="button"
-            class="btn btn-primary btn-voice-next"
-            onclick="stopVoiceGuide()"
-          >
-            🎉 Terminer (Bon appétit !)
-          </button>
-        `
-        }
+        <button
+          type="button"
+          class="btn btn-primary btn-sm btn-voice-next"
+          onclick="nextVoiceGuideStep()"
+        >
+          ⏭️ Suivant
+        </button>
       </div>
     </div>
   `;
