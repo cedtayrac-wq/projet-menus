@@ -3794,7 +3794,14 @@ function showToast(message) {
 
 function setupPwaSupport() {
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker
+      .register('./sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        try {
+          reg.update();
+        } catch (e) {}
+      })
+      .catch(() => {});
   }
 
   // Masquer le bouton d'installation uniquement si l'application est DÉJÀ ouverte en mode installé (standalone)
@@ -5592,31 +5599,8 @@ function renderVoiceGuideSettings() {
     }
   }
 
-  // Mettre à jour le menu déroulant des personnalités selon l'état des voix clones
-  const availablePersonas = getAvailableVoicePersonas();
-  const clonesActive = areClonedVoicesActive();
-  const personaSelect = document.getElementById('voice-persona-select');
-  if (personaSelect) {
-    if (!clonesActive) {
-      personaSelect.innerHTML = availablePersonas
-        .map((p) => `<option value="${p.id}" ${p.id === activePersona.id ? 'selected' : ''}>${p.name}</option>`)
-        .join('');
-    } else {
-      const chefPersonas = availablePersonas.filter((p) => p.id !== 'ia_homme' && p.id !== 'ia_femme');
-      const iaPersonas = availablePersonas.filter((p) => p.id === 'ia_homme' || p.id === 'ia_femme');
-      personaSelect.innerHTML = `
-        <optgroup label="👨‍🍳 Personnalités">
-          ${chefPersonas.map((p) => `<option value="${p.id}" ${p.id === activePersona.id ? 'selected' : ''}>${p.name}</option>`).join('')}
-        </optgroup>
-        <optgroup label="🤖 Voix Neutres IA">
-          ${iaPersonas.map((p) => `<option value="${p.id}" ${p.id === activePersona.id ? 'selected' : ''}>${p.name}</option>`).join('')}
-        </optgroup>
-      `;
-    }
-    personaSelect.value = activePersona.id;
-  }
-
   // Rendre la grille de cartes des personnalités disponibles dans les Paramètres (juste le prénom / nom IA)
+  const availablePersonas = getAvailableVoicePersonas();
   const personaGrid = document.getElementById('voice-persona-grid');
   if (personaGrid) {
     personaGrid.innerHTML = availablePersonas
@@ -6217,7 +6201,7 @@ const FISH_AUDIO_CLONE_MODEL_IDS = {
   bocuse: '35bdc7c82ae24edb91bbb24507b5c1f3',
   marx: '6df60779e006417f8ca9a300cc66f772',
   etchebest: '6e01eb6afdc24c97983bdf3841651857',
-  coffe: 'bbaf5b5ace5b4ac6ab66c5b4dc52ec6b'
+  coffe: '7ab65404e01d4eb5a4e644948a7b31e5'
 };
 
 function getEffectiveFishAudioApiKey() {
@@ -6228,9 +6212,20 @@ function getEffectiveFishAudioApiKey() {
 }
 
 async function tryFetchFishAudioCloneBlob(cleanText, persona) {
-  const refId = FISH_AUDIO_CLONE_MODEL_IDS[persona.id];
+  const refId =
+    FISH_AUDIO_CLONE_MODEL_IDS[persona.id] ||
+    (window.APP_CONFIG &&
+      window.APP_CONFIG.fishClonedVoiceIds &&
+      window.APP_CONFIG.fishClonedVoiceIds[persona.id]);
   const fishKey = getEffectiveFishAudioApiKey();
   if (!refId || !fishKey) return null;
+
+  const tempVal =
+    persona.id === 'etchebest' || persona.id === 'coffe'
+      ? 0.76
+      : persona.id === 'bocuse' || persona.id === 'marx'
+      ? 0.72
+      : 0.74;
 
   try {
     const resp = await fetch('https://api.fish.audio/v1/tts', {
@@ -6244,9 +6239,11 @@ async function tryFetchFishAudioCloneBlob(cleanText, persona) {
         text: cleanText,
         reference_id: refId,
         format: 'mp3',
-        mp3_bitrate: 128,
+        mp3_bitrate: 192,
         normalize: true,
-        latency: 'normal'
+        latency: 'normal',
+        temperature: tempVal,
+        top_p: 0.76
       })
     });
     if (!resp.ok) return null;
@@ -6260,7 +6257,7 @@ async function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v205::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v210::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -6374,7 +6371,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=205`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=211_${Date.now()}`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
@@ -6600,8 +6597,7 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
       etchebest: 0.50,
       marx: 0.53,
       coffe: 0.57,
-      lignac: 0.60,
-      remy: 0.66
+      lignac: 0.60
     };
     utterance.pitch = maleFallbackPitchMap[persona.id] || 0.55;
   } else if (persona.gender === 'female' && resolvedGender === 'male') {
@@ -7255,44 +7251,17 @@ function triggerVoiceCommandFeedback(text) {
 // ============================================================================
 function buildModalVoiceToolbarHTML() {
   const persona = getActiveVoicePersona();
-  const availablePersonas = getAvailableVoicePersonas();
-  const optionsHTML = availablePersonas
-    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name}</option>`)
-    .join('');
 
   return `
     <div id="modal-voice-guide-wrapper" class="modal-voice-guide-wrapper" style="margin: 12px 0;">
-      <div
-        style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:10px 14px; border-radius:14px; background:${persona.themeBg}; border:2px solid ${persona.themeBorder};"
+      <button
+        type="button"
+        class="btn btn-primary btn-launch-voice-guide"
+        style="width: 100%; justify-content: center; background:${persona.themeColor}; border-color:${persona.themeColor}; font-weight:800;"
+        onclick="startInteractiveVoiceGuide()"
       >
-        <div style="display:flex; align-items:center; gap:10px; min-width:200px; flex:1;">
-          <div class="voice-persona-avatar-mini" style="width:46px; height:46px; flex-shrink:0;">
-            ${buildPersonaAnimatedAvatarSVG(persona.id)}
-          </div>
-          <div style="flex:1; min-width:0;">
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-              <strong style="font-size:0.96rem; color:${persona.themeColor};">🧬 ${persona.name}</strong>
-            </div>
-            <div style="margin-top:4px;">
-              <select
-                aria-label="Changer de chef pour le guide vocal"
-                onchange="selectVoicePersona(this.value, false)"
-                style="font-size:0.78rem; padding:3px 8px; border-radius:8px; border:1px solid ${persona.themeBorder}; background:#fff; color:var(--text-main); max-width:100%;"
-              >
-                ${optionsHTML}
-              </select>
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="btn btn-primary btn-launch-voice-guide"
-          style="justify-content: center; background:${persona.themeColor}; border-color:${persona.themeColor}; font-weight:800;"
-          onclick="startInteractiveVoiceGuide()"
-        >
-          🎙️ Guide vocal avec ${persona.name}
-        </button>
-      </div>
+        🎙️ Guide vocal avec ${persona.name}
+      </button>
     </div>
   `;
 }
