@@ -15,7 +15,8 @@ const STORAGE_KEYS = {
   PANTRY_ITEMS: 'menusemaine_pantry_items_v1',
   PANTRY_SERVINGS: 'menusemaine_pantry_servings_v1',
   PANTRY_DEDUCT_MODE: 'menusemaine_pantry_deduct_v1',
-  VOICE_SETTINGS: 'menusemaine_voice_settings_v1'
+  VOICE_SETTINGS: 'menusemaine_voice_settings_v1',
+  ELEVENLABS_KEY: 'menusemaine_elevenlabs_api_key_v1'
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
@@ -78,10 +79,12 @@ let state = {
   deductPantryFromShopping: true, // Ajuster automatiquement la liste des courses avec le stock frigo/placard
   voiceSettings: {
     persona: 'lignac',
+    engine: 'elevenlabs',
     voiceURI: 'auto',
     rate: 1.0,
     pitch: 1.0,
-    frenchOnly: true
+    frenchOnly: true,
+    clonedVoiceIds: {}
   }
 };
 
@@ -289,17 +292,94 @@ function setupDaySwipeGestures() {
   );
 }
 
-function applyAppConfigAndAccessControl() {
-  const cfg = window.APP_CONFIG || {};
-  const isLocal =
+function isLocalAdminEnvironment() {
+  return (
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
-    window.location.protocol === 'file:';
+    window.location.protocol === 'file:'
+  );
+}
 
-  // Afficher le bouton Admin uniquement en local
+function decodeSharedApiKey(encoded) {
+  if (!encoded || typeof encoded !== 'string') return '';
+  const trimmed = encoded.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('msk1_')) {
+    try {
+      const b64 = trimmed.slice(5);
+      return decodeURIComponent(escape(atob(b64))).split('').reverse().join('');
+    } catch (e) {
+      return '';
+    }
+  }
+  return trimmed;
+}
+
+function getEffectiveAiApiKey(purpose = 'vision') {
+  const cfg = window.APP_CONFIG || {};
+  const isLocal = isLocalAdminEnvironment();
+  const allowShared = isLocal || cfg.shareAiKeyWithGuests !== false;
+
+  if (purpose === 'voice') {
+    if (cfg.aiVoiceEnabled === false && !isLocal) {
+      return '';
+    }
+    if (allowShared && cfg.aiVoiceEnabled !== false) {
+      const sharedVoiceKey =
+        decodeSharedApiKey(cfg.voiceApiKeyEncoded || cfg.voiceApiKey || '') ||
+        decodeSharedApiKey(cfg.aiApiKeyEncoded || cfg.aiApiKey || '');
+      if (sharedVoiceKey) return sharedVoiceKey;
+    }
+    if (isLocal) {
+      return (
+        localStorage.getItem('menusemaine_voice_api_key_v1') ||
+        localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) ||
+        ''
+      ).trim();
+    }
+    return '';
+  }
+
+  // Par défaut : 'vision' (Reconnaissance visuelle IA Garde-manger & Recettes IA)
+  if (cfg.aiVisionEnabled === false && !isLocal) {
+    return '';
+  }
+  if (allowShared && cfg.aiVisionEnabled !== false) {
+    const sharedVisionKey = decodeSharedApiKey(cfg.aiApiKeyEncoded || cfg.aiApiKey || '');
+    if (sharedVisionKey) return sharedVisionKey;
+  }
+  if (isLocal) {
+    const domKey =
+      document.getElementById('pantry-gemini-key-input')?.value.trim() ||
+      document.getElementById('gemini-api-key')?.value.trim() ||
+      '';
+    if (domKey) return domKey;
+    return (localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '').trim();
+  }
+  return '';
+}
+
+function applyAppConfigAndAccessControl() {
+  const cfg = window.APP_CONFIG || {};
+  const isLocal = isLocalAdminEnvironment();
+
+  // Afficher le bouton Admin uniquement en local (les invités n'ont jamais accès à l'admin ni à la section Clé API IA)
   const adminBtn = document.getElementById('local-admin-btn');
-  if (adminBtn && isLocal) {
-    adminBtn.style.display = 'inline-flex';
+  if (adminBtn) {
+    adminBtn.style.display = isLocal ? 'inline-flex' : 'none';
+  }
+
+  // Protection stricte : supprimer / masquer tout élément de configuration de clé API pour les invités
+  if (!isLocal || cfg.hideAiKeySectionForGuests !== false) {
+    document.querySelectorAll('.admin-only-ai-key, .pantry-ai-config-bar').forEach((el) => {
+      if (!isLocal) el.remove();
+    });
+    if (!isLocal) {
+      const pantryKeyInput = document.getElementById('pantry-gemini-key-input');
+      if (pantryKeyInput) pantryKeyInput.remove();
+      const studioKeyInput = document.getElementById('gemini-api-key');
+      if (studioKeyInput) studioKeyInput.remove();
+    }
   }
 
   // Mettre à jour les informations de la section À propos
@@ -398,12 +478,14 @@ function loadStateFromStorage() {
       }
     }
 
-    const savedKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
-    if (savedKey) {
-      const keyInput = document.getElementById('gemini-api-key');
-      if (keyInput) keyInput.value = savedKey;
-      const pantryKeyInput = document.getElementById('pantry-gemini-key-input');
-      if (pantryKeyInput) pantryKeyInput.value = savedKey;
+    if (isLocalAdminEnvironment()) {
+      const savedKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+      if (savedKey) {
+        const keyInput = document.getElementById('gemini-api-key');
+        if (keyInput) keyInput.value = savedKey;
+        const pantryKeyInput = document.getElementById('pantry-gemini-key-input');
+        if (pantryKeyInput) pantryKeyInput.value = savedKey;
+      }
     }
 
     const savedVoice = localStorage.getItem(STORAGE_KEYS.VOICE_SETTINGS);
@@ -412,12 +494,20 @@ function loadStateFromStorage() {
       if (parsedVoice && typeof parsedVoice === 'object') {
         state.voiceSettings = {
           persona: parsedVoice.persona || 'lignac',
+          engine: parsedVoice.engine || 'elevenlabs',
           voiceURI: parsedVoice.voiceURI || 'auto',
           rate: typeof parsedVoice.rate === 'number' ? parsedVoice.rate : 1.0,
           pitch: typeof parsedVoice.pitch === 'number' ? parsedVoice.pitch : 1.0,
-          frenchOnly: typeof parsedVoice.frenchOnly === 'boolean' ? parsedVoice.frenchOnly : true
+          frenchOnly: typeof parsedVoice.frenchOnly === 'boolean' ? parsedVoice.frenchOnly : true,
+          clonedVoiceIds: parsedVoice.clonedVoiceIds && typeof parsedVoice.clonedVoiceIds === 'object' ? parsedVoice.clonedVoiceIds : {}
         };
       }
+    }
+
+    const savedElevenKey = localStorage.getItem(STORAGE_KEYS.ELEVENLABS_KEY);
+    if (savedElevenKey) {
+      const elevenInput = document.getElementById('elevenlabs-api-key');
+      if (elevenInput) elevenInput.value = savedElevenKey;
     }
   } catch (e) {
     console.error('Erreur chargement localStorage :', e);
@@ -3320,6 +3410,7 @@ function renderFavoritesAndHistory() {
 // MODE HYBRIDE : AJOUT MANUEL & GÉNÉRATEUR IA GEMINI
 // ============================================================================
 function saveGeminiKey() {
+  if (!isLocalAdminEnvironment()) return;
   const key = document.getElementById('gemini-api-key')?.value.trim() || '';
   localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, key);
   showToast('Clé API Gemini enregistrée localement ✓');
@@ -3407,14 +3498,16 @@ function addManualRecipe() {
 }
 
 async function generateRecipeWithAI() {
-  const apiKey =
-    document.getElementById('gemini-api-key')?.value.trim() ||
-    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+  const apiKey = getEffectiveAiApiKey('vision');
   const mealType = document.getElementById('ai-meal-type')?.value || 'weekday';
   const customPrompt = document.getElementById('ai-custom-prompt')?.value.trim() || '';
 
   if (!apiKey) {
-    showToast('Veuillez renseigner une clé API Google Gemini ou utiliser le catalogue intégré.');
+    showToast(
+      isLocalAdminEnvironment()
+        ? 'Configurez la clé API IA dans l\'Administration locale (onglet Clé API IA).'
+        : 'Génération IA indisponible pour le moment. Utilisez le catalogue intégré.'
+    );
     return;
   }
 
@@ -3707,6 +3800,8 @@ const VOICE_PERSONAS = {
     gender: 'female',
     basePitch: 1.06,
     baseRate: 0.96,
+    defaultElevenLabsVoiceId: 'XB0fDUnXU5powFXDhCwa',
+    elevenLabsSettings: { stability: 0.36, similarity_boost: 0.86, style: 0.68, use_speaker_boost: true },
     themeColor: '#b91c1c',
     themeBg: '#fef2f2',
     themeBorder: '#fca5a5',
@@ -3740,6 +3835,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 1.07,
     baseRate: 1.04,
+    defaultElevenLabsVoiceId: 'IKne3meq5aSn9XLyUdCD',
+    elevenLabsSettings: { stability: 0.38, similarity_boost: 0.85, style: 0.65, use_speaker_boost: true },
     themeColor: '#d97706',
     themeBg: '#fffbeb',
     themeBorder: '#fcd34d',
@@ -3773,6 +3870,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 1.24,
     baseRate: 1.03,
+    defaultElevenLabsVoiceId: 'TX3LPaxmHKxFdv7VOQHJ',
+    elevenLabsSettings: { stability: 0.35, similarity_boost: 0.84, style: 0.70, use_speaker_boost: true },
     themeColor: '#0284c7',
     themeBg: '#f0f9ff',
     themeBorder: '#7dd3fc',
@@ -3806,6 +3905,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 0.84,
     baseRate: 0.92,
+    defaultElevenLabsVoiceId: 'pqHfZKP75CvOlQylNhV4',
+    elevenLabsSettings: { stability: 0.62, similarity_boost: 0.88, style: 0.45, use_speaker_boost: true },
     themeColor: '#881337',
     themeBg: '#fff1f2',
     themeBorder: '#fda4af',
@@ -3839,6 +3940,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 0.92,
     baseRate: 0.95,
+    defaultElevenLabsVoiceId: 'cjVigY5qzO86Huf0OWal',
+    elevenLabsSettings: { stability: 0.74, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true },
     themeColor: '#0f766e',
     themeBg: '#f0fdfa',
     themeBorder: '#5eead4',
@@ -3872,6 +3975,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 0.87,
     baseRate: 1.06,
+    defaultElevenLabsVoiceId: 'N2lVS1w4EtoT3dr4eOWO',
+    elevenLabsSettings: { stability: 0.32, similarity_boost: 0.88, style: 0.75, use_speaker_boost: true },
     themeColor: '#ea580c',
     themeBg: '#fff7ed',
     themeBorder: '#fdba74',
@@ -3905,6 +4010,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 0.95,
     baseRate: 1.03,
+    defaultElevenLabsVoiceId: 'JBFqnCBsd6RMkjVDRZzb',
+    elevenLabsSettings: { stability: 0.35, similarity_boost: 0.86, style: 0.72, use_speaker_boost: true },
     themeColor: '#15803d',
     themeBg: '#f0fdf4',
     themeBorder: '#86efac',
@@ -3938,6 +4045,8 @@ const VOICE_PERSONAS = {
     gender: 'male',
     basePitch: 0.92,
     baseRate: 1.0,
+    defaultElevenLabsVoiceId: 'onwK4e9ZLuTAKqWW03F9',
+    elevenLabsSettings: { stability: 0.80, similarity_boost: 0.80, style: 0.10, use_speaker_boost: true },
     themeColor: '#334155',
     themeBg: '#f8fafc',
     themeBorder: '#94a3b8',
@@ -3971,6 +4080,8 @@ const VOICE_PERSONAS = {
     gender: 'female',
     basePitch: 1.1,
     baseRate: 1.0,
+    defaultElevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
+    elevenLabsSettings: { stability: 0.80, similarity_boost: 0.80, style: 0.10, use_speaker_boost: true },
     themeColor: '#4f46e5',
     themeBg: '#eef2ff',
     themeBorder: '#a5b4fc',
@@ -4002,8 +4113,76 @@ function getActiveVoicePersona() {
   return VOICE_PERSONAS[personaId] || VOICE_PERSONAS.lignac;
 }
 
-// Illustration SVG animée sur-mesure pour chacun des 9 personnages
+const PERSONA_PUBLIC_PHOTOS = {
+  maite: {
+    local: 'assets/personas/maite.jpg',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/cc/Marie-Th%C3%A9r%C3%A8se_Ordonez.jpg',
+    credit: 'Wikimedia Commons'
+  },
+  lignac: {
+    local: 'assets/personas/lignac.jpg',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Salon_chocolat_Paris_2017_Cyril_Lignac_2949c.jpg/500px-Salon_chocolat_Paris_2017_Cyril_Lignac_2949c.jpg',
+    credit: 'Wikimedia Commons'
+  },
+  remy: {
+    local: 'assets/personas/remy.jpg',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/6c/Remy_with_Spoon%2C_Greg_Dykstra.jpg',
+    credit: 'Wikimedia Commons'
+  },
+  bocuse: {
+    local: 'assets/personas/bocuse.jpg',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Paul_Bocuse_2007_-2.jpg/500px-Paul_Bocuse_2007_-2.jpg',
+    credit: 'Wikimedia Commons'
+  },
+  marx: {
+    local: 'assets/personas/marx.jpg',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/ea/Thierry_Marx.jpg',
+    credit: 'Wikimedia Commons'
+  },
+  etchebest: {
+    local: 'assets/personas/etchebest.png',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Philippe_Etchebest_in_2018.png',
+    credit: 'Wikimedia Commons'
+  },
+  coffe: {
+    local: 'assets/personas/coffe.jpg',
+    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/55/Jean-Pierre_Coffe_22_02_2012.jpg',
+    credit: 'Wikimedia Commons'
+  },
+  ia_homme: {
+    local: 'assets/personas/ia_homme.jpg',
+    publicUrl: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=400&q=80',
+    credit: 'Unsplash Public'
+  },
+  ia_femme: {
+    local: 'assets/personas/ia_femme.jpg',
+    publicUrl: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=400&q=80',
+    credit: 'Unsplash Public'
+  }
+};
+
 function buildPersonaAnimatedAvatarSVG(personaId) {
+  const persona = VOICE_PERSONAS[personaId] || VOICE_PERSONAS.lignac;
+  const photoMeta = PERSONA_PUBLIC_PHOTOS[personaId] || PERSONA_PUBLIC_PHOTOS.lignac;
+  const fallbackSvg = buildPersonaFallbackIllustrationSVG(personaId);
+
+  return `
+    <img
+      src="${photoMeta.local}"
+      data-public-src="${photoMeta.publicUrl}"
+      alt="${persona.name}"
+      class="persona-photo-avatar"
+      loading="lazy"
+      onerror="if(this.dataset.publicSrc && this.src !== this.dataset.publicSrc){this.src=this.dataset.publicSrc;}else{this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='block';}"
+    />
+    <div class="persona-svg-fallback" style="display: none; width: 100%; height: 100%;">
+      ${fallbackSvg}
+    </div>
+  `;
+}
+
+// Illustration SVG de secours pour chacun des 9 personnages
+function buildPersonaFallbackIllustrationSVG(personaId) {
   switch (personaId) {
     case 'maite':
       return `
@@ -4623,11 +4802,14 @@ function selectVoicePersona(personaId, playSample = false) {
 function renderVoiceGuideSettings() {
   const vs = state.voiceSettings || { persona: 'lignac', voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
   const activePersona = getActiveVoicePersona();
+  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice'));
 
   // Mettre à jour la pastille en haut des Paramètres
   const statusPill = document.getElementById('voice-guide-status-pill');
   if (statusPill && !voiceGuideSession.isSpeaking) {
-    statusPill.textContent = `🎙️ Voix active : ${activePersona.name}`;
+    statusPill.textContent = hasVoiceAiKey
+      ? `🎙️ Voix active : ${activePersona.name} • 🔑 IA Active`
+      : `🎙️ Voix active : ${activePersona.name}`;
     statusPill.className = 'meta-pill healthy-pill';
   }
 
@@ -4662,7 +4844,6 @@ function renderVoiceGuideSettings() {
                 <p class="voice-persona-desc">${p.description}</p>
               </div>
             </div>
-            <div class="voice-persona-quote">${p.sampleQuote}</div>
             <div class="voice-persona-actions">
               <button
                 type="button"
@@ -4697,20 +4878,31 @@ function renderVoiceGuideSettings() {
 
   if (selectEl) {
     const autoLabel = bestAutoVoice
-      ? `🌟 Auto (${activePersona.name}) — ${bestAutoVoice.name}`
-      : '🌟 Ajustement automatique selon la personnalité';
+      ? `🌟 Auto${hasVoiceAiKey ? ' IA' : ''} (${activePersona.name}) — ${bestAutoVoice.name}`
+      : `🌟 Ajustement automatique${hasVoiceAiKey ? ' (Clé Voix IA Active)' : ' selon la personnalité'}`;
+
+    const cloudOptionHTML = hasVoiceAiKey
+      ? `<option value="cloud_neural_fr" ${vs.voiceURI === 'cloud_neural_fr' ? 'selected' : ''}>🔑 Voix IA Cloud Neural FR (${activePersona.name})</option>`
+      : '';
 
     const optionsHTML = [
       `<option value="auto">${autoLabel}</option>`,
+      cloudOptionHTML,
       ...voices.map((v) => {
         const val = (v.voiceURI || v.name).replace(/"/g, '&quot;');
         const selected = vs.voiceURI === v.voiceURI || vs.voiceURI === v.name ? 'selected' : '';
         return `<option value="${val}" ${selected}>${formatVoiceOptionLabel(v)}</option>`;
       })
-    ].join('');
+    ]
+      .filter(Boolean)
+      .join('');
 
     selectEl.innerHTML = optionsHTML;
-    if (vs.voiceURI === 'auto' || !voices.some((v) => v.voiceURI === vs.voiceURI || v.name === vs.voiceURI)) {
+    const validCloud = hasVoiceAiKey && vs.voiceURI === 'cloud_neural_fr';
+    if (
+      !validCloud &&
+      (vs.voiceURI === 'auto' || !voices.some((v) => v.voiceURI === vs.voiceURI || v.name === vs.voiceURI))
+    ) {
       selectEl.value = 'auto';
     }
   }
@@ -4729,6 +4921,10 @@ function handleVoiceGuideSelectionChange(newVoiceURI) {
   state.voiceSettings.voiceURI = newVoiceURI || 'auto';
   saveStateToStorage();
   renderVoiceGuideSettings();
+  if (newVoiceURI === 'cloud_neural_fr') {
+    showToast('🔑 Voix IA Cloud Neural FR sélectionnée');
+    return;
+  }
   const chosen = resolveActiveSpeechVoice();
   showToast(chosen ? `🗣️ Timbre système : ${chosen.name}` : '🗣️ Timbre automatique sélectionné');
 }
@@ -4767,9 +4963,13 @@ function setVoiceGuidePitch(val) {
 
 function updateVoiceStatusIndicators(isSpeaking, labelText) {
   const persona = getActiveVoicePersona();
+  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice'));
   const settingsPill = document.getElementById('voice-guide-status-pill');
   if (settingsPill) {
-    settingsPill.textContent = labelText || (isSpeaking ? `🔊 ${persona.name} vous parle...` : `🎙️ Voix active : ${persona.name}`);
+    const idleLabel = hasVoiceAiKey
+      ? `🎙️ Voix active : ${persona.name} • 🔑 IA Active`
+      : `🎙️ Voix active : ${persona.name}`;
+    settingsPill.textContent = labelText || (isSpeaking ? `🔊 ${persona.name} vous parle...` : idleLabel);
     settingsPill.className = isSpeaking ? 'meta-pill pleasure-pill' : 'meta-pill healthy-pill';
   }
 }
@@ -4777,8 +4977,98 @@ function updateVoiceStatusIndicators(isSpeaking, labelText) {
 // ============================================================================
 // SYNTHÈSE VOCALE & RECONNAISSANCE DES COMMANDES VOCALES ("SUIVANT" / "RÉPÉTER")
 // ============================================================================
+let activeCloudVoiceAudio = null;
+
+function stopActiveCloudVoiceAudio() {
+  if (activeCloudVoiceAudio) {
+    try {
+      activeCloudVoiceAudio.pause();
+      activeCloudVoiceAudio.src = '';
+    } catch (e) {}
+    activeCloudVoiceAudio = null;
+  }
+}
+
+async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options = {}) {
+  try {
+    const userRateMultiplier = state.voiceSettings?.rate || 1.0;
+    const speakingRate = Math.max(0.75, Math.min(1.4, (persona.baseRate || 1.0) * userRateMultiplier));
+    const basePitch = persona.basePitch || 1.0;
+    const semitonePitch = Math.max(-6, Math.min(6, (basePitch - 1.0) * 12));
+    const isFemale = persona.gender === 'female';
+    const voiceName = isFemale ? 'fr-FR-Neural2-A' : 'fr-FR-Neural2-B';
+
+    const resp = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(voiceApiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text: cleanText },
+          voice: {
+            languageCode: 'fr-FR',
+            name: voiceName,
+            ssmlGender: isFemale ? 'FEMALE' : 'MALE'
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate,
+            pitch: semitonePitch
+          }
+        })
+      }
+    );
+
+    if (!resp.ok) return false;
+    const data = await resp.json();
+    if (!data || !data.audioContent) return false;
+
+    stopActiveCloudVoiceAudio();
+    const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+    activeCloudVoiceAudio = audio;
+
+    audio.onplay = () => {
+      voiceGuideSession.isSpeaking = true;
+      updateVoiceStatusIndicators(true, options.statusLabel || `🔊 ${persona.name} parle...`);
+      updateCharacterStageAnimationState();
+      renderVoiceGuideSettings();
+    };
+
+    audio.onended = () => {
+      activeCloudVoiceAudio = null;
+      voiceGuideSession.isSpeaking = false;
+      voiceGuideSession.lastSpokenEndTime = Date.now();
+      updateVoiceStatusIndicators(false);
+      updateCharacterStageAnimationState();
+      renderVoiceGuideSettings();
+      if (typeof options.onEnd === 'function') {
+        options.onEnd();
+      }
+    };
+
+    audio.onerror = () => {
+      activeCloudVoiceAudio = null;
+      voiceGuideSession.isSpeaking = false;
+      voiceGuideSession.lastSpokenEndTime = Date.now();
+      updateVoiceStatusIndicators(false);
+      updateCharacterStageAnimationState();
+      if (typeof options.onEnd === 'function') {
+        options.onEnd();
+      }
+    };
+
+    await audio.play();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function speakWithVoiceGuide(textToSpeak, options = {}) {
-  if (!('speechSynthesis' in window)) {
+  const voiceApiKey = getEffectiveAiApiKey('voice');
+  const hasBrowserSpeech = 'speechSynthesis' in window;
+
+  if (!hasBrowserSpeech && !voiceApiKey) {
     showToast('⚠️ La synthèse vocale n\'est pas disponible sur cet appareil.');
     return;
   }
@@ -4787,9 +5077,12 @@ function speakWithVoiceGuide(textToSpeak, options = {}) {
   voiceGuideSession.isSpeaking = true;
   updateCharacterStageAnimationState();
 
-  try {
-    window.speechSynthesis.cancel();
-  } catch (e) {}
+  stopActiveCloudVoiceAudio();
+  if (hasBrowserSpeech) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
 
   const cleanText = String(textToSpeak || '').trim();
   if (!cleanText) {
@@ -4799,6 +5092,34 @@ function speakWithVoiceGuide(textToSpeak, options = {}) {
   }
 
   const persona = getActiveVoicePersona();
+  const preferCloudVoice =
+    Boolean(voiceApiKey) &&
+    (state.voiceSettings?.voiceURI === 'cloud_neural_fr' ||
+      !hasBrowserSpeech ||
+      (hasBrowserSpeech && window.speechSynthesis.getVoices && window.speechSynthesis.getVoices().length === 0));
+
+  if (preferCloudVoice) {
+    trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options).then((played) => {
+      if (!played && hasBrowserSpeech) {
+        speakWithBrowserSynthesis(cleanText, persona, options);
+      } else if (!played) {
+        voiceGuideSession.isSpeaking = false;
+        updateCharacterStageAnimationState();
+      }
+    });
+    return;
+  }
+
+  speakWithBrowserSynthesis(cleanText, persona, options);
+}
+
+function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
+  if (!('speechSynthesis' in window)) {
+    voiceGuideSession.isSpeaking = false;
+    updateCharacterStageAnimationState();
+    return;
+  }
+
   const utterance = new SpeechSynthesisUtterance(cleanText);
   const voice = resolveActiveSpeechVoice(persona.gender);
 
@@ -5000,17 +5321,11 @@ function triggerVoiceCommandFeedback(text) {
 // ============================================================================
 function buildModalVoiceToolbarHTML() {
   const persona = getActiveVoicePersona();
-  const personaOptions = Object.values(VOICE_PERSONAS)
-    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name}</option>`)
-    .join('');
 
   return `
     <div id="modal-voice-guide-wrapper" class="modal-voice-guide-wrapper">
       <div class="voice-launch-banner" style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};">
         <div class="voice-launch-left">
-          <div class="voice-launch-avatar" onclick="startInteractiveVoiceGuide()" title="Lancer le guide vocal avec ${persona.name}">
-            ${buildPersonaAnimatedAvatarSVG(persona.id)}
-          </div>
           <div class="voice-launch-info">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <span class="voice-persona-badge" style="background: #fff;">${persona.badge}</span>
@@ -5026,14 +5341,6 @@ function buildModalVoiceToolbarHTML() {
         </div>
 
         <div class="voice-launch-actions">
-          <select
-            class="input-field voice-quick-persona-select"
-            aria-label="Choisir la voix du chef"
-            onchange="selectVoicePersona(this.value, false)"
-            title="Changer la voix de l'assistant vocal"
-          >
-            ${personaOptions}
-          </select>
           <button
             type="button"
             class="btn btn-primary btn-launch-voice-guide"
@@ -5080,10 +5387,6 @@ function renderActiveVoiceStageUI() {
   const pct = Math.round(((idx + 1) / total) * 100);
   const isLastOutro = item.type === 'outro';
 
-  const personaOptions = Object.values(VOICE_PERSONAS)
-    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name}</option>`)
-    .join('');
-
   // Mettre en évidence dans la fiche cuisine la section correspondante (Ingrédients ou Étape N)
   highlightModalRecipeSection(item);
 
@@ -5093,22 +5396,15 @@ function renderActiveVoiceStageUI() {
       class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''} ${isLastOutro ? 'is-celebrating' : ''}"
       style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};"
     >
-      <!-- Barre supérieure : Statut Wake Lock + Sélecteur rapide de voix + Bouton Quitter -->
+      <!-- Barre supérieure : Statut Wake Lock + Voix active + Bouton Quitter -->
       <div class="voice-stage-topbar">
         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
           <span class="voice-stage-step-pill">${item.badge}</span>
+          <span class="voice-persona-badge" style="background: #fff;">🎙️ ${persona.name}</span>
           <span id="voice-wakelock-badge" class="voice-wakelock-pill">📱 Smartphone maintenu actif</span>
           <span id="voice-heard-command-pill" class="voice-heard-pill" style="display: none;">🎙️ « Suivant » reconnu ✓</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <select
-            class="input-field voice-quick-persona-select"
-            aria-label="Changer de personnage"
-            onchange="selectVoicePersona(this.value, false)"
-            title="Changer de personnage en direct"
-          >
-            ${personaOptions}
-          </select>
           <button type="button" class="btn btn-outline btn-sm" onclick="stopVoiceGuide()" title="Quitter le mode guide vocal">
             ✕ Quitter
           </button>
@@ -5120,24 +5416,8 @@ function renderActiveVoiceStageUI() {
         <div class="voice-stage-progress-fill" style="width: ${pct}%;"></div>
       </div>
 
-      <!-- Scène centrale : Personnage Animé + Bulle de Dialogue -->
-      <div class="voice-stage-main">
-        <div class="voice-character-Theater">
-          <div class="voice-character-halo"></div>
-          <div class="voice-character-float-particles" aria-hidden="true">
-            <span>${persona.particles[0] || '✨'}</span>
-            <span>${persona.particles[1] || '🍳'}</span>
-            <span>${persona.particles[2] || '🌿'}</span>
-          </div>
-          <div class="voice-character-portrait">
-            ${buildPersonaAnimatedAvatarSVG(persona.id)}
-          </div>
-          <!-- Égaliseur d'ondes vocales sous le personnage -->
-          <div class="voice-wave-bars" aria-hidden="true">
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <div class="voice-character-name-tag">${persona.name}</div>
-        </div>
+      <!-- Scène centrale : Bulle de Dialogue (sans photo icône, choix de la voix dans les Paramètres) -->
+      <div class="voice-stage-main" style="grid-template-columns: 1fr;">
 
         <div class="voice-speech-bubble">
           <div class="voice-speech-title">${item.title}</div>
@@ -5326,6 +5606,7 @@ function stopVoiceGuide() {
 
   stopVoiceCommandListener();
   releaseKitchenWakeLock();
+  stopActiveCloudVoiceAudio();
 
   if ('speechSynthesis' in window) {
     try {
@@ -5665,6 +5946,7 @@ function setPantryZoneFilter(zone) {
 }
 
 function saveGeminiKeyFromPantry() {
+  if (!isLocalAdminEnvironment()) return;
   const pantryInput = document.getElementById('pantry-gemini-key-input');
   const studioInput = document.getElementById('gemini-api-key');
   const key = pantryInput?.value.trim() || '';
@@ -5675,11 +5957,15 @@ function saveGeminiKeyFromPantry() {
 }
 
 function renderPantryAiKeyStatus() {
-  const key = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
+  const key = getEffectiveAiApiKey('vision');
   const statusEl = document.getElementById('pantry-ai-key-status');
+  const scanPill = document.getElementById('pantry-scan-status-pill');
   const inputEl = document.getElementById('pantry-gemini-key-input');
-  if (inputEl && key && !inputEl.value) {
+  if (isLocalAdminEnvironment() && inputEl && key && !inputEl.value) {
     inputEl.value = key;
+  }
+  if (scanPill && !pantryCameraStream) {
+    scanPill.textContent = key ? '🤖 Vision IA Active' : 'Caméra prête';
   }
   if (statusEl) {
     if (key) {
@@ -5687,7 +5973,7 @@ function renderPantryAiKeyStatus() {
       statusEl.style.background = '#dcfce7';
       statusEl.style.color = '#166534';
     } else {
-      statusEl.textContent = '⚡ Mode Code-barres + Dictée (Clé IA optionnelle)';
+      statusEl.textContent = '⚡ Mode Code-barres + Dictée';
       statusEl.style.background = '#fef3c7';
       statusEl.style.color = '#92400e';
     }
@@ -5827,7 +6113,9 @@ function stopPantryCamera() {
   if (btnCupboard) btnCupboard.classList.remove('active-scan');
 
   const statusPill = document.getElementById('pantry-scan-status-pill');
-  if (statusPill) statusPill.textContent = 'Caméra prête';
+  if (statusPill) {
+    statusPill.textContent = getEffectiveAiApiKey('vision') ? '🤖 Vision IA Active' : 'Caméra prête';
+  }
 }
 
 function togglePantryAutoScan() {
@@ -5872,10 +6160,10 @@ function setupPantryAutoScanLoops() {
     } catch (e) {}
   }
 
-  // 2. Boucle d'analyse visuelle IA pendant qu'on filme (toutes les 4,5 secondes si une clé Gemini est active)
+  // 2. Boucle d'analyse visuelle IA pendant qu'on filme (toutes les 4,5 secondes si une clé IA Vision est active)
   pantryAutoScanTimer = setInterval(() => {
     if (!pantryAutoScanEnabled || !pantryCameraStream || pantryAnalysisInFlight) return;
-    const apiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+    const apiKey = getEffectiveAiApiKey('vision');
     if (apiKey) {
       captureAndAnalyzeCurrentFrame(false);
     }
@@ -5987,10 +6275,7 @@ async function handlePantryPhotoUpload(event, zone) {
 async function analyzePantryImageBase64(dataUrl, zone, isManual) {
   if (pantryAnalysisInFlight) return;
 
-  const apiKey =
-    document.getElementById('pantry-gemini-key-input')?.value.trim() ||
-    document.getElementById('gemini-api-key')?.value.trim() ||
-    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+  const apiKey = getEffectiveAiApiKey('vision');
 
   const hudMsg = document.getElementById('pantry-scan-Hud-msg');
   const captureBtn = document.getElementById('btn-capture-shelf');
@@ -5998,12 +6283,13 @@ async function analyzePantryImageBase64(dataUrl, zone, isManual) {
 
   if (!apiKey) {
     if (isManual) {
-      // Mode assisté hors-clé IA : permet d'indiquer immédiatement ce qui est visible à l'écran ou d'activer la clé Gemini
-      const quickEntered = prompt(
-        `📷 Analyse rapide (${zoneLabel}) :\n` +
-          `Pour que l'IA reconnaisse automatiquement l'image, collez votre clé Gemini gratuite dans le champ "Reconnaissance visuelle IA" sous la caméra.\n\n` +
+      const promptMsg = isLocalAdminEnvironment()
+        ? `📷 Analyse rapide (${zoneLabel}) :\n` +
+          `Astuce Admin : Renseignez la clé API IA dans l'Administration locale (onglet "🔑 Clé API IA") pour activer la reconnaissance visuelle automatique sur smartphone et pour tous vos invités.\n\n` +
           `Ou tapez directement les ingrédients filmés (ex: 4 œufs, 2 courgettes, 200g comté) :`
-      );
+        : `📷 Ajout rapide (${zoneLabel}) :\n` +
+          `Tapez ou dictez les ingrédients visibles (ex: 4 œufs, 2 courgettes, 200g comté) :`;
+      const quickEntered = prompt(promptMsg);
       if (quickEntered && quickEntered.trim()) {
         const count = parseSpokenOrTypedIngredientsToPantry(quickEntered, zone);
         if (count > 0) {
@@ -6901,15 +7187,14 @@ async function generatePantryRecipeWithAI() {
     return;
   }
 
-  const apiKey =
-    document.getElementById('pantry-gemini-key-input')?.value.trim() ||
-    document.getElementById('gemini-api-key')?.value.trim() ||
-    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+  const apiKey = getEffectiveAiApiKey('vision');
 
   if (!apiKey) {
-    showToast('ℹ️ Indiquez votre clé API Google Gemini dans le panneau Scanner pour créer une recette IA sur-mesure.');
-    const keyInput = document.getElementById('pantry-gemini-key-input');
-    if (keyInput) keyInput.focus();
+    showToast(
+      isLocalAdminEnvironment()
+        ? 'ℹ️ Configurez votre clé API IA dans l\'Administration locale (onglet Clé API IA) pour créer une recette IA sur-mesure.'
+        : 'ℹ️ Utilisez les menus suggérés ci-dessous (création IA sur-mesure non activée par l\'administrateur).'
+    );
     return;
   }
 
