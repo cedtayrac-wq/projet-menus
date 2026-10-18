@@ -1623,76 +1623,6 @@ body {
   font-weight: 700;
 }
 
-/* Note Google Keep façon Post-it Aimanté sur le Frigo */
-.keep-preview-card {
-  background: var(--keep-bg);
-  border: 2px solid var(--keep-border);
-  border-radius: var(--radius-lg);
-  padding: 22px 20px 20px;
-  box-shadow: var(--shadow-md);
-  position: sticky;
-  top: 100px;
-}
-
-.keep-pin {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.5rem;
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.2));
-}
-
-.keep-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed rgba(202, 138, 4, 0.35);
-}
-
-.keep-logo-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: #713f12;
-}
-
-.keep-note-box {
-  background: #fef9c3;
-  border: 1px solid #fde047;
-  border-radius: var(--radius-md);
-  padding: 14px;
-  font-family: var(--font-sans);
-  font-size: 0.85rem;
-  color: #1e293b;
-  max-height: 360px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  margin-bottom: 14px;
-  box-shadow: inset 0 2px 5px rgba(202, 138, 4, 0.08);
-}
-
-.keep-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.keep-help-box {
-  margin-top: 14px;
-  padding: 11px 12px;
-  background: rgba(255, 255, 255, 0.78);
-  border-radius: 10px;
-  font-size: 0.78rem;
-  color: #713f12;
-  border: 1px solid rgba(250, 204, 21, 0.4);
-}
-
 .add-custom-row {
   display: flex;
   gap: 8px;
@@ -2288,6 +2218,561 @@ body {
   background: #fffbeb;
   border-color: #fde68a;
   color: #92400e;
+}
+
+/* ==========================================================================
+   SECTION : MENUS DU GARDE-MANGER (SCAN FRIGO & PLACARD, INVENTAIRE & MENUS)
+   ========================================================================== */
+.pantry-banner {
+  background: linear-gradient(135deg, #ecfeff 0%, #f0fdf4 52%, #fffbeb 100%);
+  border-color: #67e8f9;
+}
+
+.pantry-top-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 960px) {
+  .pantry-top-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pantry-scan-triggers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .pantry-scan-triggers {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-scan-zone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-color);
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.btn-scan-zone:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-scan-fridge {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #7dd3fc;
+  color: #0c4a6e;
+}
+
+.btn-scan-fridge.active-scan {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+}
+
+.btn-scan-cupboard {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fcd34d;
+  color: #78350f;
+}
+
+.btn-scan-cupboard.active-scan {
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.25);
+}
+
+.scan-zone-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.scan-zone-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scan-zone-text strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.scan-zone-text small {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  line-height: 1.25;
+}
+
+.pantry-camera-container {
+  margin-top: 14px;
+  border-radius: var(--radius-md);
+  border: 2px solid #0284c7;
+  background: #0f172a;
+  overflow: hidden;
+  padding: 10px;
+  color: #f8fafc;
+}
+
+.pantry-video-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #020617;
+  aspect-ratio: 16 / 10;
+  max-height: 320px;
+}
+
+#pantry-camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pantry-viewfinder-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.viewfinder-corners {
+  position: absolute;
+  inset: 14px;
+  border: 2px dashed rgba(56, 189, 248, 0.75);
+  border-radius: 12px;
+  box-shadow: inset 0 0 24px rgba(15, 23, 42, 0.35);
+}
+
+.pantry-zone-floating-badge {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.pantry-hud-status {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pantry-camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pantry-camera-controls .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.active-autoscan {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: #86efac !important;
+  font-weight: 800;
+}
+
+.pantry-live-feed {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(30, 41, 59, 0.9);
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.pantry-live-feed-title {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pantry-live-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pantry-detected-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #065f46;
+  color: #ecfdf5;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border: 1px solid #34d399;
+  animation: popInChip 0.25s ease;
+}
+
+@keyframes popInChip {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pantry-ai-config-bar {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.pantry-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.pantry-filter-tabs {
+  display: inline-flex;
+  background: var(--bg-subtle);
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  gap: 3px;
+}
+
+.pantry-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pantry-tab-btn.active {
+  background: #ffffff;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.pantry-add-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.pantry-zone-select {
+  width: 112px;
+  flex-shrink: 0;
+  padding: 7px 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pantry-add-row #pantry-new-name {
+  flex: 1 1 150px;
+  min-width: 130px;
+}
+
+.pantry-qty-input {
+  width: 72px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.pantry-unit-select {
+  width: 96px;
+  flex-shrink: 0;
+  padding: 7px 6px;
+  font-size: 0.82rem;
+}
+
+.pantry-quick-chips-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: var(--radius-sm);
+  border: 1px dashed #cbd5e1;
+}
+
+.pantry-quick-chip {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--text-main);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.pantry-quick-chip:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.pantry-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.pantry-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+}
+
+.pantry-item-row.zone-fridge {
+  border-left: 4px solid #0284c7;
+}
+
+.pantry-item-row.zone-cupboard {
+  border-left: 4px solid #d97706;
+}
+
+.pantry-item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pantry-zone-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.pantry-zone-pill.fridge {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+.pantry-zone-pill.cupboard {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.pantry-item-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pantry-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.pantry-qty-badge {
+  min-width: 78px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.pantry-shopping-sync-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%);
+  border: 1px solid #86efac;
+  font-size: 0.82rem;
+}
+
+.pantry-suggestions-panel {
+  margin-top: 4px;
+}
+
+.pantry-suggestions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pantry-suggestions-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pantry-servings-box {
+  display: inline-flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px !important;
+  margin: 0 !important;
+}
+
+.pantry-match-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.pantry-match-high {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.pantry-match-mid {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.pantry-match-low {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.pantry-ing-breakdown {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: var(--radius-sm);
+  border: 1px solid #e2e8f0;
+}
+
+.pantry-ing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.pantry-ing-status-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.pantry-ing-status-chip.covered {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.pantry-ing-status-chip.partial {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.pantry-ing-status-chip.missing {
+  background: #ffffff;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+}
+
+.pantry-deduction-banner {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #ecfeff 0%, #f0fdf4 100%);
+  border: 1.5px solid #34d399;
+}
+
+.pantry-deducted-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
 }
 
 
