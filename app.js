@@ -4606,6 +4606,13 @@ let voiceGuideSession = {
   active: false,
   isSpeaking: false,
   isListening: false,
+  isStarting: false,
+  startingSince: 0,
+  permissionBlocked: false,
+  fallbackMode: false,
+  fallbackStream: null,
+  fallbackAudioCtx: null,
+  fallbackVadTimer: null,
   isPaused: false,
   finished: false,
   sequence: [], // [{ type: 'intro' | 'ingredient' | 'step' | 'outro', title, visualText, spokenText, ovenTemp, ingredientIdx, recipeStepIdx }]
@@ -5690,22 +5697,110 @@ function updateDevicePermissionsButtonsUI() {
   });
 }
 
-async function requestAppMicrophonePermission() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('⚠️ Le microphone n\'est pas pris en charge sur ce navigateur.');
+function showMicDiagnosticBanner(htmlContent, isSuccess = false) {
+  let banner = document.getElementById('mic-permission-help-box');
+  if (!banner) {
+    const pill = document.getElementById('settings-mic-status-pill');
+    const parentCard = pill ? pill.closest('.card-panel') : null;
+    if (parentCard) {
+      banner = document.createElement('div');
+      banner.id = 'mic-permission-help-box';
+      banner.style.marginTop = '12px';
+      banner.style.padding = '12px 14px';
+      banner.style.borderRadius = '10px';
+      banner.style.fontSize = '0.88rem';
+      banner.style.lineHeight = '1.5';
+      parentCard.appendChild(banner);
+    }
+  }
+  if (!banner) return;
+  if (!htmlContent) {
+    banner.style.display = 'none';
     return;
   }
+  banner.style.display = 'block';
+  banner.style.background = isSuccess ? '#ecfdf5' : '#fef2f2';
+  banner.style.border = isSuccess ? '1px solid #34d399' : '1px solid #f87171';
+  banner.style.color = isSuccess ? '#065f46' : '#991b1b';
+  banner.innerHTML = htmlContent;
+}
+
+async function requestAppMicrophonePermission() {
+  if (window.location.protocol === 'file:' || (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+    const targetUrl = 'http://localhost:8080';
+    showMicDiagnosticBanner(
+      `<strong>⚠️ Adresse non sécurisée (${window.location.protocol}//${window.location.host || 'fichier local'}) :</strong><br>` +
+      `Les navigateurs bloquent le microphone lorsque l'application est ouverte via <code>file://</code> ou une adresse IP non-HTTPS.<br>` +
+      `<a href="${targetUrl}" class="btn btn-primary btn-sm" style="margin-top:8px; display:inline-flex;">🚀 Ouvrir sur ${targetUrl}</a>`
+    );
+    showToast('⚠️ Ouvrez l\'application sur http://localhost:8080 ou en HTTPS pour activer le microphone.');
+    return false;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('⚠️ Le microphone n\'est pas pris en charge sur ce navigateur.');
+    return false;
+  }
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+        video: false
+      });
+    } catch (firstErr) {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
+
+    // Garder le flux actif un court instant pour que le navigateur valide et mémorise l'autorisation
+    await new Promise((resolve) => setTimeout(resolve, 350));
     stream.getTracks().forEach((t) => t.stop());
+
     appDevicePermissionsState.mic = 'granted';
+    voiceGuideSession.permissionBlocked = false;
     localStorage.setItem('menusemaine_perm_mic_v1', 'granted');
     updateDevicePermissionsButtonsUI();
+    showMicDiagnosticBanner(
+      `<strong>✅ Microphone activé et opérationnel !</strong> Vous pouvez utiliser les commandes vocales dans le <em>Guide vocal</em> (« Suivant », « Répéter », « Pause », « Reprendre ») et la dictée dans le <em>Garde-manger</em>.`,
+      true
+    );
     showToast('🎙️ Microphone activé avec succès pour l\'application !');
+
+    if (voiceGuideSession.active && !voiceGuideSession.finished) {
+      startVoiceCommandListener(true);
+    }
+    return true;
   } catch (err) {
-    appDevicePermissionsState.mic = 'denied';
-    updateDevicePermissionsButtonsUI();
-    showToast('⚠️ Accès au microphone refusé. Vérifiez les autorisations de votre navigateur.');
+    const errName = (err && err.name) ? err.name : '';
+    if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
+      appDevicePermissionsState.mic = 'prompt';
+      updateDevicePermissionsButtonsUI();
+      showMicDiagnosticBanner(
+        `<strong>⚠️ Aucun microphone détecté (${errName}) :</strong><br>` +
+        `Vérifiez qu'un microphone ou casque est bien branché et activé dans <strong>Paramètres Windows &gt; Système &gt; Son &gt; Entrée</strong>.`
+      );
+      showToast('⚠️ Aucun microphone détecté sur cet appareil.');
+    } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
+      appDevicePermissionsState.mic = 'prompt';
+      updateDevicePermissionsButtonsUI();
+      showMicDiagnosticBanner(
+        `<strong>⚠️ Microphone occupé ou indisponible (${errName}) :</strong><br>` +
+        `Une autre application utilise exclusivement le micro ou celui-ci est désactivé dans les paramètres son de Windows.`
+      );
+      showToast('⚠️ Le microphone est occupé ou désactivé dans Windows.');
+    } else {
+      appDevicePermissionsState.mic = 'denied';
+      updateDevicePermissionsButtonsUI();
+      showMicDiagnosticBanner(
+        `<strong>🔒 Accès au microphone bloqué par le navigateur :</strong><br>` +
+        `1. Cliquez sur l'icône de réglages <strong>🎛️ / 🔒</strong> tout à gauche de la barre d'adresse (devant <code>${window.location.host || 'localhost:8080'}</code>).<br>` +
+        `2. Passez <strong>Microphone</strong> sur <strong>« Autoriser »</strong> (ou cliquez sur Réinitialiser l'autorisation).<br>` +
+        `3. Cliquez à nouveau sur <strong>🎙️ Activer le micro</strong> ci-dessus.`
+      );
+      showToast('⚠️ Micro bloqué dans la barre d\'adresse : cliquez sur l\'icône 🔒/🎛️ à gauche de l\'URL puis « Autoriser ».');
+    }
+    return false;
   }
 }
 
