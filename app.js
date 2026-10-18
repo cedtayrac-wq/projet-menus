@@ -5350,6 +5350,19 @@ function formatVoiceOptionLabel(voice) {
 
 function selectVoicePersona(personaId, playSample = false) {
   if (!VOICE_PERSONAS[personaId]) return;
+
+  // Si on clique sur le bouton "Écouter" de la voix qui est déjà en train de jouer son extrait, on l'arrête !
+  if (playSample && activePreviewPersonaId === personaId && voiceGuideSession.isSpeaking) {
+    stopVoiceGuide();
+    showToast('⏹️ Extrait vocal arrêté.');
+    return;
+  }
+
+  // Toujours couper immédiatement toute voix en cours avant de changer ou relancer un extrait
+  if (typeof cancelAllActiveSpeech === 'function') {
+    cancelAllActiveSpeech();
+  }
+
   if (!state.voiceSettings) {
     state.voiceSettings = {
       persona: personaId,
@@ -5392,10 +5405,10 @@ function selectVoicePersona(personaId, playSample = false) {
   }
 
   const p = VOICE_PERSONAS[personaId];
-  showToast(`🎙️ Assistant vocal : ${p.name} (${p.shortTitle})`);
-
   if (playSample) {
-    testSelectedVoiceGuide();
+    playPersonaVoiceSample(personaId);
+  } else {
+    showToast(`🎙️ Assistant vocal : ${p.name} (${p.shortTitle})`);
   }
 }
 
@@ -5422,9 +5435,7 @@ function renderVoiceGuideSettings() {
   const statusPill = document.getElementById('voice-guide-status-pill');
   if (statusPill && !voiceGuideSession.isSpeaking) {
     if (isCloneEngine) {
-      statusPill.textContent = isCustomCloned
-        ? `🧬 Voix Clonée active : ${activePersona.name} (Clone Perso)`
-        : builtinProf.isChefClone
+      statusPill.textContent = builtinProf.isChefClone
         ? `🧬 Voix Clonée active : ${activePersona.name}`
         : `🎙️ ${builtinProf.label} : ${activePersona.name}`;
     } else if (hasVoiceAiKey) {
@@ -5451,7 +5462,7 @@ function renderVoiceGuideSettings() {
   if (xiBadge) {
     if (isCloneEngine) {
       if (isCustomCloned) {
-        xiBadge.textContent = `🧬 Clone personnalisé actif (${activePersona.name})`;
+        xiBadge.textContent = `🧬 Voix active (${activePersona.name})`;
       } else if (xiKey) {
         xiBadge.textContent = `✅ ElevenLabs Neural v2 + 9 Voix Clonées actifs`;
       } else {
@@ -5503,21 +5514,13 @@ function renderVoiceGuideSettings() {
     personaSelect.value = activePersona.id;
   }
 
-  // Rendre la grille de cartes des 9 personnalités dans les Paramètres
+  // Rendre la grille de cartes des 9 personnalités dans les Paramètres (sans la mention 'Clone Perso')
   const personaGrid = document.getElementById('voice-persona-grid');
   if (personaGrid) {
     personaGrid.innerHTML = Object.values(VOICE_PERSONAS)
       .map((p) => {
         const isSelected = p.id === activePersona.id;
-        const hasCloneForP = hasCustomVoiceClone(p.id);
-        const pBuiltin = BUILTIN_NEURAL_PROFILES[p.id];
-        const clonePill = hasCloneForP
-          ? `<span class="voice-persona-active-tag" style="background:#7c3aed;">🧬 Clone Perso</span>`
-          : isCloneEngine && pBuiltin?.isChefClone
-          ? `<span class="voice-persona-active-tag" style="background:#7c3aed;">🧬 Voix Clonée</span>`
-          : isCloneEngine
-          ? `<span class="voice-persona-active-tag" style="background:#0284c7;">✨ ${p.gender === 'male' ? 'Voix Homme Neural' : 'Voix Femme Neural'}</span>`
-          : '';
+        const isThisSamplePlaying = activePreviewPersonaId === p.id && voiceGuideSession.isSpeaking;
         return `
           <div
             class="voice-persona-card ${isSelected ? 'is-selected' : ''}"
@@ -5532,7 +5535,6 @@ function renderVoiceGuideSettings() {
                 <div class="voice-persona-name-row">
                   <strong>${p.name}</strong>
                   ${isSelected ? '<span class="voice-persona-active-tag">✓ Choisi</span>' : ''}
-                  ${clonePill}
                 </div>
                 <span class="voice-persona-badge">${p.badge}</span>
                 <p class="voice-persona-desc">${p.description}</p>
@@ -5549,10 +5551,11 @@ function renderVoiceGuideSettings() {
               <button
                 type="button"
                 class="btn btn-outline btn-sm"
+                style="${isThisSamplePlaying ? 'background:#fef2f2; border-color:#f87171; color:#b91c1c; font-weight:800;' : ''}"
                 onclick="event.stopPropagation(); selectVoicePersona('${p.id}', true);"
-                title="Écouter un aperçu vocal de ${p.name}"
+                title="${isThisSamplePlaying ? 'Arrêter l\'extrait vocal' : 'Écouter un aperçu vocal de ' + p.name}"
               >
-                🔊 Écouter
+                ${isThisSamplePlaying ? '⏹️ Arrêter' : '🔊 Écouter'}
               </button>
             </div>
           </div>
@@ -5795,11 +5798,17 @@ function updateVoiceStatusIndicators(isSpeaking, labelText) {
 // & RECONNAISSANCE VOCALE CONTINUE (« SUIVANT », « RÉPÉTER », « PAUSE », « REPRENDRE »)
 // ============================================================================
 let activeCloudVoiceAudio = null;
+let currentVoiceRequestSeq = 0;
+let activeTtsFetchController = null;
+let activePreviewPersonaId = null;
 window._activeVoiceUtterance = null; // Référence globale pour empêcher le Garbage Collector Chrome/Android de supprimer onend !
 
 function stopActiveCloudVoiceAudio() {
   if (activeCloudVoiceAudio) {
     try {
+      activeCloudVoiceAudio.onended = null;
+      activeCloudVoiceAudio.onerror = null;
+      activeCloudVoiceAudio.onplay = null;
       activeCloudVoiceAudio.pause();
       activeCloudVoiceAudio.src = '';
     } catch (e) {}
@@ -5807,9 +5816,44 @@ function stopActiveCloudVoiceAudio() {
   }
 }
 
+function cancelAllActiveSpeech() {
+  currentVoiceRequestSeq++;
+  activePreviewPersonaId = null;
+
+  if (activeTtsFetchController) {
+    try {
+      activeTtsFetchController.abort();
+    } catch (e) {}
+    activeTtsFetchController = null;
+  }
+
+  stopActiveCloudVoiceAudio();
+
+  if (window._activeVoiceUtterance && window._activeVoiceUtterance._safetyEndTimer) {
+    clearTimeout(window._activeVoiceUtterance._safetyEndTimer);
+  }
+
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+
+  voiceGuideSession.isSpeaking = false;
+}
+
 function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
+  const reqId = options.reqId;
   return new Promise((resolve) => {
     try {
+      if (reqId && reqId !== currentVoiceRequestSeq) {
+        if (isObjectUrl) {
+          try { URL.revokeObjectURL(audioSrc); } catch (e) {}
+        }
+        resolve(true);
+        return;
+      }
+
       stopActiveCloudVoiceAudio();
       const audio = new Audio(audioSrc);
       const userRate = state.voiceSettings?.rate || 1.0;
@@ -5839,7 +5883,14 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
         if (activeCloudVoiceAudio === audio) {
           activeCloudVoiceAudio = null;
         }
+        if (reqId && reqId !== currentVoiceRequestSeq) {
+          resolve(true);
+          return;
+        }
         if (ok) {
+          if (activePreviewPersonaId === persona.id) {
+            activePreviewPersonaId = null;
+          }
           voiceGuideSession.isSpeaking = false;
           voiceGuideSession.lastSpokenEndTime = Date.now();
           updateVoiceStatusIndicators(false);
@@ -5853,6 +5904,11 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
       };
 
       audio.onplay = () => {
+        if (reqId && reqId !== currentVoiceRequestSeq) {
+          try { audio.pause(); } catch (e) {}
+          finish(true);
+          return;
+        }
         voiceGuideSession.isSpeaking = true;
         updateVoiceStatusIndicators(true, options.statusLabel || `🧬 ${persona.name} vous parle...`);
         updateCharacterStageAnimationState();
@@ -5871,6 +5927,7 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 
 // 1. Synthèse Vocale via le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + Windows OneCore Microsoft Paul/Hortense)
 async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
+  const reqId = options.reqId;
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
   const payload = {
@@ -5887,8 +5944,10 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   }
 
   for (const url of endpoints) {
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
     try {
       const controller = new AbortController();
+      activeTtsFetchController = controller;
       const timeoutId = setTimeout(() => controller.abort(), 5500);
       const resp = await fetch(url, {
         method: 'POST',
@@ -5897,12 +5956,14 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
+      if (reqId && reqId !== currentVoiceRequestSeq) return true;
 
       if (!resp.ok) continue;
       const ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
       if (!ctype.includes('audio')) continue;
 
       const blob = await resp.blob();
+      if (reqId && reqId !== currentVoiceRequestSeq) return true;
       if (!blob || blob.size < 200) continue;
 
       const audioUrl = URL.createObjectURL(blob);
@@ -5913,7 +5974,7 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
       if (state.voiceSettings && typeof prevRate === 'number') state.voiceSettings.rate = prevRate;
       if (played) return true;
     } catch (e) {
-      // Essayer le prochain endpoint ou repli
+      if (reqId && reqId !== currentVoiceRequestSeq) return true;
     }
   }
   return false;
@@ -5921,6 +5982,7 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
 
 // 2. Lecture de l'extrait vocal neuronal pré-généré embarqué (assets/voices/<persona>.mp3) — fonctionne 100% hors-ligne et sur PaaS/GitHub Pages
 async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) {
+  if (options.reqId && options.reqId !== currentVoiceRequestSeq) return true;
   const sampleQuoteClean = (persona.sampleQuote || '').replace(/[«»]/g, '').trim();
   const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
   if (!isSample) return false;
@@ -5934,6 +5996,8 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
 
 // 3. Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2) si clé ElevenLabs externe renseignée
 async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = {}) {
+  const reqId = options.reqId;
+  if (reqId && reqId !== currentVoiceRequestSeq) return true;
   try {
     const voiceId = getResolvedElevenLabsVoiceId(persona.id);
     const voiceSettings = persona.elevenLabsSettings || {
@@ -5943,6 +6007,8 @@ async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = 
       use_speaker_boost: true
     };
 
+    const controller = new AbortController();
+    activeTtsFetchController = controller;
     const resp = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
       {
@@ -5956,23 +6022,29 @@ async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = 
           text: cleanText,
           model_id: 'eleven_multilingual_v2',
           voice_settings: voiceSettings
-        })
+        }),
+        signal: controller.signal
       }
     );
 
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
     if (!resp.ok) return false;
     const blob = await resp.blob();
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
     if (!blob || blob.size < 100) return false;
 
     const audioUrl = URL.createObjectURL(blob);
     return await playAudioBlobOrUrl(audioUrl, true, persona, options);
   } catch (e) {
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
     return false;
   }
 }
 
 // 4. Synthèse Vocale Cloud IA (Google Gemini TTS & Cloud Text-to-Speech Neural2)
 async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options = {}) {
+  const reqId = options.reqId;
+  if (reqId && reqId !== currentVoiceRequestSeq) return true;
   if (!voiceApiKey || voiceApiKey.startsWith('sk_') || voiceApiKey.startsWith('xi-')) return false;
 
   const isFemale = persona.gender === 'female';
@@ -5985,6 +6057,8 @@ async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options =
     const semitonePitch = Math.max(-6, Math.min(6, (basePitch - 1.0) * 12));
     const voiceName = isFemale ? 'fr-FR-Neural2-A' : 'fr-FR-Neural2-B';
 
+    const controller = new AbortController();
+    activeTtsFetchController = controller;
     const resp = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(voiceApiKey)}`,
       {
@@ -6002,18 +6076,23 @@ async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options =
             speakingRate,
             pitch: semitonePitch
           }
-        })
+        }),
+        signal: controller.signal
       }
     );
 
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
     if (resp.ok) {
       const data = await resp.json();
+      if (reqId && reqId !== currentVoiceRequestSeq) return true;
       if (data && data.audioContent) {
         const played = await playAudioBlobOrUrl(`data:audio/mp3;base64,${data.audioContent}`, false, persona, options);
         if (played) return true;
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
+  }
 
   return false;
 }
@@ -6024,78 +6103,97 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
   const voiceApiKey = getEffectiveAiApiKey('voice');
   const hasBrowserSpeech = 'speechSynthesis' in window;
 
-  voiceGuideSession.isSpeaking = true;
-  updateCharacterStageAnimationState();
-
-  stopActiveCloudVoiceAudio();
-  if (hasBrowserSpeech) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {}
-  }
+  // Toujours couper et invalider toute lecture vocale précédente pour empêcher toute superposition
+  cancelAllActiveSpeech();
+  const reqId = ++currentVoiceRequestSeq;
+  const reqOptions = { ...options, reqId };
 
   const cleanText = String(textToSpeak || '').trim();
   if (!cleanText) {
     voiceGuideSession.isSpeaking = false;
     updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
     return;
   }
 
   const persona = getActiveVoicePersona();
+  if (options.isSamplePreview) {
+    activePreviewPersonaId = persona.id;
+  }
+
+  voiceGuideSession.isSpeaking = true;
+  updateCharacterStageAnimationState();
+  renderVoiceGuideSettings();
 
   // En Mode Voix Clonée & Imitation Réaliste (par défaut) :
   if (isCloneEngine) {
-    // 1. Si une clé ElevenLabs externe est configurée, l'essayer en priorité
-    if (xiKey) {
-      const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options);
-      if (playedXi) return;
+    // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter"), lire immédiatement l'échantillon neuronal pré-généré embarqué (assets/voices/<persona>.mp3)
+    // pour un démarrage instantané et un arrêt immédiat au second clic sans latence réseau !
+    if (options.isSamplePreview) {
+      const playedFastSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
+      if (playedFastSample || reqId !== currentVoiceRequestSeq) return;
     }
 
-    // 2. Utiliser le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + OneCore Microsoft Paul/Hortense)
-    const playedLocalNeural = await trySpeakWithLocalNeuralServer(cleanText, persona, options);
-    if (playedLocalNeural) return;
+    // 2. Si une clé ElevenLabs externe est configurée, l'essayer
+    if (xiKey) {
+      const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, reqOptions);
+      if (playedXi || reqId !== currentVoiceRequestSeq) return;
+    }
 
-    // 3. Si c'est l'aperçu vocal (bouton "🔊 Écouter") en ligne (GitHub Pages / Netlify / Smartphone) ou hors-ligne,
-    // lire directement l'échantillon neuronal pré-généré de la personnalité (assets/voices/<persona>.mp3)
-    const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, options);
-    if (playedBundledSample) return;
+    // 3. Utiliser le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + OneCore Microsoft Paul/Hortense)
+    const playedLocalNeural = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
+    if (playedLocalNeural || reqId !== currentVoiceRequestSeq) return;
 
-    // 4. Si une clé Cloud IA est configurée, essayer Cloud Neural TTS
+    // 4. Repli sur l'échantillon embarqué si applicable
+    const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
+    if (playedBundledSample || reqId !== currentVoiceRequestSeq) return;
+
+    // 5. Si une clé Cloud IA est configurée, essayer Cloud Neural TTS
     if (voiceApiKey) {
-      const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options);
-      if (playedCloud) return;
+      const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, reqOptions);
+      if (playedCloud || reqId !== currentVoiceRequestSeq) return;
     }
   } else {
     // En Mode Voix Système Standard :
-    // Si la personnalité est MASCULINE (ex: Voix IA Homme, Lignac, Bocuse, Etchebest...) mais que le navigateur
-    // ne possède AUCUNE voix française masculine (cas fréquent de Chrome sur Windows qui n'expose qu'Hortense et Google français),
-    // on interroge d'abord le serveur local (/api/tts) pour faire parler la vraie voix masculine (HenriNeural / Microsoft Paul) !
     if (persona.gender === 'male') {
       const frVoices = getSortedSpeechVoices(true);
       const hasNativeMaleBrowserVoice = frVoices.some((v) => guessVoiceGender(v) === 'male');
       if (!hasNativeMaleBrowserVoice) {
-        const playedMaleServer = await trySpeakWithLocalNeuralServer(cleanText, persona, options);
-        if (playedMaleServer) return;
-        const playedMaleSample = await trySpeakWithBundledSampleAudio(cleanText, persona, options);
-        if (playedMaleSample) return;
+        if (options.isSamplePreview) {
+          const playedMaleSampleFast = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
+          if (playedMaleSampleFast || reqId !== currentVoiceRequestSeq) return;
+        }
+        const playedMaleServer = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
+        if (playedMaleServer || reqId !== currentVoiceRequestSeq) return;
+        const playedMaleSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
+        if (playedMaleSample || reqId !== currentVoiceRequestSeq) return;
       }
     }
   }
 
-  // 5. Repli sur la synthèse vocale du navigateur (avec transposition baryton forcée si voix masculine sur moteur féminin)
+  if (reqId !== currentVoiceRequestSeq) return;
+
+  // 6. Repli sur la synthèse vocale du navigateur (avec transposition baryton forcée si voix masculine sur moteur féminin)
   if (hasBrowserSpeech) {
-    speakWithBrowserSynthesis(cleanText, persona, options);
+    speakWithBrowserSynthesis(cleanText, persona, reqOptions);
   } else {
+    activePreviewPersonaId = null;
     voiceGuideSession.isSpeaking = false;
     updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
     showToast('⚠️ La synthèse vocale n\'est pas disponible sur cet appareil.');
   }
 }
 
 function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
+  const reqId = options.reqId;
+  if (reqId && reqId !== currentVoiceRequestSeq) return;
+
   if (!('speechSynthesis' in window)) {
+    activePreviewPersonaId = null;
     voiceGuideSession.isSpeaking = false;
     updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
     return;
   }
 
@@ -6114,9 +6212,6 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
   const userRateMultiplier = state.voiceSettings?.rate || 1.0;
   utterance.rate = Math.max(0.7, Math.min(1.45, (persona.baseRate || 1.0) * userRateMultiplier));
 
-  // Correction critique : si la personnalité est un HOMME (ex: Voix IA Homme, Bocuse, Etchebest, Lignac...)
-  // mais que le navigateur n'a fourni qu'une voix féminine ou inconnue (ex: Microsoft Hortense sur Chrome Windows),
-  // abaisser franchement le pitch dans le registre baryton masculin (0.48 à 0.62) pour ne jamais avoir une voix de femme !
   const resolvedGender = voice ? guessVoiceGender(voice) : 'unknown';
   if (persona.gender === 'male' && resolvedGender !== 'male') {
     const maleFallbackPitchMap = {
@@ -6140,6 +6235,10 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
     if (finishedHandled) return;
     finishedHandled = true;
     clearTimeout(utterance._safetyEndTimer);
+    if (reqId && reqId !== currentVoiceRequestSeq) return;
+    if (activePreviewPersonaId === persona.id) {
+      activePreviewPersonaId = null;
+    }
     voiceGuideSession.isSpeaking = false;
     voiceGuideSession.lastSpokenEndTime = Date.now();
     updateVoiceStatusIndicators(false);
@@ -6159,6 +6258,10 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
   }, estimatedMs);
 
   utterance.onstart = () => {
+    if (reqId && reqId !== currentVoiceRequestSeq) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+      return;
+    }
     voiceGuideSession.isSpeaking = true;
     updateVoiceStatusIndicators(true, options.statusLabel || `🔊 ${persona.name} parle...`);
     updateCharacterStageAnimationState();
@@ -6178,8 +6281,8 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
   }
 }
 
-function testSelectedVoiceGuide() {
-  const persona = getActiveVoicePersona();
+function playPersonaVoiceSample(personaId) {
+  const persona = VOICE_PERSONAS[personaId] || getActiveVoicePersona();
   const sampleText = persona.sampleQuote.replace(/[«»]/g, '');
   speakWithVoiceGuide(sampleText, {
     statusLabel: `🔊 Aperçu vocal : ${persona.name}`,
@@ -6191,6 +6294,16 @@ function testSelectedVoiceGuide() {
     emojis: persona.particles
   });
   showToast(`🔊 ${persona.name} : démonstration vocale en cours...`);
+}
+
+function testSelectedVoiceGuide() {
+  const persona = getActiveVoicePersona();
+  if (voiceGuideSession.isSpeaking && activePreviewPersonaId === persona.id) {
+    stopVoiceGuide();
+    showToast('⏹️ Extrait vocal arrêté.');
+    return;
+  }
+  playPersonaVoiceSample(persona.id);
 }
 
 // Normalisation phonétique sans accents pour reconnaître toutes les variantes de "suivant", "répéter", "pause", "reprendre"
@@ -6733,18 +6846,13 @@ function stopVoiceGuide() {
   voiceGuideSession.isPaused = false;
   voiceGuideSession.finished = false;
 
+  cancelAllActiveSpeech();
   stopVoiceCommandListener();
   releaseKitchenWakeLock();
-  stopActiveCloudVoiceAudio();
-
-  if ('speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {}
-  }
 
   highlightModalRecipeSection(null);
   updateVoiceStatusIndicators(false);
+  renderVoiceGuideSettings();
 
   const wrapper = document.getElementById('modal-voice-guide-wrapper');
   if (wrapper && activeModalVoiceContext) {
