@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-semaine-v126';
+const CACHE_NAME = 'menu-semaine-v131';
 const ASSETS = [
   './',
   './index.html',
@@ -18,7 +18,16 @@ const ASSETS = [
   './assets/personas/etchebest.png',
   './assets/personas/coffe.jpg',
   './assets/personas/ia_homme.jpg',
-  './assets/personas/ia_femme.jpg'
+  './assets/personas/ia_femme.jpg',
+  './assets/voices/maite.mp3',
+  './assets/voices/lignac.mp3',
+  './assets/voices/remy.mp3',
+  './assets/voices/bocuse.mp3',
+  './assets/voices/marx.mp3',
+  './assets/voices/etchebest.mp3',
+  './assets/voices/coffe.mp3',
+  './assets/voices/ia_homme.mp3',
+  './assets/voices/ia_femme.mp3'
 ];
 
 self.addEventListener('install', (event) => {
