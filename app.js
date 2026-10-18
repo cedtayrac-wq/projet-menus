@@ -5980,18 +5980,213 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   return false;
 }
 
-// 2. Lecture de l'extrait vocal neuronal pré-généré embarqué (assets/voices/<persona>.mp3) — fonctionne 100% hors-ligne et sur PaaS/GitHub Pages
+// 2. Lecture de l'extrait vocal neuronal ou cloné pré-généré embarqué (assets/voices/<persona>.wav ou .mp3) — fonctionne 100% hors-ligne et sur PaaS/GitHub Pages
 async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) {
   if (options.reqId && options.reqId !== currentVoiceRequestSeq) return true;
   const sampleQuoteClean = (persona.sampleQuote || '').replace(/[«»]/g, '').trim();
   const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
+  // Essayer d'abord l'extrait cloné WAV authentique s'il est présent, sinon le MP3
+  const wavPath = `assets/voices/${persona.id}.wav`;
+  const playedWav = await playAudioBlobOrUrl(wavPath, false, persona, {
+    ...options,
+    applyClonePitchOnClient: false
+  });
+  if (playedWav || (options.reqId && options.reqId !== currentVoiceRequestSeq)) return true;
+
   const samplePath = `assets/voices/${persona.id}.mp3`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: true
   });
+}
+
+// ============================================================================
+// 2b. CLONAGE VOCAL ZERO-SHOT GRATUIT (OmniVoice / XTTS-v2) AVEC LES VRAIS EXTRAITS AUDIO DES CHEFS
+// ============================================================================
+const FREE_ZEROSHOT_CLONE_META = {
+  maite: {
+    audioPath: 'data/voices/maite.mp3',
+    gender: 'female',
+    refText: "Alors là, on va préparer un bon cassoulet. Il faut des haricots, bien sûr. Il faut de la saucisse, il faut du confit. Ah, mais attendez ! J'ai oublié l'ail. On met l'ail, beaucoup d'ail. C'est important pour le goût. Vous allez voir, c'est magnifique !"
+  },
+  etchebest: {
+    audioPath: 'data/voices/etchebest.mp3',
+    gender: 'male',
+    refText: "Bonjour à toutes et à tous ! Aujourd'hui, nous allons aborder un sujet important : le choix de la batterie de cuisine. Il est crucial de sélectionner le bon matériel pour réussir toutes vos préparations. Je suis là pour vous aider à y voir plus clair et vous guider."
+  },
+  coffe: {
+    audioPath: 'data/voices/coffe.mp3',
+    gender: 'male',
+    refText: "Moi, je crois que ce qui est grave, c'est ceci ! Regardez ça, est-ce que la caméra peut nous prendre ça ? Ça, c'est un produit acheté ce matin, mais la qualité, c'est honteux ! Je ne voudrais pas qu'on s'imagine une seconde que c'est un bon produit. C'est de mauvaise qualité, alors que ça, c'est excellent. Voilà la différence !"
+  },
+  remy: {
+    audioPath: 'data/voices/remy.mp3',
+    gender: 'male',
+    refText: "Alors, à vous de proposer! Moi, je crois que ça, on ne le veut pas, pas du tout. Mais oui, c'est exactement ça! On demande l'avis de tout le monde pour nos prochaines sorties. Qu'en pensez-vous?"
+  },
+  lignac: {
+    audioPath: 'data/voices/lignac.mp3',
+    gender: 'male',
+    refText: "Aujourd'hui, nous allons préparer une recette classique qui suscite toujours la discussion : le gratin dauphinois. Il est essentiel de suivre les étapes avec précision pour un résultat parfait, sans fromage ni œuf, uniquement avec de la crème et du lait. C'est simple, économique et délicieux si l'on respecte la tradition."
+  },
+  bocuse: {
+    audioPath: 'data/voices/bocuse.mp3',
+    gender: 'male',
+    refText: "Les vins français représentent l'excellence de notre terroir. Le Bordeaux, vin rouge noble du sud-ouest, offre des arômes complexes de fruits mûrs. Le Champagne, uniquement de la région éponyme, présente des bulles fines et une élégance incomparable."
+  },
+  marx: {
+    audioPath: 'data/voices/marx.mp3',
+    gender: 'male',
+    refText: "La vérité n'est pas ce que tu vois, mais ce que tu refuses de voir. Chaque moment de doute est une invitation à grandir. Tu n'es pas victime des circonstances, tu es le créateur de ta réalité. La conscience de ce pouvoir est ta plus grande force."
+  }
+};
+
+const _zeroShotUploadedRefCache = {};
+const _zeroShotAudioBlobCache = {};
+
+async function getUploadedZeroShotRefPath(spaceBaseUrl, personaId, signal) {
+  const cacheKey = `${spaceBaseUrl}__${personaId}`;
+  if (_zeroShotUploadedRefCache[cacheKey]) {
+    return _zeroShotUploadedRefCache[cacheKey];
+  }
+  const meta = FREE_ZEROSHOT_CLONE_META[personaId];
+  if (!meta) return null;
+
+  const refResp = await fetch(meta.audioPath, { signal });
+  if (!refResp.ok) return null;
+  const refBlob = await refResp.blob();
+
+  const fd = new FormData();
+  fd.append('files', refBlob, `${personaId}.mp3`);
+
+  const upResp = await fetch(`${spaceBaseUrl}/gradio_api/upload`, {
+    method: 'POST',
+    body: fd,
+    signal
+  });
+  if (!upResp.ok) return null;
+  const upData = await upResp.json();
+  const uploadedPath = Array.isArray(upData) ? upData[0] : null;
+  if (uploadedPath) {
+    _zeroShotUploadedRefCache[cacheKey] = uploadedPath;
+  }
+  return uploadedPath;
+}
+
+async function trySpeakWithFreeZeroShotVoiceClone(cleanText, persona, options = {}) {
+  const reqId = options.reqId;
+  if (reqId && reqId !== currentVoiceRequestSeq) return true;
+  const meta = FREE_ZEROSHOT_CLONE_META[persona.id];
+  if (!meta) return false;
+
+  const cacheKey = `${persona.id}::${cleanText}`;
+  if (_zeroShotAudioBlobCache[cacheKey]) {
+    return await playAudioBlobOrUrl(_zeroShotAudioBlobCache[cacheKey], false, persona, options);
+  }
+
+  // 1. Essayer OmniVoice Zero-Shot Voice Cloning (rapide ~4-6s) avec l'extrait vocal réel du chef
+  try {
+    const controller = new AbortController();
+    activeTtsFetchController = controller;
+    const omniBase = 'https://k2-fsa-omnivoice.hf.space';
+    const upPath = await getUploadedZeroShotRefPath(omniBase, persona.id, controller.signal);
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
+    if (upPath) {
+      const callResp = await fetch(`${omniBase}/gradio_api/call/_clone_fn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: [
+            cleanText,
+            'French',
+            { path: upPath, orig_name: `${persona.id}.mp3`, meta: { _type: 'gradio.FileData' } },
+            meta.refText,
+            '',
+            24,
+            2.0,
+            true,
+            1.0,
+            0,
+            true,
+            true
+          ]
+        }),
+        signal: controller.signal
+      });
+      if (reqId && reqId !== currentVoiceRequestSeq) return true;
+      if (callResp.ok) {
+        const { event_id } = await callResp.json();
+        if (event_id) {
+          const sseResp = await fetch(`${omniBase}/gradio_api/call/_clone_fn/${event_id}`, {
+            signal: controller.signal
+          });
+          const sseText = await sseResp.text();
+          if (reqId && reqId !== currentVoiceRequestSeq) return true;
+          const match = sseText.match(/"url":\s*"([^"]+)"/);
+          if (match && match[1]) {
+            _zeroShotAudioBlobCache[cacheKey] = match[1];
+            const ok = await playAudioBlobOrUrl(match[1], false, persona, options);
+            if (ok) return true;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
+  }
+
+  // 2. Repli Zero-Shot XTTS-v2 Multi-language Voice Cloning avec l'extrait vocal réel du chef
+  try {
+    const controller = new AbortController();
+    activeTtsFetchController = controller;
+    const xttsBase = 'https://fabrice-tiercelin-multi-language-text-to-speech.hf.space';
+    const upPath = await getUploadedZeroShotRefPath(xttsBase, persona.id, controller.signal);
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
+    if (upPath) {
+      const callResp = await fetch(`${xttsBase}/gradio_api/call/predict_all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: [
+            cleanText,
+            'fr',
+            meta.gender || persona.gender || 'male',
+            { path: upPath, orig_name: `${persona.id}.mp3`, meta: { _type: 'gradio.FileData' } },
+            null,
+            false,
+            1,
+            0.72,
+            true,
+            42
+          ]
+        }),
+        signal: controller.signal
+      });
+      if (reqId && reqId !== currentVoiceRequestSeq) return true;
+      if (callResp.ok) {
+        const { event_id } = await callResp.json();
+        if (event_id) {
+          const sseResp = await fetch(`${xttsBase}/gradio_api/call/predict_all/${event_id}`, {
+            signal: controller.signal
+          });
+          const sseText = await sseResp.text();
+          if (reqId && reqId !== currentVoiceRequestSeq) return true;
+          const match = sseText.match(/"url":\s*"([^"]+\.wav)"/);
+          if (match && match[1]) {
+            _zeroShotAudioBlobCache[cacheKey] = match[1];
+            const ok = await playAudioBlobOrUrl(match[1], false, persona, options);
+            if (ok) return true;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    if (reqId && reqId !== currentVoiceRequestSeq) return true;
+  }
+
+  return false;
 }
 
 // 3. Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2) si clé ElevenLabs externe renseignée
@@ -6127,28 +6322,35 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
 
   // En Mode Voix Clonée & Imitation Réaliste (par défaut) :
   if (isCloneEngine) {
-    // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter"), lire immédiatement l'échantillon neuronal pré-généré embarqué (assets/voices/<persona>.mp3)
+    // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter"), lire immédiatement l'échantillon cloné pré-généré embarqué (assets/voices/<persona>.wav ou .mp3)
     // pour un démarrage instantané et un arrêt immédiat au second clic sans latence réseau !
     if (options.isSamplePreview) {
       const playedFastSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
       if (playedFastSample || reqId !== currentVoiceRequestSeq) return;
     }
 
-    // 2. Si une clé ElevenLabs externe est configurée, l'essayer
+    // 2. Utiliser le moteur de Clonage Vocal Zero-Shot Gratuit (OmniVoice / XTTS-v2) avec les vrais extraits audio des chefs (data/voices/<persona>.mp3)
+    const cfg = window.APP_CONFIG || {};
+    if (cfg.preferFreeZeroShotClones !== false && FREE_ZEROSHOT_CLONE_META[persona.id]) {
+      const playedZeroShot = await trySpeakWithFreeZeroShotVoiceClone(cleanText, persona, reqOptions);
+      if (playedZeroShot || reqId !== currentVoiceRequestSeq) return;
+    }
+
+    // 3. Si une clé ElevenLabs externe est configurée, l'essayer en relais rapide
     if (xiKey) {
       const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, reqOptions);
       if (playedXi || reqId !== currentVoiceRequestSeq) return;
     }
 
-    // 3. Utiliser le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + OneCore Microsoft Paul/Hortense)
+    // 4. Utiliser le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + OneCore Microsoft Paul/Hortense)
     const playedLocalNeural = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
     if (playedLocalNeural || reqId !== currentVoiceRequestSeq) return;
 
-    // 4. Repli sur l'échantillon embarqué si applicable
+    // 5. Repli sur l'échantillon embarqué si applicable
     const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
     if (playedBundledSample || reqId !== currentVoiceRequestSeq) return;
 
-    // 5. Si une clé Cloud IA est configurée, essayer Cloud Neural TTS
+    // 6. Si une clé Cloud IA est configurée, essayer Cloud Neural TTS
     if (voiceApiKey) {
       const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, reqOptions);
       if (playedCloud || reqId !== currentVoiceRequestSeq) return;
