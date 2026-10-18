@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   FAVORITES: 'menusemaine_favorites_v1',
   HISTORY: 'menusemaine_history_v1',
   CUSTOM_RECIPES: 'menusemaine_custom_recipes_v1',
+  SEEN_RECIPES: 'menusemaine_seen_recipes_365_v1',
   GEMINI_KEY: 'menusemaine_gemini_api_key_v1'
 };
 
@@ -316,6 +317,14 @@ function loadStateFromStorage() {
     const savedCustomRecipes = localStorage.getItem(STORAGE_KEYS.CUSTOM_RECIPES);
     if (savedCustomRecipes) state.customRecipes = JSON.parse(savedCustomRecipes);
 
+    const savedSeen = localStorage.getItem(STORAGE_KEYS.SEEN_RECIPES);
+    if (savedSeen) {
+      const parsedSeen = JSON.parse(savedSeen);
+      if (Array.isArray(parsedSeen)) {
+        parsedSeen.forEach((id) => recentSeenIds.add(id));
+      }
+    }
+
     const savedKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
     if (savedKey) {
       const keyInput = document.getElementById('gemini-api-key');
@@ -335,6 +344,7 @@ function saveStateToStorage() {
     localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(state.favorites));
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(state.history));
     localStorage.setItem(STORAGE_KEYS.CUSTOM_RECIPES, JSON.stringify(state.customRecipes));
+    localStorage.setItem(STORAGE_KEYS.SEEN_RECIPES, JSON.stringify(Array.from(recentSeenIds)));
   } catch (e) {
     console.error('Erreur sauvegarde localStorage :', e);
   }
@@ -442,21 +452,127 @@ function formatEuro(amount) {
 }
 
 // ============================================================================
+// SAISONNALITÉ & ÉQUILIBRE ALIMENTAIRE (NUTRI-SCORE)
+// ============================================================================
+function getSlotMonthNum(slot) {
+  const baseIso = state.weekStartDate || getDefaultUpcomingMonday();
+  const offset = slot && typeof slot.dayOffset === 'number' ? slot.dayOffset : 0;
+  const d = addDaysToIso(baseIso, offset);
+  return d.getMonth() + 1;
+}
+
+function getMonthSeasonMeta(monthNum) {
+  const m = monthNum || new Date().getMonth() + 1;
+  const monthNames = [
+    '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+  ];
+  if (m === 12 || m <= 2) return { icon: '❄️', season: 'Hiver', monthName: monthNames[m] };
+  if (m >= 3 && m <= 5) return { icon: '🌱', season: 'Printemps', monthName: monthNames[m] };
+  if (m >= 6 && m <= 8) return { icon: '☀️', season: 'Été', monthName: monthNames[m] };
+  return { icon: '🍂', season: 'Automne', monthName: monthNames[m] };
+}
+
+function getRecipeSeasonality(recipe, slot) {
+  const monthNum = getSlotMonthNum(slot);
+  if (typeof window.evaluateRecipeSeasonality === 'function') {
+    return window.evaluateRecipeSeasonality(recipe, monthNum);
+  }
+  return { pct: 100, inSeasonCount: (recipe.ingredients || []).length, totalCount: (recipe.ingredients || []).length, month: monthNum };
+}
+
+function getRecipeNutriScore(recipe) {
+  if (typeof window.evaluateRecipeNutriScore === 'function') {
+    return window.evaluateRecipeNutriScore(recipe);
+  }
+  return { grade: 'A', label: 'Très équilibré', shortLabel: 'Optimal', color: '#047857', bg: '#d1fae5' };
+}
+
+function buildNutritionAndSeasonHTML(recipe, slot, isCompact = false) {
+  const seas = getRecipeSeasonality(recipe, slot);
+  const nutri = getRecipeNutriScore(recipe);
+  const meta = getMonthSeasonMeta(seas.month);
+
+  const grades = ['A', 'B', 'C', 'D', 'E'];
+  const scaleHTML = grades
+    .map(
+      (g) =>
+        `<span class="nutri-letter nutri-${g.toLowerCase()} ${g === nutri.grade ? 'nutri-active' : ''}">${g}</span>`
+    )
+    .join('');
+
+  const seasonClass =
+    seas.pct >= 85 ? 'season-pill-high' : seas.pct >= 70 ? 'season-pill-mid' : 'season-pill-low';
+
+  if (isCompact) {
+    return `
+      <div class="nutrition-season-row compact">
+        <span class="season-badge ${seasonClass}" title="Proportion d'ingrédients de saison en ${meta.monthName} (${meta.season})">
+          ${meta.icon} <strong>${seas.pct}%</strong> ingr. de saison
+        </span>
+        <span class="nutri-badge-inline" title="Niveau d'équilibre alimentaire : Nutri-Score ${nutri.grade} (${nutri.label})">
+          <span class="nutri-mini-scale">${scaleHTML}</span>
+          <span class="nutri-text" style="color:${nutri.color};">${nutri.shortLabel}</span>
+        </span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="nutrition-season-row">
+      <div class="season-badge ${seasonClass}" title="${seas.inSeasonCount}/${seas.totalCount} ingrédients de saison en ${meta.monthName} (${meta.season})">
+        <span>${meta.icon} <strong>${seas.pct}% d'ingrédients de saison</strong></span>
+        <small>(${seas.inSeasonCount}/${seas.totalCount} • ${meta.monthName})</small>
+      </div>
+      <div class="nutri-badge-box" title="Équilibre alimentaire du plat : Nutri-Score ${nutri.grade} — ${nutri.label}">
+        <span class="nutri-title-label">Équilibre</span>
+        <div class="nutri-scale" aria-label="Nutri-Score ${nutri.grade}">${scaleHTML}</div>
+        <span class="nutri-grade-caption" style="color:${nutri.color};">${nutri.label}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================================
 // GÉNÉRATION, REMPLACEMENT & SUPPRESSION / COMPTABILISATION DES REPAS
+// (AVEC ANTI-RÉPÉTITION 365 JOURS & PRIORITÉ AUX INGRÉDIENTS DE SAISON)
 // ============================================================================
 const recentSeenIds = new Set();
 
-function pickRandomAvoiding(list, usedIds) {
-  // 1. Essayer de piocher parmi les recettes ni présentes dans la semaine ni vues récemment
+function pickRandomAvoiding(list, usedIds, targetMonth) {
+  const monthNum = targetMonth || getSlotMonthNum(null);
+
+  // 1. Essayer de piocher parmi les recettes ni présentes dans la semaine ni vues sur l'année (365j)
   let available = list.filter((item) => !usedIds.has(item.id) && !recentSeenIds.has(item.id));
 
-  // 2. Si toutes les recettes de cette catégorie ont déjà été vues, réinitialiser la mémoire de rotation pour cette liste
+  // 2. Si toutes les recettes de cette catégorie ont déjà été vues sur l'année, réinitialiser la mémoire pour cette liste
   if (available.length === 0) {
     list.forEach((item) => recentSeenIds.delete(item.id));
     available = list.filter((item) => !usedIds.has(item.id));
   }
 
-  const pool = available.length > 0 ? available : list;
+  let pool = available.length > 0 ? available : list;
+
+  // 3. Prioriser les plats réalisés avec un maximum d'ingrédients de saison (100%, sinon >= 85%, sinon maximum dispo)
+  if (typeof window.evaluateRecipeSeasonality === 'function' && pool.length > 1) {
+    const scored = pool.map((item) => ({
+      item,
+      pct: window.evaluateRecipeSeasonality(item, monthNum).pct
+    }));
+    const fullSeason = scored.filter((x) => x.pct === 100).map((x) => x.item);
+    if (fullSeason.length >= 3) {
+      pool = fullSeason;
+    } else {
+      const highSeason = scored.filter((x) => x.pct >= 85).map((x) => x.item);
+      if (highSeason.length > 0) {
+        pool = highSeason;
+      } else {
+        const maxPct = Math.max(...scored.map((x) => x.pct));
+        pool = scored.filter((x) => x.pct >= maxPct - 10).map((x) => x.item);
+      }
+    }
+  }
+
   const picked = pool[Math.floor(Math.random() * pool.length)];
   if (picked && picked.id) {
     recentSeenIds.add(picked.id);
@@ -495,7 +611,8 @@ function generateFullWeekPlan() {
       recipePool = window.RECIPES_DB.weekendBalancedMeals;
     }
 
-    const pickedRecipe = pickRandomAvoiding(recipePool, usedRecipes);
+    const slotMonth = getSlotMonthNum(def);
+    const pickedRecipe = pickRandomAvoiding(recipePool, usedRecipes, slotMonth);
     usedRecipes.add(pickedRecipe.id);
 
     let pickedDessertId = null;
@@ -505,7 +622,8 @@ function generateFullWeekPlan() {
       );
       const pickedDessert = pickRandomAvoiding(
         styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts,
-        usedDesserts
+        usedDesserts,
+        slotMonth
       );
       usedDesserts.add(pickedDessert.id);
       pickedDessertId = pickedDessert.id;
@@ -537,23 +655,128 @@ function generateFullWeekPlan() {
 // ============================================================================
 const CULINARY_PARTICLES = ['🥗', '🥕', '🍅', '🌿', '🍳', '🧑‍🍳', '✨', '🥖', '🧀', '🍋', '🥑', '🍽️'];
 const PLEASURE_PARTICLES = ['🌟', '🍰', '🍫', '🥂', '🍝', '🧀', '🍓', '✨', '👨‍🍳'];
+const GOURMET_PARTICLES  = ['🍷', '🥂', '🍇', '✨', '🍽️', '🧑‍🍳', '⭐', '🍾'];
 
 function getDishEmoji(recipe, slot) {
   const t = ((recipe && recipe.title) || '').toLowerCase();
-  if (t.includes('saumon') || t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('truite')) return '🐟';
-  if (t.includes('crevette') || t.includes('gambas') || t.includes('saint-jacques')) return '🦐';
-  if (t.includes('poulet') || t.includes('dinde') || t.includes('volaille') || t.includes('canard')) return '🍗';
-  if (t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('haché') || t.includes('bourguignon')) return '🥩';
-  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('ravioli')) return '🍝';
+  if (t.includes('saint-jacques') || t.includes('homard') || t.includes('langoustine')) return '🐚';
+  if (t.includes('saumon') || t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('truite') || t.includes('bar')) return '🐟';
+  if (t.includes('crevette') || t.includes('gambas')) return '🦐';
+  if (t.includes('canard') || t.includes('magret') || t.includes('volaille') || t.includes('poulet') || t.includes('dinde')) return '🍗';
+  if (t.includes('tournedos') || t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('haché') || t.includes('veau') || t.includes('agneau')) return '🥩';
+  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('ravioli') || t.includes('raviole') || t.includes('mac & cheese')) return '🍝';
   if (t.includes('risotto') || t.includes('riz') || t.includes('paella') || t.includes('curry') || t.includes('tikka') || t.includes('dahl')) return '🍛';
   if (t.includes('wok') || t.includes('nouilles') || t.includes('pad thaï') || t.includes('asiatique')) return '🥢';
   if (t.includes('salade') || t.includes('bowl') || t.includes('poke') || t.includes('buddha') || t.includes('taboulé')) return '🥗';
   if (t.includes('velouté') || t.includes('soupe') || t.includes('bouillon') || t.includes('minestrone')) return '🥣';
-  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche')) return '🥧';
+  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche') || t.includes('croque')) return '🥧';
   if (t.includes('omelette') || t.includes('œuf') || t.includes('oeuf') || t.includes('frittata') || t.includes('chakchouka')) return '🍳';
   if (t.includes('wrap') || t.includes('fajita') || t.includes('quesadilla') || t.includes('tacos') || t.includes('burger')) return '🌮';
-  if (t.includes('gratin') || t.includes('parmentier') || t.includes('poêlée') || t.includes('mijoté') || t.includes('ratatouille')) return '🥘';
-  return slot && slot.isPleasure ? '🍽️' : '🥗';
+  if (t.includes('gratin') || t.includes('parmentier') || t.includes('poêlée') || t.includes('mijoté') || t.includes('ratatouille') || t.includes('tartiflette')) return '🥘';
+  const style = getSlotStyle(slot);
+  if (style === 'gourmet') return '🍷';
+  return style === 'pleasure' ? '🍽️' : '🥗';
+}
+
+function getRecipeWinePairing(recipe, slot) {
+  if (recipe && recipe.winePairing && recipe.winePairing.name) {
+    return recipe.winePairing;
+  }
+  const style = getSlotStyle(slot);
+  if (style !== 'gourmet' && (!recipe || recipe.type !== 'gourmet')) {
+    return null;
+  }
+  // Accord par défaut si une recette personnalisée est passée en mode Gourmet sans accord renseigné
+  const t = ((recipe && recipe.title) || '').toLowerCase();
+  if (t.includes('poisson') || t.includes('saumon') || t.includes('cabillaud') || t.includes('bar') || t.includes('saint-jacques') || t.includes('gambas') || t.includes('crevette')) {
+    return {
+      name: 'Chablis 1er Cru ou Sancerre Blanc (AOC)',
+      color: 'Vin blanc sec & minéral',
+      temp: '10-12°C',
+      note: 'Fraîcheur ciselée et notes d\'agrumes idéales pour sublimer la finesse des produits de la mer.'
+    };
+  }
+  return {
+    name: 'Pinot Noir de Bourgogne ou Saint-Émilion Grand Cru (AOC)',
+    color: 'Vin rouge élégant & soyeux',
+    temp: '15-16°C',
+    note: 'Tanins veloutés et arômes subtils qui accompagnent à merveille ce plat gourmet.'
+  };
+}
+
+function isWineInShoppingList(wineName) {
+  if (!wineName) return false;
+  const target = `🍷 Vin : ${wineName}`.toLowerCase();
+  return state.customItems.some((c) => (c.name || '').toLowerCase() === target);
+}
+
+function toggleWineInShoppingList(wineName, slotDayLabel, evt) {
+  if (evt) evt.stopPropagation();
+  if (!wineName) return;
+  const itemLabel = `🍷 Vin : ${wineName}`;
+  const existingIdx = state.customItems.findIndex(
+    (c) => (c.name || '').toLowerCase() === itemLabel.toLowerCase()
+  );
+
+  if (existingIdx !== -1) {
+    const removed = state.customItems[existingIdx];
+    state.customItems.splice(existingIdx, 1);
+    delete state.inStockKeys[`custom_${removed.id}`];
+    saveStateToStorage();
+    renderAll();
+    showToast(`🍷 Bouteille "${wineName}" retirée de la liste de courses`);
+  } else {
+    state.customItems.push({
+      id: Date.now().toString(),
+      name: itemLabel,
+      qty: '1 bouteille (75 cl)',
+      aisle: 'Cave & Accords Vins',
+      sourceLabel: slotDayLabel ? `Accord Gourmet ${slotDayLabel}` : 'Accord Mets & Vin'
+    });
+    saveStateToStorage();
+    renderAll();
+    if (evt && evt.clientX) {
+      spawnCulinaryConfetti({
+        x: evt.clientX,
+        y: evt.clientY,
+        count: 9,
+        spread: 90,
+        emojis: GOURMET_PARTICLES
+      });
+    }
+    showToast(`🍷 "${wineName}" ajouté au rayon Cave de votre liste de courses !`);
+  }
+}
+
+function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
+  const wine = getRecipeWinePairing(recipe, slot);
+  if (!wine) return '';
+
+  const inList = isWineInShoppingList(wine.name);
+  const safeWineName = (wine.name || '').replace(/'/g, "\\'");
+  const safeDayLabel = `${slot.day} (${slot.mealLabel})`.replace(/'/g, "\\'");
+
+  return `
+    <div class="wine-pairing-box ${isModal ? 'wine-pairing-modal' : ''}">
+      <div class="wine-pairing-header">
+        <div class="wine-pairing-badge-group">
+          <span class="wine-pairing-tag">🍷 Suggestion de vin • Accord Gourmet</span>
+          ${wine.color ? `<span class="wine-color-pill">${wine.color}</span>` : ''}
+          ${wine.temp ? `<span class="wine-temp-pill">🌡️ Service ${wine.temp}</span>` : ''}
+        </div>
+        <button
+          type="button"
+          class="btn btn-sm ${inList ? 'btn-wine-added' : 'btn-wine-add'}"
+          onclick="toggleWineInShoppingList('${safeWineName}', '${safeDayLabel}', event)"
+          title="${inList ? 'Retirer cette bouteille de la liste de courses' : 'Ajouter cette bouteille au rayon Cave de la liste de courses'}"
+        >
+          ${inList ? '✓ Bouteille au panier' : '🛒 + Ajouter aux courses'}
+        </button>
+      </div>
+      <div class="wine-pairing-name">${wine.name}</div>
+      ${wine.note ? `<p class="wine-pairing-note">« ${wine.note} »</p>` : ''}
+    </div>
+  `;
 }
 
 function spawnCulinaryConfetti(options = {}) {
@@ -647,7 +870,7 @@ function replaceMealInSlot(slotId, evt) {
   const usedIds = new Set(state.slots.filter((s) => s.active !== false).map((s) => s.recipeId));
   const pool = getPoolForSlot(slot);
 
-  const nextRecipe = pickRandomAvoiding(pool, usedIds);
+  const nextRecipe = pickRandomAvoiding(pool, usedIds, getSlotMonthNum(slot));
   slot.recipeId = nextRecipe.id;
   slot.validated = false;
   slot.active = true;
@@ -661,10 +884,12 @@ function replaceMealInSlot(slotId, evt) {
       y: evt.clientY,
       count: 7,
       spread: 80,
-      emojis: ['🎲', '✨', '🍳', '🌿']
+      emojis: getSlotStyle(slot) === 'gourmet' ? GOURMET_PARTICLES : ['🎲', '✨', '🍳', '🌿']
     });
   }
-  showToast(`🎲 Nouvelle idée du Chef pour ${slot.day} (${slot.mealLabel}) !`);
+  const seas = getRecipeSeasonality(nextRecipe, slot);
+  const nutri = getRecipeNutriScore(nextRecipe);
+  showToast(`🎲 Nouvelle idée (${seas.pct}% de saison • Nutri-Score ${nutri.grade}) pour ${slot.day} !`);
 }
 
 function replaceDessertInSlot(slotId) {
@@ -674,7 +899,10 @@ function replaceDessertInSlot(slotId) {
   const usedDesserts = new Set(
     state.slots.filter((s) => s.dessertId).map((s) => s.dessertId)
   );
-  const nextDessert = pickRandomAvoiding(window.RECIPES_DB.weekendDesserts, usedDesserts);
+  const style = getSlotStyle(slot);
+  const styleDesserts = window.RECIPES_DB.weekendDesserts.filter((d) => d.style === style);
+  const pool = styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts;
+  const nextDessert = pickRandomAvoiding(pool, usedDesserts, getSlotMonthNum(slot));
   slot.dessertId = nextDessert.id;
   saveStateToStorage();
   renderAll();
@@ -682,56 +910,88 @@ function replaceDessertInSlot(slotId) {
   showToast(`🍰 Nouvelle douceur proposée pour ${slot.day} (${slot.mealLabel}) !`);
 }
 
-// Basculer en Menu Plaisir aussi bien pour la Semaine que pour le Week-end
-function togglePleasureMode(slotId, evt) {
+// Choisir directement entre les 3 types de repas (Équilibré, Plaisir, Gourmet) en Semaine comme le Week-end
+function setSlotMealStyle(slotId, newStyle, evt) {
   const slot = state.slots.find((s) => s.slotId === slotId);
   if (!slot) return;
 
-  slot.isPleasure = !slot.isPleasure;
+  const validStyle =
+    newStyle === 'gourmet' || newStyle === 'pleasure' || newStyle === 'balanced'
+      ? newStyle
+      : 'balanced';
+
+  const currentStyle = getSlotStyle(slot);
+  syncSlotStyleFlags(slot, validStyle);
+
+  // Si on clique sur le type déjà actif, on propose une autre recette de ce même type
   const usedIds = new Set(state.slots.map((s) => s.recipeId));
   const pool = getPoolForSlot(slot);
-
-  const nextRecipe = pickRandomAvoiding(pool, usedIds);
+  const slotMonth = getSlotMonthNum(slot);
+  const nextRecipe = pickRandomAvoiding(pool, usedIds, slotMonth);
   slot.recipeId = nextRecipe.id;
 
-  if (slot.isPleasure) {
-    if (!slot.dessertId) {
-      const usedDesserts = new Set(
-        state.slots.filter((s) => s.dessertId).map((s) => s.dessertId)
-      );
-      const pleasureDesserts = window.RECIPES_DB.weekendDesserts.filter(
-        (d) => d.style === 'pleasure'
-      );
-      const pickedDessert = pickRandomAvoiding(
-        pleasureDesserts.length ? pleasureDesserts : window.RECIPES_DB.weekendDesserts,
-        usedDesserts
-      );
-      slot.dessertId = pickedDessert.id;
-    }
-  } else if (!slot.isWeekend) {
+  if (validStyle === 'pleasure' || validStyle === 'gourmet' || slot.isWeekend) {
+    const usedDesserts = new Set(
+      state.slots.filter((s) => s.dessertId && s.slotId !== slotId).map((s) => s.dessertId)
+    );
+    const matchingDesserts = window.RECIPES_DB.weekendDesserts.filter(
+      (d) => d.style === validStyle
+    );
+    const pickedDessert = pickRandomAvoiding(
+      matchingDesserts.length ? matchingDesserts : window.RECIPES_DB.weekendDesserts,
+      usedDesserts,
+      slotMonth
+    );
+    slot.dessertId = pickedDessert.id;
+  } else {
     slot.dessertId = null;
   }
 
   slot.validated = false;
+  slot.active = true;
   saveStateToStorage();
   renderAll();
   animateCardElement(slotId, 'anim-shuffle');
 
-  if (slot.isPleasure && evt && evt.clientX) {
+  if (evt && evt.clientX) {
+    const particles =
+      validStyle === 'gourmet'
+        ? GOURMET_PARTICLES
+        : validStyle === 'pleasure'
+        ? PLEASURE_PARTICLES
+        : CULINARY_PARTICLES;
     spawnCulinaryConfetti({
       x: evt.clientX,
       y: evt.clientY,
-      count: 10,
-      spread: 110,
-      emojis: PLEASURE_PARTICLES
+      count: validStyle === 'balanced' ? 8 : 12,
+      spread: 115,
+      emojis: particles
     });
   }
 
-  showToast(
-    slot.isPleasure
-      ? `🌟 ${slot.day} (${slot.mealLabel}) passe en Menu Plaisir (+ dessert gourmand) !`
-      : `🥗 ${slot.day} (${slot.mealLabel}) repasse en Menu ${slot.isWeekend ? 'Équilibré' : 'Healthy & Rapide'}`
-  );
+  if (validStyle === 'gourmet') {
+    const wine = getRecipeWinePairing(nextRecipe, slot);
+    showToast(
+      `🍷 ${slot.day} (${slot.mealLabel}) en Menu Gourmet${wine ? ` • Accord : ${wine.name}` : ''} !`
+    );
+  } else if (validStyle === 'pleasure') {
+    showToast(
+      `🌟 ${slot.day} (${slot.mealLabel}) en Menu Plaisir (gourmand, simple & rapide) !`
+    );
+  } else {
+    showToast(
+      `🥗 ${slot.day} (${slot.mealLabel}) en Menu Équilibré (sain, simple & rapide)${currentStyle === 'balanced' ? ' — Nouvelle idée' : ''}`
+    );
+  }
+}
+
+// Basculer en cycle entre Équilibré -> Plaisir -> Gourmet
+function togglePleasureMode(slotId, evt) {
+  const slot = state.slots.find((s) => s.slotId === slotId);
+  if (!slot) return;
+  const cur = getSlotStyle(slot);
+  const next = cur === 'balanced' ? 'pleasure' : cur === 'pleasure' ? 'gourmet' : 'balanced';
+  setSlotMealStyle(slotId, next, evt);
 }
 
 function regenerateUnvalidatedMeals() {
@@ -741,7 +1001,7 @@ function regenerateUnvalidatedMeals() {
       generateFullWeekPlan();
       renderAll();
       spawnCulinaryConfetti({ count: 18, spread: 200 });
-      showToast('🎲 Nouvelle semaine concoctée par le Chef !');
+      showToast('🎲 Nouvelle semaine de saison concoctée par le Chef !');
     }
     return;
   }
@@ -758,12 +1018,19 @@ function regenerateUnvalidatedMeals() {
   state.slots.forEach((slot) => {
     if (slot.active === false || slot.validated) return;
     const pool = getPoolForSlot(slot);
-    const nextRecipe = pickRandomAvoiding(pool, usedRecipes);
+    const slotMonth = getSlotMonthNum(slot);
+    const nextRecipe = pickRandomAvoiding(pool, usedRecipes, slotMonth);
     usedRecipes.add(nextRecipe.id);
     slot.recipeId = nextRecipe.id;
 
-    if (slot.isWeekend || slot.isPleasure) {
-      const nextDessert = pickRandomAvoiding(window.RECIPES_DB.weekendDesserts, usedDesserts);
+    const style = getSlotStyle(slot);
+    if (slot.isWeekend || style === 'pleasure' || style === 'gourmet') {
+      const styleDesserts = window.RECIPES_DB.weekendDesserts.filter((d) => d.style === style);
+      const nextDessert = pickRandomAvoiding(
+        styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts,
+        usedDesserts,
+        slotMonth
+      );
       usedDesserts.add(nextDessert.id);
       slot.dessertId = nextDessert.id;
     }
@@ -771,8 +1038,8 @@ function regenerateUnvalidatedMeals() {
 
   saveStateToStorage();
   renderAll();
-  spawnCulinaryConfetti({ count: 14, spread: 160, emojis: ['🎲', '🥗', '🥘', '✨', '🧑‍🍳'] });
-  showToast(`🎲 ${unvalidated.length} repas non validé(s) renouvelé(s) !`);
+  spawnCulinaryConfetti({ count: 14, spread: 160, emojis: ['🎲', '🥗', '🥘', '🍷', '🧑‍🍳'] });
+  showToast(`🎲 ${unvalidated.length} repas non validé(s) renouvelé(s) avec un maximum d'ingrédients de saison !`);
 }
 
 // ============================================================================
@@ -850,12 +1117,13 @@ function toggleValidateSlot(slotId, evt) {
 
     const originX = evt && evt.clientX ? evt.clientX : window.innerWidth / 2;
     const originY = evt && evt.clientY ? evt.clientY : window.innerHeight / 2;
+    const style = getSlotStyle(slot);
     spawnCulinaryConfetti({
       x: originX,
       y: originY,
       count: 14,
       spread: 130,
-      emojis: slot.isPleasure ? PLEASURE_PARTICLES : CULINARY_PARTICLES
+      emojis: style === 'gourmet' ? GOURMET_PARTICLES : style === 'pleasure' ? PLEASURE_PARTICLES : CULINARY_PARTICLES
     });
 
     // Vérifier si toute la journée vient d'être bouclée !
@@ -874,7 +1142,7 @@ function toggleValidateSlot(slotId, evt) {
       showDayCelebrationBanner(
         `🎉 ${slot.day} est au menu !`,
         `Déjeuner & Dîner validés (${formatEuro(evaluateDayCost(slot.dayOffset))})`,
-        slot.isWeekend ? '🌟' : '👩‍🍳'
+        style === 'gourmet' ? '🍷' : slot.isWeekend ? '🌟' : '👩‍🍳'
       );
     }
   }
@@ -1003,20 +1271,23 @@ function renderValidationStatus() {
     }
   }
 
-  // Compteurs Healthy vs Plaisir en semaine et week-end (sur les repas comptabilisés)
+  // Compteurs Équilibré / Plaisir / Gourmet en semaine et week-end (sur les repas comptabilisés)
   const weekdayActive = state.slots.filter((s) => !s.isWeekend && s.active !== false);
-  const weekdayPleasureCount = weekdayActive.filter((s) => s.isPleasure).length;
-  const weekdayHealthyCount = weekdayActive.length - weekdayPleasureCount;
+  const wdBalanced = weekdayActive.filter((s) => getSlotStyle(s) === 'balanced').length;
+  const wdPleasure = weekdayActive.filter((s) => getSlotStyle(s) === 'pleasure').length;
+  const wdGourmet = weekdayActive.filter((s) => getSlotStyle(s) === 'gourmet').length;
   const weekdayPill = document.getElementById('weekday-pleasure-pill');
   if (weekdayPill) {
-    weekdayPill.textContent = `${weekdayHealthyCount} Healthy • ${weekdayPleasureCount} Plaisir 🌟`;
+    weekdayPill.textContent = `${wdBalanced} Équilibré 🥗 • ${wdPleasure} Plaisir 🌟 • ${wdGourmet} Gourmet 🍷`;
   }
 
   const weekendActive = state.slots.filter((s) => s.isWeekend && s.active !== false);
-  const weekendPleasureCount = weekendActive.filter((s) => s.isPleasure).length;
+  const weBalanced = weekendActive.filter((s) => getSlotStyle(s) === 'balanced').length;
+  const wePleasure = weekendActive.filter((s) => getSlotStyle(s) === 'pleasure').length;
+  const weGourmet = weekendActive.filter((s) => getSlotStyle(s) === 'gourmet').length;
   const pleasurePill = document.getElementById('pleasure-counter-pill');
   if (pleasurePill) {
-    pleasurePill.textContent = `${weekendPleasureCount} Menu${weekendPleasureCount > 1 ? 's' : ''} Plaisir 🌟 sur le week-end`;
+    pleasurePill.textContent = `${weBalanced} Équilibré 🥗 • ${wePleasure} Plaisir 🌟 • ${weGourmet} Gourmet 🍷`;
   }
 
   // Budget validé & budget total prévu de la semaine
@@ -1054,6 +1325,7 @@ function buildSlotCostBadgeInnerHTML(slot, costInfo) {
 
 function createMealCardHTML(slot) {
   const isSkipped = slot.active === false;
+  const style = getSlotStyle(slot);
   const recipe = findRecipeById(slot.recipeId);
   const dessert = slot.dessertId ? findDessertById(slot.dessertId) : null;
   const isFav = state.favorites.includes(recipe.id);
@@ -1065,7 +1337,8 @@ function createMealCardHTML(slot) {
   const cardClasses = [
     'meal-card',
     !isSkipped && slot.validated ? 'is-validated' : '',
-    !isSkipped && slot.isPleasure ? 'is-pleasure' : '',
+    !isSkipped && style === 'pleasure' ? 'is-pleasure' : '',
+    !isSkipped && style === 'gourmet' ? 'is-gourmet' : '',
     isSkipped ? 'is-skipped' : ''
   ]
     .filter(Boolean)
@@ -1101,11 +1374,14 @@ function createMealCardHTML(slot) {
     `;
   }
 
-  const modeButtonLabel = slot.isPleasure
-    ? '🌟 Menu Plaisir'
-    : slot.isWeekend
-    ? '🥗 Équilibré'
-    : '🥗 Healthy & Rapide';
+  const styleSubtitle =
+    style === 'gourmet'
+      ? '🍷 Menu Gourmet • Ingrédients nobles & délicats • Recette simple + Accord Vin'
+      : style === 'pleasure'
+      ? '🌟 Menu Plaisir • Se faire plaisir • Simple & rapide à réaliser'
+      : '🥗 Menu Équilibré • Sain, simple & rapide à réaliser';
+
+  const winePairingHTML = buildWinePairingBoxHTML(recipe, slot, false);
 
   return `
     <article id="meal-card-${slot.slotId}" class="${cardClasses}">
@@ -1116,13 +1392,6 @@ function createMealCardHTML(slot) {
             ${slot.validated ? '<span class="chef-stamp-badge">✓ Validé</span>' : ''}
           </div>
           <div class="card-top-badges">
-            <button
-              class="btn btn-sm ${slot.isPleasure ? 'btn-pleasure' : 'btn-outline'}"
-              onclick="togglePleasureMode('${slot.slotId}', event)"
-              title="Basculer entre Menu Healthy/Équilibré et Menu Plaisir 🌟"
-            >
-              ${modeButtonLabel}
-            </button>
             <button
               class="btn btn-outline btn-sm"
               style="padding: 4px 8px; color: #b91c1c; border-color: #fecaca;"
@@ -1135,6 +1404,29 @@ function createMealCardHTML(slot) {
               ${isFav ? '❤️' : '🤍'}
             </button>
           </div>
+        </div>
+
+        <!-- Bouton unique Type de repas (Équilibré / Plaisir / Gourmet) + Bouton Autre idée à côté -->
+        <div class="meal-style-bar">
+          <div class="meal-style-switcher" role="group" aria-label="Type de repas et Autre idée">
+            <button
+              type="button"
+              class="style-pill-btn ${style === 'gourmet' ? 'active-gourmet' : style === 'pleasure' ? 'active-pleasure' : 'active-balanced'}"
+              onclick="togglePleasureMode('${slot.slotId}', event)"
+              title="Cliquer pour changer de catégorie : Équilibré 🥗 → Plaisir 🌟 → Gourmet 🍷"
+            >
+              ${style === 'gourmet' ? '🍷 Gourmet ↻' : style === 'pleasure' ? '🌟 Plaisir ↻' : '🥗 Équilibré ↻'}
+            </button>
+            <button
+              type="button"
+              class="style-pill-btn"
+              onclick="replaceMealInSlot('${slot.slotId}', event)"
+              title="Proposer une autre recette de la catégorie sélectionnée"
+            >
+              🎲 Autre idée
+            </button>
+          </div>
+          <div class="meal-style-caption">${styleSubtitle}</div>
         </div>
 
         <div class="meal-title-row">
@@ -1152,6 +1444,11 @@ function createMealCardHTML(slot) {
           <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
           <span class="meta-pill">${recipe.budget}</span>
         </div>
+
+        <!-- Indicateurs Saisonnalité (%) & Équilibre alimentaire (Nutri-Score A-E) -->
+        ${buildNutritionAndSeasonHTML(recipe, slot, false)}
+
+        ${winePairingHTML}
 
         <!-- Évaluation du montant du menu -->
         <div id="cost-summary-${slot.slotId}" class="slot-cost-box">
@@ -1208,16 +1505,13 @@ function createMealCardHTML(slot) {
           </div>
         </div>
 
-        <!-- Boutons Recette / Catalogue / Autre idée / Valider -->
+        <!-- Boutons Recette / Catalogue / Valider -->
         <div class="meal-card-actions">
           <button class="btn btn-outline btn-sm" onclick="openRecipeModal('${slot.slotId}')">
             📖 Fiche cuisine
           </button>
           <button class="btn btn-outline btn-sm" onclick="openCatalogModal('${slot.slotId}')" title="Parcourir tout le catalogue de menus">
             📚 Catalogue
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="replaceMealInSlot('${slot.slotId}', event)">
-            🎲 Autre idée
           </button>
           <button
             class="btn btn-validate ${slot.validated ? 'validated' : ''}"
@@ -1569,6 +1863,7 @@ function openRecipeModal(slotId) {
   const dessert = slot.dessertId ? findDessertById(slot.dessertId) : null;
   const ratio = slot.servings / (recipe.baseServings || 2);
   const costInfo = evaluateSlotCost(slot);
+  const style = getSlotStyle(slot);
 
   const modalBody = document.getElementById('recipe-modal-body');
   if (!modalBody) return;
@@ -1585,6 +1880,7 @@ function openRecipeModal(slotId) {
     .join('');
 
   const stepsHTML = recipe.steps.map((step) => `<li>${step}</li>`).join('');
+  const wineModalHTML = buildWinePairingBoxHTML(recipe, slot, true);
 
   let dessertSectionHTML = '';
   if (dessert) {
@@ -1617,8 +1913,18 @@ function openRecipeModal(slotId) {
     `;
   }
 
+  const styleBadgeText =
+    style === 'gourmet'
+      ? '🍷 Menu Gourmet (Ingrédients nobles & Accord Vin)'
+      : style === 'pleasure'
+      ? '🌟 Menu Plaisir (Gourmand, simple & rapide)'
+      : '🥗 Menu Équilibré (Sain, simple & rapide)';
+
   modalBody.innerHTML = `
-    <span class="slot-label">${formatSlotDayHeader(slot)} • ${slot.mealLabel}</span>
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <span class="slot-label">${formatSlotDayHeader(slot)} • ${slot.mealLabel}</span>
+      <span class="meta-pill ${style === 'gourmet' ? 'gourmet-pill' : style === 'pleasure' ? 'pleasure-pill' : 'healthy-pill'}">${styleBadgeText}</span>
+    </div>
     <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 8px;">${recipe.title}</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">${recipe.description || ''}</p>
 
@@ -1628,6 +1934,8 @@ function openRecipeModal(slotId) {
       <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Cuisson ${recipe.cookTime}</span>
       <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
     </div>
+
+    ${wineModalHTML}
 
     <h3 style="font-size: 1rem; font-weight: 800; margin-top: 16px; margin-bottom: 8px;">
       🛒 Ingrédients du plat (${slot.servings} ${slot.servings > 1 ? 'parts' : 'part'} — ${formatEuro(costInfo.dishCost)})
@@ -1663,7 +1971,7 @@ function closeRecipeModal() {
 // ============================================================================
 let catalogState = {
   slotId: null,
-  category: 'all', // 'all' | 'weekday' | 'weekend-balanced' | 'weekend-pleasure' | 'dessert' | 'favorites'
+  category: 'all', // 'all' | 'weekday' | 'weekend-balanced' | 'weekend-pleasure' | 'gourmet' | 'dessert' | 'favorites'
   searchQuery: ''
 };
 
@@ -1673,10 +1981,13 @@ function openCatalogModal(slotId, initialCategory) {
 
   catalogState.slotId = slotId;
   catalogState.searchQuery = '';
+  const style = getSlotStyle(slot);
 
   if (initialCategory) {
     catalogState.category = initialCategory;
-  } else if (slot.isPleasure) {
+  } else if (style === 'gourmet') {
+    catalogState.category = 'gourmet';
+  } else if (style === 'pleasure') {
     catalogState.category = 'weekend-pleasure';
   } else if (slot.isWeekend) {
     catalogState.category = 'weekend-balanced';
@@ -1688,11 +1999,12 @@ function openCatalogModal(slotId, initialCategory) {
   if (!modalBody) return;
 
   const db = window.RECIPES_DB;
-  const wdCount = db.weekdayDinners.length;
-  const wbCount = db.weekendBalancedMeals.length;
-  const wpCount = db.weekendPleasureMeals.length;
-  const desCount = db.weekendDesserts.length;
-  const totalDishes = wdCount + wbCount + wpCount;
+  const wdCount = (db.weekdayDinners || []).length;
+  const wbCount = (db.weekendBalancedMeals || []).length;
+  const wpCount = (db.weekendPleasureMeals || []).length;
+  const gmCount = (db.gourmetMeals || []).length;
+  const desCount = (db.weekendDesserts || []).length;
+  const totalDishes = wdCount + wbCount + wpCount + gmCount;
 
   modalBody.innerHTML = `
     <span class="slot-label">📚 Grand Livre des Menus • ${formatSlotDayHeader(slot)} (${slot.mealLabel})</span>
@@ -1700,7 +2012,7 @@ function openCatalogModal(slotId, initialCategory) {
       Choisir dans le catalogue (${totalDishes} plats &amp; ${desCount} desserts)
     </h2>
     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
-      Filtrez par catégorie ou recherchez un ingrédient (ex : <em>poulet, saumon, courgette, chèvre, curry...</em>)
+      Filtrez parmi les 3 types de repas (<strong>Équilibré</strong>, <strong>Plaisir</strong>, <strong>Gourmet</strong>) ou recherchez un ingrédient ou un vin
     </p>
 
     <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
@@ -1708,19 +2020,22 @@ function openCatalogModal(slotId, initialCategory) {
         type="search"
         id="catalog-search-input"
         class="input-field"
-        placeholder="🔍 Rechercher un plat ou un ingrédient..."
+        placeholder="🔍 Rechercher un plat, un ingrédient, un vin..."
         oninput="updateCatalogSearch(this.value)"
       />
 
       <div id="catalog-filter-tabs" style="display: flex; gap: 6px; flex-wrap: wrap;">
         <button type="button" class="btn btn-sm" data-cat="weekday" onclick="setCatalogCategory('weekday')">
-          🥗 Semaine Healthy (${wdCount})
+          🥗 Semaine Équilibré (${wdCount})
         </button>
         <button type="button" class="btn btn-sm" data-cat="weekend-balanced" onclick="setCatalogCategory('weekend-balanced')">
           🍽️ Week-end Équilibré (${wbCount})
         </button>
         <button type="button" class="btn btn-sm" data-cat="weekend-pleasure" onclick="setCatalogCategory('weekend-pleasure')">
           🌟 Menus Plaisir (${wpCount})
+        </button>
+        <button type="button" class="btn btn-sm" data-cat="gourmet" onclick="setCatalogCategory('gourmet')">
+          🍷 Menus Gourmet (${gmCount})
         </button>
         <button type="button" class="btn btn-sm" data-cat="all" onclick="setCatalogCategory('all')">
           📚 Tous les plats (${totalDishes})
@@ -1807,18 +2122,26 @@ function renderCatalogModalResults() {
     return;
   }
 
+  const allMeals = [
+    ...(db.weekdayDinners || []),
+    ...(db.weekendBalancedMeals || []),
+    ...(db.weekendPleasureMeals || []),
+    ...(db.gourmetMeals || [])
+  ];
+
   let list = [];
   if (catalogState.category === 'weekday') {
-    list = db.weekdayDinners;
+    list = db.weekdayDinners || [];
   } else if (catalogState.category === 'weekend-balanced') {
-    list = db.weekendBalancedMeals;
+    list = db.weekendBalancedMeals || [];
   } else if (catalogState.category === 'weekend-pleasure') {
-    list = db.weekendPleasureMeals;
+    list = db.weekendPleasureMeals || [];
+  } else if (catalogState.category === 'gourmet') {
+    list = db.gourmetMeals || [];
   } else if (catalogState.category === 'favorites') {
-    const all = [...db.weekdayDinners, ...db.weekendBalancedMeals, ...db.weekendPleasureMeals];
-    list = all.filter((r) => state.favorites.includes(r.id));
+    list = allMeals.filter((r) => state.favorites.includes(r.id));
   } else {
-    list = [...db.weekdayDinners, ...db.weekendBalancedMeals, ...db.weekendPleasureMeals];
+    list = allMeals;
   }
 
   const filtered = list.filter((r) => {
@@ -1827,7 +2150,8 @@ function renderCatalogModalResults() {
     const inDesc = (r.description || '').toLowerCase().includes(q);
     const inTags = (r.tags || []).some((t) => t.toLowerCase().includes(q));
     const inIng = (r.ingredients || []).some((i) => i.name.toLowerCase().includes(q));
-    return inTitle || inDesc || inTags || inIng;
+    const inWine = r.winePairing && r.winePairing.name && r.winePairing.name.toLowerCase().includes(q);
+    return inTitle || inDesc || inTags || inIng || inWine;
   });
 
   if (filtered.length === 0) {
@@ -1840,13 +2164,17 @@ function renderCatalogModalResults() {
       const isCurrent = slot && slot.recipeId === r.id;
       const emoji = getDishEmoji(r, slot);
       const ingPreview = (r.ingredients || []).slice(0, 4).map((i) => i.name).join(', ');
+      const wineLine = r.winePairing && r.winePairing.name
+        ? `<div style="font-size: 0.75rem; color: #881337; font-weight: 700; margin-top: 3px;">🍷 Accord vin : ${r.winePairing.name}</div>`
+        : '';
       return `
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'var(--primary-soft)' : '#fff'}; border-radius: 10px;">
           <div style="flex: 1;">
             <div style="font-weight: 800; font-size: 0.93rem;">${emoji} ${r.title}</div>
             <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
-              ⏱️ Prépa ${r.prepTime} • Feu ${r.cookTime} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2p)
+              ⏱️ Prépa ${r.prepTime} • Feu ${r.cookTime} • 👨‍🍳 ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2p)
             </div>
+            ${wineLine}
             <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">
               🛒 ${ingPreview}...
             </div>
@@ -1866,12 +2194,21 @@ function selectRecipeFromCatalog(recipeId) {
 
   const recipe = findRecipeById(recipeId);
   slot.recipeId = recipe.id;
-  slot.isPleasure = recipe.type === 'weekend-pleasure';
+
+  const newStyle =
+    recipe.type === 'gourmet'
+      ? 'gourmet'
+      : recipe.type === 'weekend-pleasure'
+      ? 'pleasure'
+      : 'balanced';
+  syncSlotStyleFlags(slot, newStyle);
+
   slot.active = true;
   slot.validated = false;
 
-  if (slot.isPleasure && !slot.dessertId) {
-    slot.dessertId = window.RECIPES_DB.weekendDesserts[0].id;
+  if ((newStyle === 'pleasure' || newStyle === 'gourmet') && !slot.dessertId) {
+    const styleDesserts = window.RECIPES_DB.weekendDesserts.filter((d) => d.style === newStyle);
+    slot.dessertId = (styleDesserts[0] || window.RECIPES_DB.weekendDesserts[0]).id;
   }
 
   recentSeenIds.add(recipe.id);
@@ -1968,8 +2305,8 @@ function buildAggregatedShoppingList() {
       name: custom.name,
       qty: custom.qty,
       unit: '',
-      aisle: 'Boulangerie & Divers',
-      sources: ['Ajout personnel'],
+      aisle: custom.aisle || 'Boulangerie & Divers',
+      sources: [custom.sourceLabel || 'Ajout personnel'],
       isCustom: true,
       customId: custom.id
     });
@@ -2215,8 +2552,10 @@ function generateGoogleKeepNoteText(grouped, sortedAisles) {
     validatedSlots.forEach((s) => {
       const r = findRecipeById(s.recipeId);
       const d = s.dessertId ? ` + ${findDessertById(s.dessertId).title}` : '';
+      const wine = getRecipeWinePairing(r, s);
+      const wineSuffix = wine && wine.name ? ` [🍷 Vin conseillé : ${wine.name}]` : '';
       const cost = formatEuro(evaluateSlotCost(s).totalCost);
-      lines.push(`• ${formatSlotDayHeader(s)} (${s.mealLabel} - ${s.servings}p - ${cost}) : ${r.title}${d}`);
+      lines.push(`• ${formatSlotDayHeader(s)} (${s.mealLabel} - ${s.servings}p - ${cost}) : ${r.title}${d}${wineSuffix}`);
     });
   }
 
@@ -2422,7 +2761,7 @@ function renderFavoritesAndHistory() {
             <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:8px;">
               <div>
                 <strong style="font-size:0.92rem;">${r.title}</strong>
-                <div style="font-size:0.76rem; color:var(--text-muted);">⏱️ ${r.prepTime} • ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2 parts)</div>
+                <div style="font-size:0.76rem; color:var(--text-muted);">⏱️ ${r.prepTime} • ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2 parts)${r.winePairing && r.winePairing.name ? ` • 🍷 ${r.winePairing.name}` : ''}</div>
               </div>
               <button class="btn btn-outline btn-sm" onclick="toggleFavorite('${r.id}')">Retirer</button>
             </div>
@@ -2475,6 +2814,7 @@ function addManualRecipe() {
   const title = document.getElementById('manual-title')?.value.trim();
   const type = document.getElementById('manual-type')?.value || 'weekday';
   const time = document.getElementById('manual-time')?.value.trim() || '15 min';
+  const wineInput = document.getElementById('manual-wine')?.value.trim() || '';
   const rawIngs = document.getElementById('manual-ingredients')?.value.trim();
   const rawSteps = document.getElementById('manual-steps')?.value.trim();
 
@@ -2504,26 +2844,39 @@ function addManualRecipe() {
         .filter(Boolean)
     : ['Préparer et cuire les ingrédients selon votre habitude.'];
 
+  const isGourmet = type === 'gourmet';
+  const isPleasure = type === 'weekend-pleasure';
+
   const newRecipe = {
     id: `custom-${Date.now()}`,
     title,
     type,
     prepTime: time,
     cookTime: '10 min',
-    difficulty: type === 'weekend-pleasure' ? 'Moyenne' : 'Facile',
-    budget: type === 'weekend-pleasure' ? '€€ (Moyen)' : '€ (Bon marché)',
-    costFor2: type === 'weekend-pleasure' ? 8.00 : 4.50,
+    difficulty: 'Facile',
+    budget: isGourmet ? '€€€ (Gourmet)' : isPleasure ? '€€ (Moyen)' : '€ (Bon marché)',
+    costFor2: isGourmet ? 12.50 : isPleasure ? 8.00 : 4.50,
     baseServings: 2,
     description: 'Recette personnalisée ajoutée à votre catalogue.',
     ingredients,
     steps
   };
 
+  if (isGourmet || wineInput) {
+    newRecipe.winePairing = {
+      name: wineInput || 'Chablis 1er Cru ou Pinot Noir de Bourgogne (AOC)',
+      color: 'Accord du Sommelier',
+      temp: '12-15°C',
+      note: 'Vin sélectionné pour accompagner délicatement les arômes de votre recette.'
+    };
+  }
+
   state.customRecipes.push(newRecipe);
   getCatalogListByType(type).unshift(newRecipe);
   saveStateToStorage();
 
   document.getElementById('manual-title').value = '';
+  if (document.getElementById('manual-wine')) document.getElementById('manual-wine').value = '';
   document.getElementById('manual-ingredients').value = '';
   document.getElementById('manual-steps').value = '';
 
@@ -2548,24 +2901,31 @@ async function generateRecipeWithAI() {
     btn.textContent = '⏳ Génération en cours...';
   }
 
-  const promptText = `Génère une recette en français au format JSON strict pour 2 adultes.
-Catégorie : ${
-    mealType === 'weekday'
-      ? 'Repas de semaine (déjeuner ou dîner) healthy, équilibré, rapide (15 min) et bon marché'
+  const categoryDesc =
+    mealType === 'gourmet'
+      ? 'Menu Gourmet avec des ingrédients nobles et délicats (Saint-Jacques, magret, filet de bœuf, truffe, bar sauvage, morilles...), recette simple à réaliser (Facile, 15-20 min) accompagnée d\'une suggestion de vin précise'
       : mealType === 'weekend-pleasure'
-      ? 'Menu Plaisir gourmand, simplicité moyenne et durée moyenne (35 min)'
-      : 'Repas équilibré et convivial'
-  }.
+      ? 'Menu Plaisir gourmand pour se faire plaisir même si moins équilibré, simple et rapide à réaliser (10-15 min)'
+      : 'Menu Équilibré sain, simple et rapide à réaliser (10-15 min)';
+
+  const promptText = `Génère une recette en français au format JSON strict pour 2 adultes.
+Catégorie : ${categoryDesc}.
 Indication supplémentaire : ${customPrompt || 'Aucune'}.
 Format JSON attendu uniquement (sans markdown) :
 {
   "title": "Nom du plat",
   "prepTime": "10 min",
-  "cookTime": "15 min",
+  "cookTime": "12 min",
   "difficulty": "Facile",
-  "budget": "€ (Bon marché)",
-  "costFor2": 4.80,
+  "budget": "${mealType === 'gourmet' ? '€€€ (Gourmet)' : mealType === 'weekend-pleasure' ? '€€ (Moyen)' : '€ (Bon marché)'}",
+  "costFor2": ${mealType === 'gourmet' ? 13.5 : mealType === 'weekend-pleasure' ? 8.0 : 4.8},
   "description": "Courte description appétissante",
+  "winePairing": {
+    "name": "Nom de l'appellation AOC conseillée",
+    "color": "Vin blanc sec ou Vin rouge élégant",
+    "temp": "11-12°C",
+    "note": "Explication courte de l'accord mets et vin"
+  },
   "ingredients": [
     {"name": "Nom ingrédient", "qty": 200, "unit": "g", "aisle": "Fruits & Légumes"}
   ],
@@ -2595,13 +2955,14 @@ Format JSON attendu uniquement (sans markdown) :
       id: `ai-${Date.now()}`,
       title: parsed.title,
       type: mealType,
-      prepTime: parsed.prepTime || '15 min',
-      cookTime: parsed.cookTime || '15 min',
-      difficulty: parsed.difficulty || 'Facile',
-      budget: parsed.budget || '€ (Bon marché)',
-      costFor2: parseFloat(parsed.costFor2) || (mealType === 'weekend-pleasure' ? 8.50 : 4.80),
+      prepTime: parsed.prepTime || '10 min',
+      cookTime: parsed.cookTime || '12 min',
+      difficulty: 'Facile',
+      budget: parsed.budget || (mealType === 'gourmet' ? '€€€ (Gourmet)' : mealType === 'weekend-pleasure' ? '€€ (Moyen)' : '€ (Bon marché)'),
+      costFor2: parseFloat(parsed.costFor2) || (mealType === 'gourmet' ? 13.00 : mealType === 'weekend-pleasure' ? 8.00 : 4.80),
       baseServings: 2,
       description: parsed.description || 'Recette générée par IA.',
+      winePairing: parsed.winePairing || null,
       ingredients: parsed.ingredients || [],
       steps: parsed.steps || []
     };
@@ -2611,11 +2972,12 @@ Format JSON attendu uniquement (sans markdown) :
 
     const targetSlot = state.slots.find((s) =>
       s.active !== false &&
-      (mealType === 'weekday'
-        ? !s.isWeekend && !s.validated
+      !s.validated &&
+      (mealType === 'gourmet'
+        ? getSlotStyle(s) === 'gourmet'
         : mealType === 'weekend-pleasure'
-        ? s.isPleasure && !s.validated
-        : s.isWeekend && !s.isPleasure && !s.validated)
+        ? getSlotStyle(s) === 'pleasure'
+        : getSlotStyle(s) === 'balanced')
     );
 
     if (targetSlot) {
