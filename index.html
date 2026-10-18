@@ -240,41 +240,57 @@
             </button>
           </div>
 
-          <!-- Fenêtre Vidéo Live (affichée quand le scan Frigo ou Placard est actif) -->
+          <!-- Fenêtre Vidéo Plein Écran / Centrée (affichée quand le scan Frigo ou Placard est actif) -->
           <div id="pantry-camera-container" class="pantry-camera-container" style="display: none;">
-            <div class="pantry-video-wrapper">
-              <video id="pantry-camera-video" autoplay playsinline muted></video>
-              <canvas id="pantry-camera-canvas" style="display: none;"></canvas>
-
-              <div class="pantry-viewfinder-overlay">
-                <div class="viewfinder-corners"></div>
+            <div class="pantry-fullscreen-box">
+              <!-- Barre supérieure du scanner plein écran -->
+              <div class="pantry-fullscreen-topbar">
                 <div id="pantry-active-zone-badge" class="pantry-zone-floating-badge">
                   ❄️ Scan du Frigo en direct
                 </div>
-                <div id="pantry-scan-Hud-msg" class="pantry-hud-status">
-                  Filmez lentement l'intérieur...
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button type="button" class="btn btn-outline btn-sm pantry-switch-zone-btn" onclick="switchActiveCameraZone()">
+                    🔄 Changer (❄️/🥫)
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm pantry-close-cam-btn" onclick="stopPantryCamera()">
+                    ✕ Fermer
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <!-- Commandes simplifiées pendant qu'on filme -->
-            <div class="pantry-camera-controls">
-              <button type="button" id="btn-capture-shelf" class="btn btn-primary" onclick="captureAndAnalyzeCurrentFrame(true)">
-                📸 Analyser maintenant
-              </button>
-              <button type="button" id="btn-voice-scan" class="btn btn-outline btn-sm" onclick="togglePantryVoiceRecognition()">
-                🎙️ Dicter
-              </button>
-              <button type="button" class="btn btn-outline btn-sm" style="color: #b91c1c; border-color: #fecaca;" onclick="stopPantryCamera()">
-                ⏹️ Fermer
-              </button>
-            </div>
+              <!-- Flux vidéo centré plein écran -->
+              <div class="pantry-video-wrapper">
+                <video id="pantry-camera-video" autoplay playsinline muted></video>
+                <canvas id="pantry-camera-canvas" style="display: none;"></canvas>
 
-            <!-- Journal en direct des ingrédients ajoutés pendant le scan -->
-            <div id="pantry-live-feed" class="pantry-live-feed">
-              <div class="pantry-live-feed-title">✨ Ingrédients reconnus :</div>
-              <div id="pantry-live-detections-list" class="pantry-live-chips">
-                <span style="font-size: 0.78rem; color: var(--text-muted);">Filmez vos étagères : les ingrédients s'ajoutent ici au fur et à mesure...</span>
+                <div class="pantry-viewfinder-overlay">
+                  <div class="viewfinder-corners"></div>
+                  <div id="pantry-scan-Hud-msg" class="pantry-hud-status">
+                    Filmez lentement l'intérieur...
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ingrédients reconnus en direct + Boutons d'action centrés en bas -->
+              <div class="pantry-fullscreen-bottom">
+                <div id="pantry-live-feed" class="pantry-live-feed">
+                  <div class="pantry-live-feed-title">✨ Ingrédients ajoutés à votre liste :</div>
+                  <div id="pantry-live-detections-list" class="pantry-live-chips">
+                    <span style="font-size: 0.78rem; color: #cbd5e1;">Filmez vos étagères : les ingrédients s'ajoutent au fur et à mesure...</span>
+                  </div>
+                </div>
+
+                <div class="pantry-camera-controls">
+                  <button type="button" id="btn-capture-shelf" class="btn btn-primary" onclick="captureAndAnalyzeCurrentFrame(true)">
+                    📸 Analyser maintenant
+                  </button>
+                  <button type="button" id="btn-voice-scan" class="btn btn-outline btn-sm" style="background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.3);" onclick="togglePantryVoiceRecognition()">
+                    🎙️ Dicter
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" style="background: #ffffff; color: #0f172a; font-weight: 800;" onclick="stopPantryCamera()">
+                    ✓ Terminer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
