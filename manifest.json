@@ -1,8 +1,8 @@
 {
   "id": "./index.html",
-  "name": "MenuSemaine & Courses Keep",
+  "name": "MenuSemaine & Panier de Courses",
   "short_name": "MenuSemaine",
-  "description": "Planificateur de menus hebdomadaires équilibrés & plaisir avec génération de liste de courses pour Google Keep.",
+  "description": "Planificateur de menus hebdomadaires équilibrés, plaisir & gourmet avec panier de courses intégré par rayon.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
