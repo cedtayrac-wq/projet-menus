@@ -3958,7 +3958,7 @@ const VOICE_PERSONAS = {
 
   lignac: {
     id: 'lignac',
-    name: 'Cyril Lignac',
+    name: 'Cyril',
     shortTitle: 'Gourmand, Croquant & Joyeux',
     badge: '👨‍🍳 Gourmand & Croquant',
     gender: 'male',
@@ -3993,7 +3993,7 @@ const VOICE_PERSONAS = {
 
   remy: {
     id: 'remy',
-    name: 'Rémy (Ratatouille)',
+    name: 'Rémy',
     shortTitle: 'Le Petit Chef Passionné',
     badge: '🐭 Petit Chef • Gusteau',
     gender: 'male',
@@ -4028,7 +4028,7 @@ const VOICE_PERSONAS = {
 
   bocuse: {
     id: 'bocuse',
-    name: 'Paul Bocuse',
+    name: 'Paul',
     shortTitle: 'Monsieur Paul • Grande Tradition',
     badge: '👑 Pape de la Gastronomie',
     gender: 'male',
@@ -4063,7 +4063,7 @@ const VOICE_PERSONAS = {
 
   marx: {
     id: 'marx',
-    name: 'Thierry Marx',
+    name: 'Thierry',
     shortTitle: 'Esprit Zen, Précision & Science',
     badge: '🥋 Zen & Justesse Thermique',
     gender: 'male',
@@ -4098,7 +4098,7 @@ const VOICE_PERSONAS = {
 
   etchebest: {
     id: 'etchebest',
-    name: 'Philippe Etchebest',
+    name: 'Philippe',
     shortTitle: 'Chef de Brigade Énergique & Franc',
     badge: '🔥 Brigade • Rigueur & Cœur',
     gender: 'male',
@@ -4133,7 +4133,7 @@ const VOICE_PERSONAS = {
 
   coffe: {
     id: 'coffe',
-    name: 'Jean-Pierre Coffe',
+    name: 'Jean-Pierre',
     shortTitle: 'Amour du Vrai Produit & Franc-Parler',
     badge: '👓 Terroir & Authenticité',
     gender: 'male',
@@ -4168,7 +4168,7 @@ const VOICE_PERSONAS = {
 
   ia_homme: {
     id: 'ia_homme',
-    name: 'Voix neutre IA Homme',
+    name: 'Voix Homme (IA)',
     shortTitle: 'Assistant Vocal IA Masculin Neutre',
     badge: '🤖👨 IA Neutre Homme',
     gender: 'male',
@@ -4203,7 +4203,7 @@ const VOICE_PERSONAS = {
 
   ia_femme: {
     id: 'ia_femme',
-    name: 'Voix neutre IA Femme',
+    name: 'Voix Femme (IA)',
     shortTitle: 'Assistante Vocale IA Féminine Neutre',
     badge: '🤖👩 IA Neutre Femme',
     gender: 'female',
@@ -4214,7 +4214,7 @@ const VOICE_PERSONAS = {
     themeColor: '#4f46e5',
     themeBg: '#eef2ff',
     themeBorder: '#a5b4fc',
-    particles: ['🤖', '🎙️', '🥗', '⏱️', '✨'],
+    particles: ['👩‍🍳', '🎙️', '🥗', '⏱️', '✨'],
     description: 'Voix féminine synthétique neutre, douce, fluide et précise pour un accompagnement clair étape par étape.',
     sampleQuote: '« Bonjour. Guide vocal IA Femme activé. Nous allons cuisiner votre recette pas à pas. Quand vous êtes prêt, dites Suivant. »',
     buildIntro: (dish, servings) =>
@@ -4237,9 +4237,52 @@ const VOICE_PERSONAS = {
   }
 };
 
+let runtimeClonedVoicesInactive = false;
+
+function areClonedVoicesActive() {
+  if (runtimeClonedVoicesInactive) return false;
+  const cfg = window.APP_CONFIG || {};
+  if (cfg.clonedVoicesEnabled === false || cfg.aiVoiceEnabled === false) return false;
+  if (state.voiceSettings?.engine === 'system' || state.voiceSettings?.clonesActive === false) return false;
+
+  const hasConfiguredCloneIds =
+    (cfg.fishClonedVoiceIds && Object.keys(cfg.fishClonedVoiceIds).length > 0) ||
+    (cfg.clonedVoiceIds && Object.keys(cfg.clonedVoiceIds).some((k) => k !== 'ia_homme' && k !== 'ia_femme')) ||
+    (state.voiceSettings?.clonedVoiceIds && Object.keys(state.voiceSettings.clonedVoiceIds).length > 0);
+
+  return Boolean(hasConfiguredCloneIds);
+}
+
+function getAvailableVoicePersonas() {
+  if (!areClonedVoicesActive()) {
+    return [VOICE_PERSONAS.ia_femme, VOICE_PERSONAS.ia_homme];
+  }
+  return Object.values(VOICE_PERSONAS);
+}
+
+function deactivateClonedVoicesFallback() {
+  if (runtimeClonedVoicesInactive) return;
+  runtimeClonedVoicesInactive = true;
+  const prevPersona = VOICE_PERSONAS[state.voiceSettings?.persona];
+  const fallbackId = prevPersona && prevPersona.gender === 'male' ? 'ia_homme' : 'ia_femme';
+  if (state.voiceSettings) {
+    state.voiceSettings.persona = fallbackId;
+    saveStateToStorage();
+  }
+  renderVoiceGuideSettings();
+}
+
 function getActiveVoicePersona() {
   const personaId = state.voiceSettings?.persona || 'lignac';
-  return VOICE_PERSONAS[personaId] || VOICE_PERSONAS.lignac;
+  if (!areClonedVoicesActive() && personaId !== 'ia_femme' && personaId !== 'ia_homme') {
+    const prev = VOICE_PERSONAS[personaId];
+    const fallbackId = prev && prev.gender === 'male' ? 'ia_homme' : 'ia_femme';
+    if (state.voiceSettings) {
+      state.voiceSettings.persona = fallbackId;
+    }
+    return VOICE_PERSONAS[fallbackId];
+  }
+  return VOICE_PERSONAS[personaId] || (areClonedVoicesActive() ? VOICE_PERSONAS.lignac : VOICE_PERSONAS.ia_femme);
 }
 
 const PERSONA_PUBLIC_PHOTOS = {
@@ -4284,8 +4327,8 @@ const PERSONA_PUBLIC_PHOTOS = {
     credit: 'Unsplash Public'
   },
   ia_femme: {
-    local: 'assets/personas/ia_femme.jpg',
-    publicUrl: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=400&q=80',
+    local: 'assets/personas/ia_femme.jpg?v=2',
+    publicUrl: 'https://images.unsplash.com/photo-1583394293214-28ded15ee548?auto=format&fit=crop&w=400&q=80',
     credit: 'Unsplash Public'
   }
 };
@@ -4483,16 +4526,12 @@ function buildPersonaFallbackIllustrationSVG(personaId) {
       return `
         <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
           <circle cx="60" cy="60" r="54" fill="#e2e8f0" stroke="#334155" stroke-width="3"/>
-          <circle cx="60" cy="60" r="46" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="6 4"/>
-          <!-- Casque & Avatar IA Masculin -->
-          <rect x="34" y="32" width="52" height="48" rx="18" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
-          <!-- Yeux LED bleus -->
-          <rect x="44" y="48" width="10" height="6" rx="3" fill="#38bdf8"/>
-          <rect x="66" y="48" width="10" height="6" rx="3" fill="#38bdf8"/>
-          <!-- Onde vocale bouche IA -->
-          <ellipse class="svg-mouth" cx="60" cy="66" rx="11" ry="4" fill="#38bdf8"/>
-          <!-- Corps IA -->
-          <path d="M34 90 Q60 98 86 90 L92 114 L28 114 Z" fill="#334155"/>
+          <rect x="38" y="14" width="44" height="28" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <circle cx="60" cy="62" r="24" fill="#fed7aa"/>
+          <circle cx="50" cy="56" r="3" fill="#0f172a"/>
+          <circle cx="70" cy="56" r="3" fill="#0f172a"/>
+          <ellipse class="svg-mouth" cx="60" cy="71" rx="8" ry="4" fill="#991b1b"/>
+          <path d="M30 90 Q60 100 90 90 L96 114 L24 114 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
         </svg>
       `;
     case 'ia_femme':
@@ -4500,16 +4539,17 @@ function buildPersonaFallbackIllustrationSVG(personaId) {
       return `
         <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
           <circle cx="60" cy="60" r="54" fill="#e0e7ff" stroke="#4f46e5" stroke-width="3"/>
-          <circle cx="60" cy="60" r="46" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="6 4"/>
-          <!-- Avatar IA Féminin -->
-          <rect x="34" y="32" width="52" height="48" rx="22" fill="#312e81" stroke="#c084fc" stroke-width="2.5"/>
-          <!-- Yeux LED lumineux -->
-          <circle cx="49" cy="51" r="4" fill="#e879f9"/>
-          <circle cx="71" cy="51" r="4" fill="#e879f9"/>
-          <!-- Onde vocale bouche IA -->
-          <ellipse class="svg-mouth" cx="60" cy="66" rx="10" ry="4" fill="#e879f9"/>
-          <!-- Corps IA -->
-          <path d="M34 90 Q60 98 86 90 L92 114 L28 114 Z" fill="#4338ca"/>
+          <!-- Toque & chignon de cuisinière -->
+          <path d="M38 40 C34 16, 86 16, 82 40 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <circle cx="60" cy="62" r="24" fill="#fde68a"/>
+          <circle cx="44" cy="66" r="4.5" fill="#f472b6" opacity="0.45"/>
+          <circle cx="76" cy="66" r="4.5" fill="#f472b6" opacity="0.45"/>
+          <circle cx="50" cy="56" r="3" fill="#1e293b"/>
+          <circle cx="70" cy="56" r="3" fill="#1e293b"/>
+          <ellipse class="svg-mouth" cx="60" cy="71" rx="8" ry="4.5" fill="#be123c"/>
+          <!-- Veste de cuisinière blanche & tablier -->
+          <path d="M30 90 Q60 100 90 90 L96 114 L24 114 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+          <rect x="44" y="92" width="32" height="22" rx="4" fill="#4338ca"/>
         </svg>
       `;
   }
@@ -5515,16 +5555,34 @@ function renderVoiceGuideSettings() {
     }
   }
 
-  // Mettre à jour le menu déroulant des personnalités
+  // Mettre à jour le menu déroulant des personnalités selon l'état des voix clones
+  const availablePersonas = getAvailableVoicePersonas();
+  const clonesActive = areClonedVoicesActive();
   const personaSelect = document.getElementById('voice-persona-select');
   if (personaSelect) {
+    if (!clonesActive) {
+      personaSelect.innerHTML = availablePersonas
+        .map((p) => `<option value="${p.id}" ${p.id === activePersona.id ? 'selected' : ''}>${p.name}</option>`)
+        .join('');
+    } else {
+      const chefPersonas = availablePersonas.filter((p) => p.id !== 'ia_homme' && p.id !== 'ia_femme');
+      const iaPersonas = availablePersonas.filter((p) => p.id === 'ia_homme' || p.id === 'ia_femme');
+      personaSelect.innerHTML = `
+        <optgroup label="👨‍🍳 Personnalités">
+          ${chefPersonas.map((p) => `<option value="${p.id}" ${p.id === activePersona.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+        </optgroup>
+        <optgroup label="🤖 Voix Neutres IA">
+          ${iaPersonas.map((p) => `<option value="${p.id}" ${p.id === activePersona.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+        </optgroup>
+      `;
+    }
     personaSelect.value = activePersona.id;
   }
 
-  // Rendre la grille de cartes des 9 personnalités dans les Paramètres (sans la mention 'Clone Perso')
+  // Rendre la grille de cartes des personnalités disponibles dans les Paramètres (juste le prénom / nom IA)
   const personaGrid = document.getElementById('voice-persona-grid');
   if (personaGrid) {
-    personaGrid.innerHTML = Object.values(VOICE_PERSONAS)
+    personaGrid.innerHTML = availablePersonas
       .map((p) => {
         const isSelected = p.id === activePersona.id;
         const isThisSamplePlaying = activePreviewPersonaId === p.id && voiceGuideSession.isSpeaking;
@@ -5534,17 +5592,15 @@ function renderVoiceGuideSettings() {
             style="--persona-color: ${p.themeColor}; --persona-bg: ${p.themeBg}; --persona-border: ${p.themeBorder};"
             onclick="selectVoicePersona('${p.id}', false)"
           >
-            <div class="voice-persona-card-top">
+            <div class="voice-persona-card-top" style="align-items: center;">
               <div class="voice-persona-avatar-mini ${isSelected && voiceGuideSession.isSpeaking ? 'is-speaking' : ''}">
                 ${buildPersonaAnimatedAvatarSVG(p.id)}
               </div>
               <div class="voice-persona-meta">
-                <div class="voice-persona-name-row">
+                <div class="voice-persona-name-row" style="margin-bottom: 0;">
                   <strong>${p.name}</strong>
                   ${isSelected ? '<span class="voice-persona-active-tag">✓ Choisi</span>' : ''}
                 </div>
-                <span class="voice-persona-badge">${p.badge}</span>
-                <p class="voice-persona-desc">${p.description}</p>
               </div>
             </div>
             <div class="voice-persona-actions">
@@ -5553,7 +5609,7 @@ function renderVoiceGuideSettings() {
                 class="btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline'}"
                 onclick="event.stopPropagation(); selectVoicePersona('${p.id}', false);"
               >
-                ${isSelected ? '✓ Personnalité active' : 'Choisir cette voix'}
+                ${isSelected ? '✓ Active' : 'Choisir'}
               </button>
               <button
                 type="button"
@@ -6253,7 +6309,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     return;
   }
 
-  const persona = getActiveVoicePersona();
+  let persona = getActiveVoicePersona();
   if (options.isSamplePreview) {
     activePreviewPersonaId = persona.id;
   }
@@ -6289,6 +6345,13 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     if (voiceApiKey) {
       const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, reqOptions);
       if (playedCloud || reqId !== currentVoiceRequestSeq) return;
+    }
+
+    // Si aucun moteur de voix clonée ne répond pour une personnalité clonée hors extrait,
+    // basculer automatiquement sur les seules Voix Femme (IA) et Voix Homme (IA)
+    if (!options.isSamplePreview && persona.id !== 'ia_femme' && persona.id !== 'ia_homme') {
+      deactivateClonedVoicesFallback();
+      persona = getActiveVoicePersona();
     }
   } else {
     // En Mode Voix Système Standard :
