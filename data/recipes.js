@@ -1,4 +1,8 @@
-// Base de données complète de recettes (Semaine Healthy & Économique, Week-end Équilibré, Week-end Plaisir, et Desserts)
+// Base de données complète de recettes :
+// 3 Types de repas (Semaine & Week-end) :
+// - 🥗 Équilibré : menus sains, simples et rapides à réaliser
+// - 🌟 Plaisir : menus gourmands pour se faire plaisir (même si moins équilibrés), simples et rapides à réaliser
+// - 🍷 Gourmet : menus avec des ingrédients plus nobles et délicats, recettes simples à réaliser + suggestion de vin
 // Toutes les quantités d'ingrédients sont calibrées pour baseServings: 2 (2 adultes par défaut).
 
 window.RECIPES_DB = {
@@ -8,7 +12,8 @@ window.RECIPES_DB = {
     "Crèmerie & Frais": { icon: "🧀", order: 3 },
     "Épicerie salée": { icon: "🍝", order: 4 },
     "Épicerie sucrée & Pâtisserie": { icon: "🍫", order: 5 },
-    "Boulangerie & Divers": { icon: "🥖", order: 6 }
+    "Boulangerie & Divers": { icon: "🥖", order: 6 },
+    "Cave & Accords Vins": { icon: "🍷", order: 7 }
   },
 
   // =========================================================================
@@ -759,6 +764,843 @@ window.RECIPES_DB = {
         "Garnir de feuilles de salade, rondelles de tomate, lamelles d'avocat et tranches de blanc de dinde.",
         "Refermer, couper en triangles et servir avec le reste de salade verte."
       ]
+    },
+    {
+      id: "wd-29",
+      title: "Gnocchis poêlés aux tomates cerises rôties, épinards et billes de mozzarella",
+      type: "weekday",
+      prepTime: "5 min",
+      cookTime: "10 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "435 kcal / part",
+      tags: ["Healthy", "Végétarien", "Rapide", "Économique"],
+      baseServings: 2,
+      costFor2: 3.90,
+      description: "Une poêlée italienne prête en 15 minutes, croustillante dehors et fondante dedans.",
+      ingredients: [
+        { name: "Gnocchis à poêler", qty: 300, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Tomates cerises", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Pousses d'épinards", qty: 120, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Mozzarella", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Huile d'olive & Basilic", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Faire dorer les gnocchis dans une poêle chaude avec un filet d'huile d'olive pendant 5 minutes.",
+        "Ajouter les tomates cerises coupées en deux et les pousses d'épinards, laisser fondre 3 minutes.",
+        "Hors du feu, parsemer de dés de mozzarella et de basilic frais, puis servir aussitôt."
+      ]
+    },
+    {
+      id: "wd-30",
+      title: "Émincé de poulet au curry doux, lait de coco léger et courgettes fondantes",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "445 kcal / part",
+      tags: ["Healthy", "Rapide", "Riche en protéines"],
+      baseServings: 2,
+      costFor2: 5.10,
+      description: "Un curry express doux et parfumé, accompagné de riz basmati.",
+      ingredients: [
+        { name: "Blanc de poulet", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Courgettes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Lait de coco léger", qty: 150, unit: "ml", aisle: "Épicerie salée" },
+        { name: "Riz basmati", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Curry en poudre", qty: 1.5, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Lancer la cuisson du riz basmati dans l'eau bouillante salée.",
+        "Couper le poulet et les courgettes en dés, les faire dorer 6 minutes à la poêle avec le curry.",
+        "Verser le lait de coco léger, laisser mijoter 5 minutes à feu doux et servir sur le riz."
+      ]
+    },
+    {
+      id: "wd-31",
+      title: "Salade grecque complète au pois chiches, concombre, tomates, olives et feta",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "0 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "410 kcal / part",
+      tags: ["Healthy", "Végétarien", "Sans cuisson", "Déjeuner idéal"],
+      baseServings: 2,
+      costFor2: 3.80,
+      description: "La fraîcheur de la salade crétoise enrichie de pois chiches pour un repas rassasiant sans cuisson.",
+      ingredients: [
+        { name: "Pois chiches cuits (conserve)", qty: 240, unit: "g", aisle: "Épicerie salée" },
+        { name: "Concombre", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Tomates", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Feta", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Olives noires", qty: 40, unit: "g", aisle: "Épicerie salée" },
+        { name: "Huile d'olive & Origan", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Rincer et égoutter les pois chiches. Couper le concombre et les tomates en dés.",
+        "Réunir dans un saladier avec les olives noires et la feta coupée en cubes.",
+        "Assaisonner d'huile d'olive, d'un trait de citron ou vinaigre et d'origan séché."
+      ]
+    },
+    {
+      id: "wd-32",
+      title: "Croque-monsieur healthy au four (pain complet, jambon blanc, tomate & mozzarella)",
+      type: "weekday",
+      prepTime: "7 min",
+      cookTime: "10 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "430 kcal / part",
+      tags: ["Healthy", "Rapide", "Économique"],
+      baseServings: 2,
+      costFor2: 3.90,
+      description: "Le plaisir du croque doré sans béchamel lourde, remplacée par du fromage frais et de la tomate.",
+      ingredients: [
+        { name: "Pain de mie complet ou pain de campagne", qty: 4, unit: "tranches", aisle: "Boulangerie & Divers" },
+        { name: "Jambon blanc découenné", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Mozzarella ou Emmental", qty: 80, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Tomate", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Salade verte", qty: 100, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Préchauffer le four à 200°C (ou utiliser un appareil à croque).",
+        "Garnir les tranches de pain de rondelles fines de tomate, jambon blanc et tranches de mozzarella.",
+        "Dorer 10 minutes au four et servir bien chaud avec la salade verte."
+      ]
+    },
+    {
+      id: "wd-33",
+      title: "Filet de merlu meunière au citron, purée de brocolis et pommes de terre",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "395 kcal / part",
+      tags: ["Healthy", "Poisson", "Léger"],
+      baseServings: 2,
+      costFor2: 5.60,
+      description: "Un poisson blanc délicatement doré accompagné d'un écrasé vert riche en vitamines.",
+      ingredients: [
+        { name: "Filets de merlu ou colin", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Brocoli", qty: 1, unit: "tête", aisle: "Fruits & Légumes" },
+        { name: "Pommes de terre", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Citron", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive ou beurre", qty: 1, unit: "c. à soupe", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Cuire les pommes de terre en cubes et les bouquets de brocoli 13 minutes dans l'eau bouillante salée, puis les écraser à la fourchette.",
+        "Poêler les filets de merlu 3 à 4 minutes par face avec un filet d'huile ou noisette de beurre.",
+        "Arroser de jus de citron et servir avec l'écrasé de brocolis."
+      ]
+    },
+    {
+      id: "wd-34",
+      title: "Nouilles sautées aux légumes croquants, œufs brouillés et sésame (Bami Goreng)",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€ (Très économique)",
+      calories: "440 kcal / part",
+      tags: ["Healthy", "Végétarien", "Rapide", "Économique"],
+      baseServings: 2,
+      costFor2: 3.40,
+      description: "Un wok végétarien complet, économique et parfumé à la sauce soja.",
+      ingredients: [
+        { name: "Nouilles de blé ou de riz", qty: 150, unit: "g", aisle: "Épicerie salée" },
+        { name: "Œufs", qty: 3, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Carottes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Poireau ou chou blanc", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Sauce soja", qty: 2, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Cuire les nouilles selon le paquet. Tailler les carottes et le poireau en fines juliennes.",
+        "Faire sauter les légumes 6 minutes à feu vif dans un wok, pousser sur le côté et brouiller les œufs.",
+        "Ajouter les nouilles égouttées et la sauce soja, mélanger 2 minutes à feu vif."
+      ]
+    },
+    {
+      id: "wd-35",
+      title: "Velouté de potimarron rôti, éclats de châtaignes ou noisettes & œuf mollet",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€ (Très économique)",
+      calories: "390 kcal / part",
+      tags: ["Healthy", "Végétarien", "Réconfortant"],
+      baseServings: 2,
+      costFor2: 3.70,
+      description: "Un velouté d'automne-hiver ultra-doux transformé en plat complet grâce à l'œuf mollet.",
+      ingredients: [
+        { name: "Potimarron (inutile d'éplucher)", qty: 450, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pain aux céréales", qty: 2, unit: "tranches", aisle: "Boulangerie & Divers" },
+        { name: "Crème légère", qty: 2, unit: "c. à soupe", aisle: "Crèmerie & Frais" },
+        { name: "Bouillon de légumes", qty: 1, unit: "cube", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Couper le potimarron lavé et épépiné en cubes. Cuire 15 minutes dans 400 ml d'eau avec le bouillon.",
+        "Cuire les œufs 6 minutes à l'eau bouillante puis les écaler.",
+        "Mixer le potimarron avec la crème légère, servir dans deux bols avec l'œuf mollet ouvert au centre et le pain grillé."
+      ]
+    },
+    {
+      id: "wd-36",
+      title: "Aiguillettes de poulet à la moutarde à l'ancienne, haricots verts et semoule",
+      type: "weekday",
+      prepTime: "7 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "445 kcal / part",
+      tags: ["Healthy", "Rapide", "Riche en protéines"],
+      baseServings: 2,
+      costFor2: 4.90,
+      description: "Une sauce minute légère à la moutarde en grains qui relève tendrement le poulet.",
+      ingredients: [
+        { name: "Aiguillettes de poulet", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Haricots verts", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Semoule moyenne", qty: 110, unit: "g", aisle: "Épicerie salée" },
+        { name: "Moutarde à l'ancienne", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Crème légère 15%", qty: 2, unit: "c. à soupe", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Cuire les haricots verts 10 minutes à l'eau ou vapeur et gonfler la semoule à l'eau bouillante.",
+        "Dorer les aiguillettes de poulet 7 minutes à la poêle, puis ajouter la moutarde et la crème légère.",
+        "Mélanger 2 minutes à feu doux et servir avec les haricots verts et la semoule."
+      ]
+    },
+    {
+      id: "wd-37",
+      title: "Pâtes penne à l'arrabbiata douce, courgettes grillées et ricotta fraîche",
+      type: "weekday",
+      prepTime: "7 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "440 kcal / part",
+      tags: ["Healthy", "Végétarien", "Économique"],
+      baseServings: 2,
+      costFor2: 3.60,
+      description: "La douceur lactée de la ricotta vient équilibrer une sauce tomate parfumée à l'ail.",
+      ingredients: [
+        { name: "Pâtes penne", qty: 160, unit: "g", aisle: "Épicerie salée" },
+        { name: "Courgette", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Coulis de tomates", qty: 250, unit: "g", aisle: "Épicerie salée" },
+        { name: "Ricotta", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Ail", qty: 1, unit: "gousse", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire les penne al dente dans l'eau bouillante salée.",
+        "Faire dorer la courgette coupée en petits dés avec l'ail haché pendant 5 minutes, puis verser le coulis de tomates.",
+        "Mélanger les pâtes égouttées à la sauce et déposer une belle cuillerée de ricotta fraîche sur chaque assiette."
+      ]
+    },
+    {
+      id: "wd-38",
+      title: "Salade niçoise express au thon, haricots verts, tomates, œuf dur et pommes de terre",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "430 kcal / part",
+      tags: ["Healthy", "Déjeuner idéal", "Équilibré"],
+      baseServings: 2,
+      costFor2: 4.30,
+      description: "Toute la Méditerranée dans une assiette complète, fraîche et rassasiante.",
+      ingredients: [
+        { name: "Thon au naturel (conserve)", qty: 140, unit: "g", aisle: "Épicerie salée" },
+        { name: "Haricots verts cuits ou surgelés", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Pommes de terre", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Tomates", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Olives noires & Huile d'olive", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Cuire les pommes de terre en dés, les haricots verts et les œufs durs pendant 10 à 12 minutes.",
+        "Couper les tomates en quartiers et écaler les œufs.",
+        "Assembler dans deux grandes assiettes avec le thon émietté et les olives, puis arroser d'un filet d'huile d'olive."
+      ]
+    },
+    {
+      id: "wd-39",
+      title: "Quesadillas complètes au poulet effiloché, poivrons doux, maïs et cheddar",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "8 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "460 kcal / part",
+      tags: ["Healthy", "Rapide", "Ludique"],
+      baseServings: 2,
+      costFor2: 4.70,
+      description: "Des galettes mexicaines dorées à la poêle, croustillantes et accompagnées de salade verte.",
+      ingredients: [
+        { name: "Tortillas de blé ou maïs", qty: 4, unit: "pièces", aisle: "Boulangerie & Divers" },
+        { name: "Émincé de poulet cuit ou rôti", qty: 180, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Poivron rouge", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Maïs doux (conserve)", qty: 80, unit: "g", aisle: "Épicerie salée" },
+        { name: "Fromage râpé ou Cheddar", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Faire revenir le poivron émincé 4 minutes à la poêle avec le poulet et le maïs égoutté.",
+        "Répartir la garniture et le fromage sur la moitié des tortillas, replier en demi-lune.",
+        "Dorer 2 minutes de chaque côté dans la poêle sèche et servir avec la salade."
+      ]
+    },
+    {
+      id: "wd-40",
+      title: "Curry de pois chiches et épinards au lait de coco (Chana Palak) & riz basmati",
+      type: "weekday",
+      prepTime: "6 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "435 kcal / part",
+      tags: ["Healthy", "Végétarien", "Économique", "Sans gluten"],
+      baseServings: 2,
+      costFor2: 3.10,
+      description: "Un grand classique végétarien indien ultra-rapide, riche en protéines et minéraux.",
+      ingredients: [
+        { name: "Pois chiches cuits (conserve)", qty: 250, unit: "g", aisle: "Épicerie salée" },
+        { name: "Épinards frais ou surgelés", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Lait de coco léger", qty: 150, unit: "ml", aisle: "Épicerie salée" },
+        { name: "Riz basmati", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Garam masala ou Curry", qty: 1.5, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Cuire le riz basmati 10 minutes dans l'eau bouillante salée.",
+        "Faire chauffer les pois chiches égouttés avec les épices, le lait de coco et les épinards pendant 8 minutes à feu moyen.",
+        "Servir bien chaud sur le riz basmati."
+      ]
+    },
+    {
+      id: "wd-41",
+      title: "Filet de truite rose au four, rondelles de courgettes au thym et semoule",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "14 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "420 kcal / part",
+      tags: ["Healthy", "Poisson", "Oméga-3"],
+      baseServings: 2,
+      costFor2: 5.90,
+      description: "La truite, alternative locale et économique au saumon, cuite au four sur lit de courgettes.",
+      ingredients: [
+        { name: "Pavés de truite", qty: 240, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Courgettes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Semoule ou boulghour", qty: 110, unit: "g", aisle: "Épicerie salée" },
+        { name: "Citron", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive & Thym", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Préchauffer le four à 195°C. Disposer les courgettes en fines rondelles au fond d'un plat, arroser d'un filet d'huile et de thym.",
+        "Poser les pavés de truite par-dessus, arroser de citron et enfourner 14 minutes.",
+        "Préparer la semoule et servir aussitôt."
+      ]
+    },
+    {
+      id: "wd-42",
+      title: "Poêlée campagnarde légère de pommes de terre, haricots verts, jambon cru et œuf au plat",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€ (Très économique)",
+      calories: "450 kcal / part",
+      tags: ["Healthy", "Économique", "Convivial"],
+      baseServings: 2,
+      costFor2: 4.10,
+      description: "Une assiette rustique mais parfaitement équilibrée avec moitié légumes verts et moitié pommes de terre.",
+      ingredients: [
+        { name: "Pommes de terre", qty: 300, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Haricots verts", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Jambon cru ou bacon maigre", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Huile d'olive", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Précuire les pommes de terre en dés et les haricots verts 10 minutes à la vapeur ou à l'eau.",
+        "Les faire dorer 5 minutes à la poêle avec le jambon cru coupé en lanières.",
+        "Cuire les 2 œufs au plat et les déposer sur la poêlée chaude."
+      ]
+    },
+    {
+      id: "wd-43",
+      title: "Taboulé oriental maison au poulet grillé, menthe fraîche, concombre et tomates",
+      type: "weekday",
+      prepTime: "12 min",
+      cookTime: "8 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "430 kcal / part",
+      tags: ["Healthy", "Frais", "Déjeuner idéal"],
+      baseServings: 2,
+      costFor2: 4.50,
+      description: "Parfait au déjeuner ou pour un dîner léger plein de fraîcheur.",
+      ingredients: [
+        { name: "Blanc de poulet", qty: 220, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Semoule moyenne", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Tomates", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Concombre", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Citron & Menthe fraîche", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Réhydrater la semoule avec de l'eau chaude, le jus de citron et l'huile d'olive.",
+        "Ajouter les tomates et le concombre coupés en petits dés ainsi que la menthe ciselée.",
+        "Saisir les dés de poulet 7 minutes à la poêle et les disposer sur le taboulé."
+      ]
+    },
+    {
+      id: "wd-44",
+      title: "Spaghettis à l'ail, huile d'olive, brocolis croquants et copeaux de parmesan",
+      type: "weekday",
+      prepTime: "6 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "420 kcal / part",
+      tags: ["Healthy", "Végétarien", "Économique", "Rapide"],
+      baseServings: 2,
+      costFor2: 3.20,
+      description: "Un classique italien du quotidien où le brocoli cuit directement avec les pâtes.",
+      ingredients: [
+        { name: "Spaghettis (blé complet ou classique)", qty: 160, unit: "g", aisle: "Épicerie salée" },
+        { name: "Brocoli", qty: 1, unit: "tête", aisle: "Fruits & Légumes" },
+        { name: "Parmesan râpé", qty: 40, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Ail", qty: 2, unit: "gousses", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Plonger les spaghettis dans l'eau bouillante salée et ajouter les petits bouquets de brocoli 5 minutes avant la fin de cuisson.",
+        "Faire revenir l'ail émincé dans l'huile d'olive à feu doux.",
+        "Égoutter pâtes et brocolis, mélanger dans la poêle avec l'huile parfumée et le parmesan."
+      ]
+    },
+    {
+      id: "wd-45",
+      title: "Bagel complet au saumon fumé, fromage frais citronné, concombre et roquette",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "2 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "430 kcal / part",
+      tags: ["Healthy", "Rapide", "Déjeuner idéal"],
+      baseServings: 2,
+      costFor2: 5.50,
+      description: "Prêt en moins de 10 minutes, frais et gourmand sans excès.",
+      ingredients: [
+        { name: "Pains bagels au sésame ou complets", qty: 2, unit: "pièces", aisle: "Boulangerie & Divers" },
+        { name: "Saumon ou truite fumée", qty: 100, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Fromage frais nature", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Concombre", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Roquette ou mâche", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Ouvrir les bagels en deux et les toaster légèrement.",
+        "Tartiner de fromage frais poivré et citronné, puis garnir de rondelles de concombre, de saumon fumé et de roquette.",
+        "Servir le reste de roquette et concombre en salade d'accompagnement."
+      ]
+    },
+    {
+      id: "wd-46",
+      title: "Sauté de dinde aux poivrons, oignon rouge et semoule aux raisins secs",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "440 kcal / part",
+      tags: ["Healthy", "Rapide", "Parfumé"],
+      baseServings: 2,
+      costFor2: 4.80,
+      description: "Des saveurs façon tajine express prêtes en 20 minutes.",
+      ingredients: [
+        { name: "Filets de dinde", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Poivrons", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Semoule moyenne", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Oignon rouge", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Ras-el-hanout ou Cumin", qty: 1, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Émincer l'oignon et les poivrons, les faire revenir 5 minutes à la poêle avec les épices.",
+        "Ajouter la dinde coupée en cubes et cuire 7 minutes supplémentaires.",
+        "Servir chaud sur la semoule gonflée à l'eau bouillante."
+      ]
+    },
+    {
+      id: "wd-47",
+      title: "Flan léger de courgettes au basilic, coulis de tomate et jambon blanc",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "18 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "360 kcal / part",
+      tags: ["Healthy", "Léger", "Économique"],
+      baseServings: 2,
+      costFor2: 3.60,
+      description: "Un dîner très léger et digeste, riche en protéines et légumes.",
+      ingredients: [
+        { name: "Courgettes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Œufs", qty: 3, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Jambon blanc", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Lait ou crème légère", qty: 100, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Fromage râpé", qty: 30, unit: "g", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Râper les courgettes et les faire revenir 4 minutes à la poêle.",
+        "Battre les œufs avec le lait, le fromage râpé et le jambon coupé en dés, puis incorporer les courgettes.",
+        "Cuire 15 minutes au four à 190°C (ou à la poêle couverte à feu doux)."
+      ]
+    },
+    {
+      id: "wd-48",
+      title: "Salade tiède de lentilles vertes, œufs mollets, carottes fanes et moutarde à l'ancienne",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "10 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "415 kcal / part",
+      tags: ["Healthy", "Végétarien", "Économique", "Riche en fibres"],
+      baseServings: 2,
+      costFor2: 3.10,
+      description: "Le grand classique bistrot en version healthy et économique.",
+      ingredients: [
+        { name: "Lentilles vertes cuites (conserve)", qty: 260, unit: "g", aisle: "Épicerie salée" },
+        { name: "Œufs", qty: 4, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Carottes", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Échalote", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Moutarde à l'ancienne & Huile", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Râper ou couper en fines rondelles les carottes. Réchauffer doucement les lentilles égouttées.",
+        "Cuire les œufs 6 minutes dans l'eau bouillante pour qu'ils soient mollets, puis les écaler.",
+        "Mélanger les lentilles tièdes avec la vinaigrette à la moutarde, l'échalote et les carottes, puis poser les œufs dessus."
+      ]
+    },
+    {
+      id: "wd-49",
+      title: "Filet de colin au lait de coco, citron vert, tomates cerises et riz",
+      type: "weekday",
+      prepTime: "7 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "430 kcal / part",
+      tags: ["Healthy", "Poisson", "Rapide"],
+      baseServings: 2,
+      costFor2: 5.40,
+      description: "Un poisson poché directement dans une sauce légère au lait de coco et citron vert.",
+      ingredients: [
+        { name: "Filets de colin ou cabillaud", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Tomates cerises", qty: 150, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Lait de coco léger", qty: 150, unit: "ml", aisle: "Épicerie salée" },
+        { name: "Riz basmati", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Citron vert", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Cuire le riz basmati.",
+        "Dans une sauteuse, porter à frémissement le lait de coco avec les tomates cerises coupées en deux et le zeste de citron vert.",
+        "Déposer les filets de poisson dans la sauce et laisser pocher à couvert 8 à 10 minutes à feu doux. Servir avec le riz."
+      ]
+    },
+    {
+      id: "wd-50",
+      title: "Tartine nordique sur pain de seigle : avocat, crevettes roses, pamplemousse ou citron",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "0 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "390 kcal / part",
+      tags: ["Healthy", "Sans cuisson", "Léger", "Déjeuner idéal"],
+      baseServings: 2,
+      costFor2: 5.20,
+      description: "Inspiré du Smørrebrød danois : ultra-frais, riche en protéines et prêt en 10 minutes.",
+      ingredients: [
+        { name: "Pain de seigle ou complet", qty: 4, unit: "tranches", aisle: "Boulangerie & Divers" },
+        { name: "Crevettes roses cuites décortiquées", qty: 180, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Avocat", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Fromage frais", qty: 60, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Mâche ou jeunes pousses", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Tartiner les tranches de pain de seigle de fromage frais.",
+        "Disposer les lamelles d'avocat et les crevettes roses assaisonnées d'un filet de citron et d'aneth ou ciboulette.",
+        "Accompagner de la salade de mâche."
+      ]
+    },
+    {
+      id: "wd-51",
+      title: "Boulettes de bœuf maigre aux herbes, sauce tomate maison et spaghettis complets",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "465 kcal / part",
+      tags: ["Healthy", "Classique", "Convivial"],
+      baseServings: 2,
+      costFor2: 5.20,
+      description: "Des boulettes moelleuses mijotées dans un coulis de tomates au basilic.",
+      ingredients: [
+        { name: "Bœuf haché 5%", qty: 240, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Spaghettis complets", qty: 150, unit: "g", aisle: "Épicerie salée" },
+        { name: "Coulis de tomates", qty: 300, unit: "g", aisle: "Épicerie salée" },
+        { name: "Oignon", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Herbes de Provence", qty: 1, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Façonner de petites boulettes avec le bœuf haché, du sel, du poivre et les herbes.",
+        "Les dorer 5 minutes à la poêle avec l'oignon émincé, puis verser le coulis de tomates et mijoter 7 minutes.",
+        "Servir sur les spaghettis complets cuits al dente."
+      ]
+    },
+    {
+      id: "wd-52",
+      title: "Poêlée de haricots blancs à la provençale, tomates, thon et persil frais",
+      type: "weekday",
+      prepTime: "5 min",
+      cookTime: "10 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "420 kcal / part",
+      tags: ["Healthy", "Économique", "Placard", "Rapide"],
+      baseServings: 2,
+      costFor2: 3.30,
+      description: "Une recette du placard ultra-rapide et savoureuse aux accents du Sud.",
+      ingredients: [
+        { name: "Haricots blancs cuits (conserve)", qty: 260, unit: "g", aisle: "Épicerie salée" },
+        { name: "Thon au naturel (conserve)", qty: 140, unit: "g", aisle: "Épicerie salée" },
+        { name: "Tomates concassées", qty: 200, unit: "g", aisle: "Épicerie salée" },
+        { name: "Ail & Persil", qty: 1, unit: "gousse", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Faire revenir l'ail haché dans l'huile d'olive puis ajouter les tomates concassées et laisser réduire 4 minutes.",
+        "Incorporer les haricots blancs rincés et le thon émietté, chauffer 5 minutes à feu doux.",
+        "Parsemer de persil ciselé et servir chaud."
+      ]
+    },
+    {
+      id: "wd-53",
+      title: "Omelette espagnole légère (Tortilla) aux pommes de terre vapeur, oignon et salade",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Très économique)",
+      calories: "410 kcal / part",
+      tags: ["Healthy", "Végétarien", "Économique"],
+      baseServings: 2,
+      costFor2: 3.00,
+      description: "Une tortilla fondante préparée sans friture grâce à une précuisson vapeur des pommes de terre.",
+      ingredients: [
+        { name: "Œufs", qty: 4, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pommes de terre", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Oignon", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Salade verte", qty: 100, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Couper les pommes de terre en fines rondelles et les précuire 8 minutes à l'eau ou au micro-ondes couvert.",
+        "Les dorer 3 minutes à la poêle avec l'oignon émincé, puis verser les œufs battus.",
+        "Cuire 4 minutes par face et servir avec la salade verte."
+      ]
+    },
+    {
+      id: "wd-54",
+      title: "Salade thaïe au bœuf mariné (ou poulet), concombre, carottes, menthe et vermicelles",
+      type: "weekday",
+      prepTime: "12 min",
+      cookTime: "6 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "435 kcal / part",
+      tags: ["Healthy", "Frais", "Riche en protéines"],
+      baseServings: 2,
+      costFor2: 5.60,
+      description: "Inspirée du Bo Bun : fraîche, parfumée à la menthe et très légère.",
+      ingredients: [
+        { name: "Bavette de bœuf ou filet de poulet", qty: 220, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Vermicelles de riz", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Concombre", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Carotte", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Menthe fraîche & Citron vert", qty: 0.5, unit: "botte", aisle: "Fruits & Légumes" },
+        { name: "Sauce soja", qty: 2, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Réhydrater les vermicelles de riz 4 minutes dans l'eau bouillante puis les égoutter.",
+        "Râper la carotte, couper le concombre en bâtonnets et ciseler la menthe.",
+        "Saisir la viande émincée 4 minutes à feu vif avec la sauce soja et dresser le tout dans deux bols."
+      ]
+    },
+    {
+      id: "wd-55",
+      title: "Gratin express de chou-fleur et pommes de terre au jambon et béchamel légère",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€ (Très économique)",
+      calories: "420 kcal / part",
+      tags: ["Healthy", "Économique", "Réconfortant"],
+      baseServings: 2,
+      costFor2: 3.90,
+      description: "Le grand classique familial allégé avec du lait demi-écrémé et de la muscade.",
+      ingredients: [
+        { name: "Chou-fleur (frais ou surgelé)", qty: 350, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Pommes de terre", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Jambon blanc", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Lait demi-écrémé & Maïzena", qty: 200, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Emmental râpé", qty: 40, unit: "g", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Cuire les bouquets de chou-fleur et les dés de pommes de terre 10 minutes à l'eau bouillante.",
+        "Épaissir le lait chaud avec 1 c. à soupe de Maïzena, sel, poivre et muscade.",
+        "Mélanger légumes, lanières de jambon et sauce dans un plat, parsemer d'emmental et gratiner 5 minutes sous le gril."
+      ]
+    },
+    {
+      id: "wd-56",
+      title: "Pita garnie façon gyros grec : poulet grillé au paprika, tzatziki léger et crudités",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "8 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "440 kcal / part",
+      tags: ["Healthy", "Rapide", "Ludique"],
+      baseServings: 2,
+      costFor2: 4.80,
+      description: "Des pains pita chauds garnis de poulet doré et d'une sauce fraîche yaourt-concombre.",
+      ingredients: [
+        { name: "Pains pita", qty: 2, unit: "pièces", aisle: "Boulangerie & Divers" },
+        { name: "Filets de poulet", qty: 240, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Yaourt grec", qty: 1, unit: "pot", aisle: "Crèmerie & Frais" },
+        { name: "Concombre", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Tomate", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Faire dorer le poulet émincé avec du paprika, de l'origan et un filet d'huile d'olive pendant 7 minutes.",
+        "Râper la moitié du concombre et la mélanger au yaourt grec avec sel, poivre et menthe ou ail.",
+        "Chauffer les pains pita, les ouvrir et les garnir de tzatziki, tomate, concombre et poulet."
+      ]
+    },
+    {
+      id: "wd-57",
+      title: "Risotto express de coquillettes au jambon blanc, petits pois et parmesan",
+      type: "weekday",
+      prepTime: "5 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Très économique)",
+      calories: "450 kcal / part",
+      tags: ["Healthy", "Rapide", "Économique"],
+      baseServings: 2,
+      costFor2: 3.60,
+      description: "Le coquillettes-jambon façon risotto avec des petits pois verts pour l'équilibre.",
+      ingredients: [
+        { name: "Coquillettes", qty: 150, unit: "g", aisle: "Épicerie salée" },
+        { name: "Jambon blanc découenné", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Petits pois (frais ou surgelés)", qty: 150, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Parmesan ou Comté râpé", qty: 40, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Bouillon de légumes", qty: 1, unit: "cube", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Cuire les coquillettes et les petits pois dans une sauteuse avec 450 ml d'eau bouillante et le cube de bouillon pendant 10 minutes jusqu'à absorption.",
+        "Hors du feu, incorporer le jambon coupé en dés et le fromage râpé pour lier."
+      ]
+    },
+    {
+      id: "wd-58",
+      title: "Salade d'automne-printemps : quinoa, betterave rouge, chèvre frais et noix",
+      type: "weekday",
+      prepTime: "10 min",
+      cookTime: "12 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "430 kcal / part",
+      tags: ["Healthy", "Végétarien", "Déjeuner idéal"],
+      baseServings: 2,
+      costFor2: 4.20,
+      description: "Une salade colorée, riche en antioxydants et très rassasiante.",
+      ingredients: [
+        { name: "Quinoa", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Betterave rouge cuite", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Fromage de chèvre frais", qty: 80, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Mâche", qty: 80, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Cerneaux de noix", qty: 25, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Cuire le quinoa 12 minutes dans l'eau bouillante puis le passer sous l'eau froide et l'égoutter.",
+        "Couper la betterave en dés et émietter le chèvre frais.",
+        "Assembler dans deux bols sur un lit de mâche avec les noix concassées et une vinaigrette légère."
+      ]
+    },
+    {
+      id: "wd-59",
+      title: "Poêlée de crevettes, poireaux fondants au curry et riz basmati",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "425 kcal / part",
+      tags: ["Healthy", "Poisson", "Rapide"],
+      baseServings: 2,
+      costFor2: 5.70,
+      description: "L'alliance subtile des poireaux fondants au curry doux et des crevettes sautées.",
+      ingredients: [
+        { name: "Crevettes décortiquées", qty: 200, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Poireaux", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Riz basmati", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Crème légère 15%", qty: 2, unit: "c. à soupe", aisle: "Crèmerie & Frais" },
+        { name: "Curry doux", qty: 1, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Laver et émincer les poireaux, les faire fondre 10 minutes à couvert avec un fond d'eau et le curry.",
+        "Cuire le riz en parallèle.",
+        "Ajouter les crevettes et la crème légère dans les poireaux, chauffer 3 minutes et servir avec le riz."
+      ]
+    },
+    {
+      id: "wd-60",
+      title: "Bruschettas chaudes à la tomate fraîche, jambon Serrano, mozzarella et roquette",
+      type: "weekday",
+      prepTime: "8 min",
+      cookTime: "7 min",
+      difficulty: "Très facile",
+      budget: "€ (Bon marché)",
+      calories: "420 kcal / part",
+      tags: ["Healthy", "Rapide", "Italien"],
+      baseServings: 2,
+      costFor2: 4.50,
+      description: "De grandes tartines italiennes dorées au four, servies sur un lit de roquette.",
+      ingredients: [
+        { name: "Pain de campagne (grandes tranches)", qty: 4, unit: "tranches", aisle: "Boulangerie & Divers" },
+        { name: "Tomates mûres", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Jambon cru Serrano", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Mozzarella", qty: 100, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Roquette", qty: 80, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Ail & Huile d'olive", qty: 1, unit: "gousse", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Frotter les tranches de pain avec la gousse d'ail, répartir les tomates en petits dés et la mozzarella.",
+        "Passer 7 minutes au four à 200°C jusqu'à ce que le fromage fonde.",
+        "Ajouter le jambon Serrano et la roquette fraîche à la sortie du four."
+      ]
     }
   ],
 
@@ -923,6 +1765,422 @@ window.RECIPES_DB = {
         "Couper les tomates et le concombre en tout petits dés, ciseler la menthe et mélanger à la semoule.",
         "Couper le poulet en cubes, l'arroser du reste de citron et le griller à la poêle 10 minutes.",
         "Servir les brochettes chaudes avec le taboulé frais."
+      ]
+    },
+    {
+      id: "we-b7",
+      title: "Tajine léger de poulet aux abricots secs, amandes effilées et semoule",
+      type: "weekend-balanced",
+      prepTime: "12 min",
+      cookTime: "25 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "495 kcal / part",
+      tags: ["Week-end", "Convivial", "Sucré-salé"],
+      baseServings: 2,
+      costFor2: 6.90,
+      description: "Un tajine parfumé à la cannelle et au gingembre, tendre et léger.",
+      ingredients: [
+        { name: "Blancs ou hauts de cuisse de poulet", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Abricots secs moelleux", qty: 60, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Semoule moyenne", qty: 130, unit: "g", aisle: "Épicerie salée" },
+        { name: "Oignon", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Amandes effilées", qty: 20, unit: "g", aisle: "Épicerie sucrée & Pâtisserie" },
+        { name: "Ras-el-hanout & Cannelle", qty: 1, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Faire dorer le poulet et l'oignon émincé dans une sauteuse avec les épices pendant 5 minutes.",
+        "Ajouter les abricots secs et un verre d'eau, couvrir et laisser mijoter 20 minutes à feu doux.",
+        "Servir sur la semoule chaude parsemée d'amandes effilées grillées à sec."
+      ]
+    },
+    {
+      id: "we-b8",
+      title: "Pavé de saumon rôti au miel et moutarde, riz sauvage et brocolis croquants",
+      type: "weekend-balanced",
+      prepTime: "10 min",
+      cookTime: "18 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "510 kcal / part",
+      tags: ["Poisson", "Week-end", "Healthy"],
+      baseServings: 2,
+      costFor2: 7.80,
+      description: "Un glaçage miel-moutarde à l'ancienne qui caramélise délicatement le saumon au four.",
+      ingredients: [
+        { name: "Pavés de saumon", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Brocoli", qty: 1, unit: "tête", aisle: "Fruits & Légumes" },
+        { name: "Riz complet ou mélange 3 riz", qty: 130, unit: "g", aisle: "Épicerie salée" },
+        { name: "Moutarde à l'ancienne", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" },
+        { name: "Miel", qty: 1, unit: "c. à café", aisle: "Épicerie sucrée & Pâtisserie" }
+      ],
+      steps: [
+        "Préchauffer le four à 195°C. Badigeonner les pavés de saumon du mélange miel-moutarde et enfourner 14 minutes.",
+        "Cuire le riz et les bouquets de brocoli à la vapeur.",
+        "Dresser dans les assiettes avec le jus de cuisson du poisson."
+      ]
+    },
+    {
+      id: "we-b9",
+      title: "Tian provençal de courgettes, aubergines, tomates et mozzarella rôtie, filet de volaille",
+      type: "weekend-balanced",
+      prepTime: "15 min",
+      cookTime: "30 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "460 kcal / part",
+      tags: ["Week-end", "Méditerranéen", "Healthy"],
+      baseServings: 2,
+      costFor2: 6.20,
+      description: "Les couleurs et parfums du Sud dans un plat familial équilibré.",
+      ingredients: [
+        { name: "Filets de poulet", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Courgette", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Tomates", qty: 3, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Mozzarella", qty: 125, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Herbes de Provence & Huile d'olive", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Préchauffer le four à 190°C. Alterner verticalement dans un plat les rondelles de courgette, tomate et tranches de mozzarella.",
+        "Arroser d'huile d'olive, parsemer d'herbes et enfourner 30 minutes.",
+        "Griller les filets de poulet à la poêle et les servir avec le tian fondant."
+      ]
+    },
+    {
+      id: "we-b10",
+      title: "Wok de bœuf mariné au gingembre, poivrons rouges, brocolis et nouilles udon",
+      type: "weekend-balanced",
+      prepTime: "15 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "490 kcal / part",
+      tags: ["Week-end", "Asiatique", "Équilibré"],
+      baseServings: 2,
+      costFor2: 7.40,
+      description: "Un sauté minute riche en légumes croquants et bœuf tendre.",
+      ingredients: [
+        { name: "Bavette ou rumsteck de bœuf", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Brocoli", qty: 0.5, unit: "tête", aisle: "Fruits & Légumes" },
+        { name: "Poivron rouge", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Nouilles asiatiques", qty: 150, unit: "g", aisle: "Épicerie salée" },
+        { name: "Sauce soja & Gingembre", qty: 2, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Émincer le bœuf en fines lamelles et le mariner avec la sauce soja et le gingembre.",
+        "Faire sauter les petits bouquets de brocoli et les lanières de poivron 7 minutes au wok.",
+        "Saisir le bœuf 3 minutes à feu vif, ajouter les nouilles cuites et servir."
+      ]
+    },
+    {
+      id: "we-b11",
+      title: "Quiche lorraine légère sur pâte brisée maison ou fine, jambon blanc et salade aux noix",
+      type: "weekend-balanced",
+      prepTime: "10 min",
+      cookTime: "28 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "485 kcal / part",
+      tags: ["Week-end", "Convivial", "Classique"],
+      baseServings: 2,
+      costFor2: 4.90,
+      description: "Une quiche dorée préparée avec du lait, de la crème légère et du jambon découenné.",
+      ingredients: [
+        { name: "Pâte brisée", qty: 1, unit: "rouleau", aisle: "Crèmerie & Frais" },
+        { name: "Œufs", qty: 3, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Jambon blanc ou allumettes de bacon maigre", qty: 150, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Lait & Crème légère", qty: 200, unit: "ml", aisle: "Crèmerie & Frais" },
+        { name: "Comté ou Emmental râpé", qty: 50, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte", qty: 100, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Foncer un moule avec la pâte brisée et répartir les dés de jambon ou bacon.",
+        "Battre les œufs avec le lait, la crème légère, la muscade et le fromage râpé.",
+        "Enfourner 28 minutes à 190°C et déguster avec la salade verte."
+      ]
+    },
+    {
+      id: "we-b12",
+      title: "Dorade ou bar au four au citron et fenouil, pommes de terre vapeur persillées",
+      type: "weekend-balanced",
+      prepTime: "10 min",
+      cookTime: "22 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "460 kcal / part",
+      tags: ["Poisson", "Week-end", "Healthy"],
+      baseServings: 2,
+      costFor2: 8.20,
+      description: "Un plat de poisson raffiné et très simple à réussir le week-end.",
+      ingredients: [
+        { name: "Filets de dorade ou bar", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Bulbe de fenouil (ou courgette)", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Pommes de terre", qty: 300, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Citron", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Émincer finement le fenouil, le disposer dans un plat à four avec les filets de poisson, des rondelles de citron et l'huile d'olive.",
+        "Enfourner 20 minutes à 190°C et servir avec les pommes de terre vapeur."
+      ]
+    },
+    {
+      id: "we-b13",
+      title: "Risotto printanier aux petits pois, courgettes, menthe et jambon cru croustillant",
+      type: "weekend-balanced",
+      prepTime: "10 min",
+      cookTime: "20 min",
+      difficulty: "Moyenne",
+      budget: "€ (Bon marché)",
+      calories: "495 kcal / part",
+      tags: ["Week-end", "Italien", "Équilibré"],
+      baseServings: 2,
+      costFor2: 5.80,
+      description: "Un risotto vert et léger, relevé par des éclats de jambon cru doré.",
+      ingredients: [
+        { name: "Riz à risotto (Arborio)", qty: 150, unit: "g", aisle: "Épicerie salée" },
+        { name: "Petits pois", qty: 150, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Courgette", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Jambon cru", qty: 2, unit: "tranches", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Parmesan râpé", qty: 40, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Bouillon de légumes", qty: 1, unit: "cube", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Nacrer le riz dans une sauteuse puis mouiller louche par louche avec 550 ml de bouillon chaud pendant 18 minutes.",
+        "Ajouter les petits pois et les petits dés de courgette à mi-cuisson.",
+        "Lier au parmesan et servir garni de lanières de jambon cru grillées à sec."
+      ]
+    },
+    {
+      id: "we-b14",
+      title: "Suprêmes de volaille rôtis au citron confit, carottes fanes glacées et boulghour",
+      type: "weekend-balanced",
+      prepTime: "12 min",
+      cookTime: "22 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "480 kcal / part",
+      tags: ["Week-end", "Convivial", "Healthy"],
+      baseServings: 2,
+      costFor2: 6.50,
+      description: "Des carottes fondantes légèrement caramélisées au jus d'orange ou citron.",
+      ingredients: [
+        { name: "Filets de poulet fermier", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Carottes", qty: 4, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Boulghour", qty: 120, unit: "g", aisle: "Épicerie salée" },
+        { name: "Citron", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Cumin & Huile d'olive", qty: 1, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Couper les carottes en bâtonnets et les faire étuver 18 minutes à couvert avec un fond d'eau, du cumin et du jus de citron.",
+        "Poêler les suprêmes de volaille 10 minutes jusqu'à ce qu'ils soient bien dorés et cuire le boulghour."
+      ]
+    },
+    {
+      id: "we-b15",
+      title: "Lasagnes végétariennes aux épinards, ricotta et coulis de tomates au basilic",
+      type: "weekend-balanced",
+      prepTime: "15 min",
+      cookTime: "25 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "490 kcal / part",
+      tags: ["Végétarien", "Week-end", "Italien"],
+      baseServings: 2,
+      costFor2: 5.50,
+      description: "Plus légères que les lasagnes classiques, ultra-fondantes grâce à la ricotta.",
+      ingredients: [
+        { name: "Feuilles de lasagnes", qty: 6, unit: "pièces", aisle: "Épicerie salée" },
+        { name: "Épinards frais ou surgelés", qty: 300, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Ricotta", qty: 200, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Coulis de tomates", qty: 350, unit: "g", aisle: "Épicerie salée" },
+        { name: "Mozzarella ou Emmental râpé", qty: 60, unit: "g", aisle: "Crèmerie & Frais" }
+      ],
+      steps: [
+        "Faire tomber les épinards 4 minutes à la poêle puis les mélanger hors du feu avec la ricotta, sel, poivre et muscade.",
+        "Alterner dans un plat à gratin coulis de tomates, feuilles de lasagnes et farce ricotta-épinards.",
+        "Parsemer de fromage râpé et enfourner 25 minutes à 190°C."
+      ]
+    },
+    {
+      id: "we-b16",
+      title: "Brochettes de gambas ou grosses crevettes à l'ananas rôti et riz parfumé",
+      type: "weekend-balanced",
+      prepTime: "12 min",
+      cookTime: "12 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "450 kcal / part",
+      tags: ["Poisson", "Week-end", "Exotique"],
+      baseServings: 2,
+      costFor2: 7.90,
+      description: "Une assiette ensoleillée, légère et festive pour le week-end.",
+      ingredients: [
+        { name: "Grosses crevettes décortiquées", qty: 250, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Ananas frais ou au jus naturel", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Riz basmati ou thaï", qty: 130, unit: "g", aisle: "Épicerie salée" },
+        { name: "Citron vert & Sauce soja", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Cuire le riz parfumé.",
+        "Poêler les dés d'ananas et les crevettes à feu vif pendant 5 à 6 minutes avec le jus de citron vert et la sauce soja.",
+        "Dresser sur le riz chaud."
+      ]
+    },
+    {
+      id: "we-b17",
+      title: "Couscous express de légumes d'été & automne aux pois chiches et filet de poulet grillé",
+      type: "weekend-balanced",
+      prepTime: "15 min",
+      cookTime: "20 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "505 kcal / part",
+      tags: ["Week-end", "Convivial", "Équilibré"],
+      baseServings: 2,
+      costFor2: 5.90,
+      description: "Tout le plaisir d'un couscous parfumé prêt en 30 minutes et sans excès de gras.",
+      ingredients: [
+        { name: "Filets de poulet", qty: 260, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Semoule à couscous", qty: 130, unit: "g", aisle: "Épicerie salée" },
+        { name: "Pois chiches cuits", qty: 150, unit: "g", aisle: "Épicerie salée" },
+        { name: "Courgette & Carottes", qty: 3, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Épices à couscous (Ras-el-hanout)", qty: 1.5, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Couper les carottes et la courgette en morceaux et les cuire 18 minutes dans un bouillon parfumé au ras-el-hanout avec les pois chiches.",
+        "Griller le poulet à la poêle et gonfler la semoule.",
+        "Servir la semoule arrosée de bouillon et garnie des légumes et du poulet."
+      ]
+    },
+    {
+      id: "we-b18",
+      title: "Aubergines rôties au four façon Parmigiana légère (tomate, basilic, mozzarella)",
+      type: "weekend-balanced",
+      prepTime: "15 min",
+      cookTime: "25 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "440 kcal / part",
+      tags: ["Végétarien", "Week-end", "Italien"],
+      baseServings: 2,
+      costFor2: 5.40,
+      description: "Des aubergines dorées au four sans friture, nappées de tomate et mozzarella fondante.",
+      ingredients: [
+        { name: "Aubergines", qty: 2, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Coulis de tomates", qty: 350, unit: "g", aisle: "Épicerie salée" },
+        { name: "Mozzarella", qty: 125, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Parmesan râpé", qty: 30, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Pain ciabatta ou campagne", qty: 2, unit: "tranches", aisle: "Boulangerie & Divers" }
+      ],
+      steps: [
+        "Couper les aubergines en tranches et les précuire 12 minutes au four à 200°C (ou à la poêle couverte).",
+        "Monter en couches dans un plat avec le coulis de tomates, la mozzarella et le parmesan, puis gratiner 15 minutes.",
+        "Déguster avec le pain grillé."
+      ]
+    },
+    {
+      id: "we-b19",
+      title: "Bavette d'aloyau grillée aux échalotes confites, haricots verts et pommes au four",
+      type: "weekend-balanced",
+      prepTime: "12 min",
+      cookTime: "20 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "515 kcal / part",
+      tags: ["Week-end", "Bistrot", "Équilibré"],
+      baseServings: 2,
+      costFor2: 8.40,
+      description: "Le classique de brasserie du week-end en version saine avec pommes rôties au four.",
+      ingredients: [
+        { name: "Bavettes de bœuf", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Pommes de terre", qty: 300, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Haricots verts", qty: 250, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Échalotes", qty: 3, unit: "pièces", aisle: "Fruits & Légumes" },
+        { name: "Huile d'olive & Vinaigre balsamique", qty: 1.5, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Rôtir les quartiers de pommes de terre 20 minutes au four à 200°C et cuire les haricots verts à la vapeur.",
+        "Faire fondre les échalotes émincées à feu doux avec un trait de vinaigre balsamique.",
+        "Saisir les bavettes 2 à 3 minutes par face et napper des échalotes confites."
+      ]
+    },
+    {
+      id: "we-b20",
+      title: "Paëlla express de la mer (crevettes, colin, petits pois, poivrons et riz safrané)",
+      type: "weekend-balanced",
+      prepTime: "12 min",
+      cookTime: "20 min",
+      difficulty: "Moyenne",
+      budget: "€€ (Moyen)",
+      calories: "490 kcal / part",
+      tags: ["Poisson", "Week-end", "Convivial"],
+      baseServings: 2,
+      costFor2: 7.60,
+      description: "Une poêlée espagnole conviviale et complète, cuite dans une seule sauteuse.",
+      ingredients: [
+        { name: "Crevettes décortiquées", qty: 150, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Filet de colin ou cabillaud", qty: 150, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Riz long ou rond", qty: 140, unit: "g", aisle: "Épicerie salée" },
+        { name: "Poivron rouge & Petits pois", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Curcuma ou épices à paëlla", qty: 1, unit: "c. à café", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Faire revenir le poivron en dés dans une grande poêle, ajouter le riz et les épices.",
+        "Verser 350 ml d'eau chaude salée et cuire 15 minutes à feu doux avec les petits pois.",
+        "Disposer les morceaux de poisson et les crevettes sur le riz pour les 5 dernières minutes de cuisson à couvert."
+      ]
+    },
+    {
+      id: "we-b21",
+      title: "Poke Bowl festif au saumon mariné soja-sésame, mangue fraîche, avocat et riz",
+      type: "weekend-balanced",
+      prepTime: "15 min",
+      cookTime: "10 min",
+      difficulty: "Facile",
+      budget: "€€ (Moyen)",
+      calories: "510 kcal / part",
+      tags: ["Poisson", "Week-end", "Frais"],
+      baseServings: 2,
+      costFor2: 8.10,
+      description: "Coloré, frais et exotique, idéal pour un déjeuner de week-end.",
+      ingredients: [
+        { name: "Pavé de saumon très frais", qty: 220, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Mangue mûre", qty: 0.5, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Avocat", qty: 1, unit: "pièce", aisle: "Fruits & Légumes" },
+        { name: "Riz", qty: 130, unit: "g", aisle: "Épicerie salée" },
+        { name: "Sauce soja & Graines de sésame", qty: 2, unit: "c. à soupe", aisle: "Épicerie salée" }
+      ],
+      steps: [
+        "Cuire le riz et le laisser tiédir.",
+        "Couper le saumon, la mangue et l'avocat en dés.",
+        "Mariner le saumon dans la sauce soja et dresser harmonieusement sur le riz."
+      ]
+    },
+    {
+      id: "we-b22",
+      title: "Galettes bretonnes forestières au poulet, champignons poêlés, œuf et cidre brut",
+      type: "weekend-balanced",
+      prepTime: "10 min",
+      cookTime: "15 min",
+      difficulty: "Facile",
+      budget: "€ (Bon marché)",
+      calories: "480 kcal / part",
+      tags: ["Week-end", "Convivial", "Équilibré"],
+      baseServings: 2,
+      costFor2: 5.30,
+      description: "Une crêperie à la maison avec une garniture forestière légère.",
+      ingredients: [
+        { name: "Galettes de sarrasin", qty: 2, unit: "pièces", aisle: "Crèmerie & Frais" },
+        { name: "Blanc de poulet", qty: 200, unit: "g", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Champignons de Paris", qty: 200, unit: "g", aisle: "Fruits & Légumes" },
+        { name: "Œufs", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
+        { name: "Crème légère & Emmental râpé", qty: 50, unit: "g", aisle: "Crèmerie & Frais" },
+        { name: "Salade verte", qty: 80, unit: "g", aisle: "Fruits & Légumes" }
+      ],
+      steps: [
+        "Poêler les champignons émincés et les petits dés de poulet 8 minutes, lier d'une cuillère de crème légère.",
+        "Garnir les galettes de sarrasin du mélange, d'un œuf et de fromage, replier et servir avec la salade."
       ]
     }
   ],
