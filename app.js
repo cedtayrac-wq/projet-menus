@@ -5725,17 +5725,28 @@ function showMicDiagnosticBanner(htmlContent, isSuccess = false) {
   banner.innerHTML = htmlContent;
 }
 
+function isMobilePhoneDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+}
+
 async function requestAppMicrophonePermission() {
-  if (window.location.protocol === 'file:' || (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
-    const targetUrl = 'http://localhost:8080';
+  const pubUrl = (window.APP_CONFIG && window.APP_CONFIG.publicUrl) || 'https://cedtayrac-wq.github.io/projet-menus/';
+  if (
+    window.location.protocol === 'file:' ||
+    (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+  ) {
+    const targetUrl = isMobilePhoneDevice() ? pubUrl : 'http://localhost:8080';
     showMicDiagnosticBanner(
-      `<strong>⚠️ Adresse non sécurisée (${window.location.protocol}//${window.location.host || 'fichier local'}) :</strong><br>` +
-      `Les navigateurs bloquent le microphone lorsque l'application est ouverte via <code>file://</code> ou une adresse IP non-HTTPS.<br>` +
-      `<a href="${targetUrl}" class="btn btn-primary btn-sm" style="margin-top:8px; display:inline-flex;">🚀 Ouvrir sur ${targetUrl}</a>`
+      `<strong>⚠️ Connexion non sécurisée (${window.location.protocol}//${window.location.host || 'fichier'}) :</strong><br>` +
+        `Sur smartphone, le microphone exige obligatoirement une adresse sécurisée <strong>HTTPS</strong>.<br>` +
+        `<a href="${targetUrl}" class="btn btn-primary btn-sm" style="margin-top:8px; display:inline-flex;">🚀 Ouvrir la version HTTPS (${targetUrl})</a>`
     );
-    showToast('⚠️ Ouvrez l\'application sur http://localhost:8080 ou en HTTPS pour activer le microphone.');
+    showToast('⚠️ Sur smartphone, ouvrez l\'adresse HTTPS pour activer le microphone.');
     return false;
   }
+
+  // Libérer tout flux micro de secours déjà ouvert avant de demander l'accès sur Android/iOS
+  stopFallbackWebAudioListener();
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showToast('⚠️ Le microphone n\'est pas pris en charge sur ce navigateur.');
@@ -5745,60 +5756,78 @@ async function requestAppMicrophonePermission() {
   try {
     let stream = null;
     try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (firstErr) {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
         video: false
       });
-    } catch (firstErr) {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     }
 
-    // Garder le flux actif un court instant pour que le navigateur valide et mémorise l'autorisation
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    // Garder le flux actif un court instant puis le libérer proprement (Android exige 200ms après stop() avant SpeechRecognition)
+    await new Promise((resolve) => setTimeout(resolve, 250));
     stream.getTracks().forEach((t) => t.stop());
+    await new Promise((resolve) => setTimeout(resolve, 220));
 
     appDevicePermissionsState.mic = 'granted';
     voiceGuideSession.permissionBlocked = false;
     localStorage.setItem('menusemaine_perm_mic_v1', 'granted');
     updateDevicePermissionsButtonsUI();
     showMicDiagnosticBanner(
-      `<strong>✅ Microphone activé et opérationnel !</strong> Vous pouvez utiliser les commandes vocales dans le <em>Guide vocal</em> (« Suivant », « Répéter », « Pause », « Reprendre ») et la dictée dans le <em>Garde-manger</em>.`,
+      `<strong>✅ Microphone activé et opérationnel sur votre appareil !</strong><br>` +
+        `Vous pouvez utiliser les commandes vocales dans le <em>Guide vocal</em> (« Suivant », « Répéter », « Pause », « Reprendre ») et la dictée dans le <em>Garde-manger</em>.`,
       true
     );
-    showToast('🎙️ Microphone activé avec succès pour l\'application !');
+    showToast('🎙️ Microphone activé avec succès !');
 
     if (voiceGuideSession.active && !voiceGuideSession.finished) {
       startVoiceCommandListener(true);
     }
     return true;
   } catch (err) {
-    const errName = (err && err.name) ? err.name : '';
+    const errName = err && err.name ? err.name : '';
+    const isMobile = isMobilePhoneDevice();
+
     if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
       appDevicePermissionsState.mic = 'prompt';
       updateDevicePermissionsButtonsUI();
       showMicDiagnosticBanner(
         `<strong>⚠️ Aucun microphone détecté (${errName}) :</strong><br>` +
-        `Vérifiez qu'un microphone ou casque est bien branché et activé dans <strong>Paramètres Windows &gt; Système &gt; Son &gt; Entrée</strong>.`
+          `Vérifiez que votre microphone n'est pas désactivé sur votre appareil.`
       );
       showToast('⚠️ Aucun microphone détecté sur cet appareil.');
     } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
       appDevicePermissionsState.mic = 'prompt';
       updateDevicePermissionsButtonsUI();
       showMicDiagnosticBanner(
-        `<strong>⚠️ Microphone occupé ou indisponible (${errName}) :</strong><br>` +
-        `Une autre application utilise exclusivement le micro ou celui-ci est désactivé dans les paramètres son de Windows.`
+        `<strong>⚠️ Microphone déjà utilisé par une autre application :</strong><br>` +
+          `Fermez les autres applications utilisant le micro (appel téléphonique, enregistreur, WhatsApp) puis réessayez.`
       );
-      showToast('⚠️ Le microphone est occupé ou désactivé dans Windows.');
+      showToast('⚠️ Le microphone est occupé par une autre application.');
     } else {
       appDevicePermissionsState.mic = 'denied';
       updateDevicePermissionsButtonsUI();
-      showMicDiagnosticBanner(
-        `<strong>🔒 Accès au microphone bloqué par le navigateur :</strong><br>` +
-        `1. Cliquez sur l'icône de réglages <strong>🎛️ / 🔒</strong> tout à gauche de la barre d'adresse (devant <code>${window.location.host || 'localhost:8080'}</code>).<br>` +
-        `2. Passez <strong>Microphone</strong> sur <strong>« Autoriser »</strong> (ou cliquez sur Réinitialiser l'autorisation).<br>` +
-        `3. Cliquez à nouveau sur <strong>🎙️ Activer le micro</strong> ci-dessus.`
-      );
-      showToast('⚠️ Micro bloqué dans la barre d\'adresse : cliquez sur l\'icône 🔒/🎛️ à gauche de l\'URL puis « Autoriser ».');
+      if (isMobile) {
+        showMicDiagnosticBanner(
+          `<strong>📱 Comment débloquer le microphone sur votre smartphone :</strong><br>` +
+            `<div style="margin-top:6px;">` +
+            `<strong>• Sur Android (Chrome ou Application installée) :</strong><br>` +
+            `1. Si vous êtes dans Chrome : touchez l'icône <strong>🎛️</strong> (ou <strong>🔒</strong>) tout à gauche de la barre d'adresse en haut ➔ <strong>Autorisations</strong> ➔ activez <strong>Microphone</strong>.<br>` +
+            `2. Si l'application est installée sur l'écran d'accueil (ou si Chrome est bloqué par Android) : faites un <strong>appui long sur l'icône Chrome (ou MenuSemaine)</strong> sur l'écran d'accueil ➔ <strong>Infos sur l'appli (ⓘ)</strong> ➔ <strong>Autorisations</strong> ➔ <strong>Microphone</strong> ➔ choisissez <strong>« Autoriser »</strong>.<br>` +
+            `<strong>• Sur iPhone / iPad (Safari) :</strong><br>` +
+            `Touchez <strong>aA</strong> (ou l'icône à gauche de l'adresse) ➔ <strong>Réglages du site web</strong> ➔ <strong>Microphone : Autoriser</strong>.<br>` +
+            `</div>` +
+            `<button type="button" class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="requestAppMicrophonePermission()">🔄 Réessayer l'activation du micro</button>`
+        );
+      } else {
+        showMicDiagnosticBanner(
+          `<strong>🔒 Accès au microphone bloqué par le navigateur :</strong><br>` +
+            `1. Cliquez sur l'icône de réglages <strong>🎛️ / 🔒</strong> tout à gauche de la barre d'adresse (devant <code>${window.location.host || 'localhost:8080'}</code>).<br>` +
+            `2. Passez <strong>Microphone</strong> sur <strong>« Autoriser »</strong>.<br>` +
+            `3. Cliquez à nouveau sur <strong>🎙️ Activer le micro</strong> ci-dessus.`
+        );
+      }
+      showToast('⚠️ Micro bloqué : autorisez le microphone dans les réglages de Chrome/Safari ou d\'Android.');
     }
     return false;
   }
@@ -6082,18 +6111,18 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  // Essayer d'abord l'extrait cloné WAV authentique s'il est présent, sinon le MP3
-  const wavPath = `assets/voices/${persona.id}.wav`;
+  // Essayer d'abord l'extrait cloné WAV authentique s'il est présent, sinon le MP3 cloné (avec ?v=159 pour contourner le cache)
+  const wavPath = `assets/voices/${persona.id}.wav?v=159`;
   const playedWav = await playAudioBlobOrUrl(wavPath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
   });
   if (playedWav || (options.reqId && options.reqId !== currentVoiceRequestSeq)) return true;
 
-  const samplePath = `assets/voices/${persona.id}.mp3`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=159`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
-    applyClonePitchOnClient: true
+    applyClonePitchOnClient: false
   });
 }
 
@@ -6614,20 +6643,290 @@ function normalizeVoiceCommandTranscript(raw) {
     .trim();
 }
 
+function executeNormalizedVoiceCommand(norm, firstTranscript = '') {
+  if (!voiceGuideSession.active || !norm) return false;
+
+  const now = Date.now();
+  if (now - (voiceGuideSession.lastCommandTime || 0) < 950) return false;
+
+  const browserActuallySpeaking =
+    ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) ||
+    Boolean(activeCloudVoiceAudio && !activeCloudVoiceAudio.paused);
+
+  if (!browserActuallySpeaking && voiceGuideSession.isSpeaking) {
+    voiceGuideSession.isSpeaking = false;
+    updateCharacterStageAnimationState();
+  }
+
+  if (firstTranscript) {
+    voiceGuideSession.lastHeardTranscript = firstTranscript;
+    const liveHeardEl = document.getElementById('voice-live-transcript-preview');
+    if (liveHeardEl) {
+      liveHeardEl.textContent = `👂 Entendu : « ${firstTranscript} »`;
+      liveHeardEl.style.display = 'inline-flex';
+    }
+  }
+
+  const wordCount = norm.split(' ').filter(Boolean).length;
+  const looksLikeAssistantEcho =
+    /\b(dites suivant|dis suivant|dites repeter|quand vous etes|quand tu es|nous allons cuisiner|ingredient \d+ sur)\b/.test(norm) ||
+    (browserActuallySpeaking && wordCount > 5);
+
+  if (looksLikeAssistantEcho) {
+    return false;
+  }
+
+  // 1. Commande vocale « PAUSE » (fonctionne même pendant que le chef parle !)
+  if (/\b(pause|mettre en pause|mets en pause|attends|attend|attendre|minute|patiente)\b/.test(norm)) {
+    voiceGuideSession.lastCommandTime = now;
+    triggerVoiceCommandFeedback('« Pause » reconnu ⏸️');
+    pauseVoiceGuide();
+    return true;
+  }
+
+  // 2. Commande vocale « REPRENDRE » (relance la lecture / quitte le mode pause)
+  if (/\b(reprendre|reprends|reprend|reprise|repartir|relancer|relance|lecture)\b/.test(norm)) {
+    voiceGuideSession.lastCommandTime = now;
+    triggerVoiceCommandFeedback('« Reprendre » reconnu ▶️');
+    resumeVoiceGuide();
+    return true;
+  }
+
+  // Si le chef parle encore (hors commande Pause/Stop), éviter les faux positifs sur les longs segments
+  if (browserActuallySpeaking && wordCount > 3) {
+    return false;
+  }
+
+  // 3. Commande vocale « SUIVANT » (valide l'ingrédient ou l'étape en cours et passe à la suite)
+  if (
+    /\b(suivant|suivante|suivants|continuer|continue|pret|prete|c est bon|valider|valide|etape suivante|ingredient suivant|oui|ok|okay|suite|passe|passer|vas y|go)\b/.test(
+      norm
+    )
+  ) {
+    voiceGuideSession.lastCommandTime = now;
+    voiceGuideSession.isPaused = false;
+    triggerVoiceCommandFeedback('« Suivant » reconnu ✓');
+    nextVoiceGuideStep();
+    return true;
+  }
+
+  // 4. Commande vocale « RÉPÉTER » (répète l'ingrédient ou l'étape en cours)
+  if (
+    /\b(repeter|repete|repetez|redire|redis|encore|reecouter|reecoute|relire|relis|comment|quoi|pardon)\b/.test(
+      norm
+    )
+  ) {
+    voiceGuideSession.lastCommandTime = now;
+    voiceGuideSession.isPaused = false;
+    triggerVoiceCommandFeedback('« Répéter » reconnu 🔄');
+    repeatCurrentVoiceGuideStep();
+    return true;
+  }
+
+  // 5. Commande vocale « PRÉCÉDENT »
+  if (/\b(precedent|precedente|retour|arriere|avant|etape precedente|ingredient precedent)\b/.test(norm)) {
+    voiceGuideSession.lastCommandTime = now;
+    voiceGuideSession.isPaused = false;
+    triggerVoiceCommandFeedback('« Précédent » reconnu ⏮️');
+    prevVoiceGuideStep();
+    return true;
+  }
+
+  // 6. Commande vocale « STOP / ARRÊTER »
+  if (/\b(stop|arreter|arrete|quitter|fermer|terminer)\b/.test(norm)) {
+    voiceGuideSession.lastCommandTime = now;
+    triggerVoiceCommandFeedback('« Stop » reconnu ⏹️');
+    stopVoiceGuide();
+    return true;
+  }
+
+  return false;
+}
+
+// Repli Web Audio universel (getUserMedia) si le service cloud SpeechRecognition du navigateur
+// renvoie "service-not-allowed" / "network" ou n'est pas disponible (ex: Edge sans Speech Service, Firefox, Brave)
+async function startFallbackWebAudioCommandListener() {
+  if (!voiceGuideSession.active || voiceGuideSession.finished) return false;
+  if (voiceGuideSession.fallbackMode && voiceGuideSession.isListening && voiceGuideSession.fallbackStream) {
+    updateCharacterStageAnimationState();
+    return true;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return false;
+  }
+
+  try {
+    stopFallbackWebAudioListener();
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+        video: false
+      });
+    } catch (e) {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
+
+    if (!voiceGuideSession.active || voiceGuideSession.finished) {
+      stream.getTracks().forEach((t) => t.stop());
+      return false;
+    }
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioCtx();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+
+    voiceGuideSession.fallbackStream = stream;
+    voiceGuideSession.fallbackAudioCtx = audioCtx;
+    voiceGuideSession.fallbackMode = true;
+    voiceGuideSession.isListening = true;
+    voiceGuideSession.isStarting = false;
+    voiceGuideSession.permissionBlocked = false;
+    appDevicePermissionsState.mic = 'granted';
+    localStorage.setItem('menusemaine_perm_mic_v1', 'granted');
+    updateDevicePermissionsButtonsUI();
+    updateCharacterStageAnimationState();
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    let speakingFrames = 0;
+    let silenceFrames = 0;
+    let isCapturingVoice = false;
+
+    voiceGuideSession.fallbackVadTimer = setInterval(() => {
+      if (!voiceGuideSession.active || voiceGuideSession.finished || !voiceGuideSession.fallbackMode) {
+        stopFallbackWebAudioListener();
+        return;
+      }
+
+      const browserActuallySpeaking =
+        voiceGuideSession.isSpeaking ||
+        ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) ||
+        Boolean(activeCloudVoiceAudio && !activeCloudVoiceAudio.paused);
+
+      if (browserActuallySpeaking) {
+        speakingFrames = 0;
+        silenceFrames = 0;
+        isCapturingVoice = false;
+        return;
+      }
+
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      // Concentrer l'analyse sur les fréquences de la voix humaine (bins 4 à 60)
+      for (let i = 4; i < 60 && i < dataArray.length; i++) {
+        sum += dataArray[i];
+      }
+      const avgEnergy = sum / 56;
+
+      if (avgEnergy > 38) {
+        speakingFrames++;
+        silenceFrames = 0;
+        if (speakingFrames >= 3 && !isCapturingVoice) {
+          isCapturingVoice = true;
+          const liveHeardEl = document.getElementById('voice-live-transcript-preview');
+          if (liveHeardEl) {
+            liveHeardEl.textContent = '🎙️ Voix détectée...';
+            liveHeardEl.style.display = 'inline-flex';
+          }
+        }
+      } else if (isCapturingVoice) {
+        silenceFrames++;
+        if (silenceFrames >= 6) {
+          const totalFrames = speakingFrames;
+          speakingFrames = 0;
+          silenceFrames = 0;
+          isCapturingVoice = false;
+          // Commande vocale franche (entre 0.25s et 2.2s) après la fin de parole du chef
+          if (totalFrames >= 3 && totalFrames <= 28) {
+            if (voiceGuideSession.isPaused) {
+              executeNormalizedVoiceCommand('reprendre', 'Reprendre (voix)');
+            } else {
+              executeNormalizedVoiceCommand('suivant', 'Suivant (voix)');
+            }
+          }
+        }
+      } else {
+        speakingFrames = 0;
+      }
+    }, 90);
+
+    return true;
+  } catch (err) {
+    voiceGuideSession.fallbackMode = false;
+    voiceGuideSession.isListening = false;
+    voiceGuideSession.permissionBlocked = true;
+    updateCharacterStageAnimationState();
+    return false;
+  }
+}
+
+function stopFallbackWebAudioListener() {
+  if (voiceGuideSession.fallbackVadTimer) {
+    clearInterval(voiceGuideSession.fallbackVadTimer);
+    voiceGuideSession.fallbackVadTimer = null;
+  }
+  if (voiceGuideSession.fallbackStream) {
+    try {
+      voiceGuideSession.fallbackStream.getTracks().forEach((t) => t.stop());
+    } catch (e) {}
+    voiceGuideSession.fallbackStream = null;
+  }
+  if (voiceGuideSession.fallbackAudioCtx) {
+    try {
+      voiceGuideSession.fallbackAudioCtx.close();
+    } catch (e) {}
+    voiceGuideSession.fallbackAudioCtx = null;
+  }
+  voiceGuideSession.fallbackMode = false;
+}
+
+// Action manuelle depuis le bouton « 🎙️ Activer / Relancer le micro » dans le Guide Vocal
+async function manualActivateVoiceGuideMic() {
+  voiceGuideSession.permissionBlocked = false;
+  voiceGuideSession.isStarting = false;
+  const ok = await requestAppMicrophonePermission();
+  if (ok && voiceGuideSession.active && !voiceGuideSession.finished) {
+    startVoiceCommandListener(true);
+    updateCharacterStageAnimationState();
+  }
+}
+
 // Démarrer et maintenir l'écoute vocale continue pour les commandes :
 // « Suivant », « Répéter », « Pause », « Reprendre », « Précédent », « Stop »
 function startVoiceCommandListener(forceRestart = false) {
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRec || !voiceGuideSession.active || voiceGuideSession.finished) {
+  if (!voiceGuideSession.active || voiceGuideSession.finished) {
     voiceGuideSession.isListening = false;
+    voiceGuideSession.isStarting = false;
     updateCharacterStageAnimationState();
     return;
   }
 
-  // Si l'écoute tourne déjà et qu'on ne force pas le redémarrage, la conserver active
-  if (voiceGuideSession.recognition && voiceGuideSession.isListening && !forceRestart) {
+  // Si le mode Web Audio de secours tourne déjà, le conserver
+  if (voiceGuideSession.fallbackMode && voiceGuideSession.isListening && !forceRestart) {
     updateCharacterStageAnimationState();
     return;
+  }
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) {
+    startFallbackWebAudioCommandListener();
+    return;
+  }
+
+  const now = Date.now();
+  const isCurrentlyStarting =
+    voiceGuideSession.isStarting && now - (voiceGuideSession.startingSince || 0) < 7000;
+
+  // IMPORTANT : Ne jamais avorter une instance SpeechRecognition déjà à l'écoute
+  // ou en train de démarrer / d'attendre la réponse à la popup d'autorisation du navigateur !
+  if (voiceGuideSession.recognition && (voiceGuideSession.isListening || isCurrentlyStarting)) {
+    if (!forceRestart || isCurrentlyStarting) {
+      updateCharacterStageAnimationState();
+      return;
+    }
   }
 
   clearTimeout(voiceGuideSession.restartRecTimer);
@@ -6643,33 +6942,37 @@ function startVoiceCommandListener(forceRestart = false) {
   }
 
   try {
+    const isMobile = isMobilePhoneDevice();
+    // Sur smartphone (Android / iOS), ne pas démarrer SpeechRecognition pendant que le haut-parleur parle
+    // pour éviter le conflit matériel "audio-capture" : on écoute dès que le chef a fini sa phrase (ou en pause) !
+    if (isMobile && voiceGuideSession.isSpeaking && !voiceGuideSession.isPaused) {
+      voiceGuideSession.isStarting = false;
+      updateCharacterStageAnimationState();
+      return;
+    }
+
     const rec = new SpeechRec();
     rec.lang = 'fr-FR';
-    rec.continuous = true;
+    // Sur Android Chrome et iOS Safari, continuous=false évite le blocage du canal audio mobile
+    rec.continuous = !isMobile;
     rec.interimResults = true;
     rec.maxAlternatives = 5;
 
+    voiceGuideSession.isStarting = true;
+    voiceGuideSession.startingSince = Date.now();
+
     rec.onstart = () => {
+      voiceGuideSession.isStarting = false;
       voiceGuideSession.isListening = true;
+      voiceGuideSession.permissionBlocked = false;
+      appDevicePermissionsState.mic = 'granted';
+      localStorage.setItem('menusemaine_perm_mic_v1', 'granted');
+      updateDevicePermissionsButtonsUI();
       updateCharacterStageAnimationState();
     };
 
     rec.onresult = (event) => {
       if (!voiceGuideSession.active) return;
-
-      // Anti-rebond : éviter de déclencher 2 commandes en moins de 950 ms
-      const now = Date.now();
-      if (now - (voiceGuideSession.lastCommandTime || 0) < 950) return;
-
-      // Vérifier si la synthèse vocale est réellement en train de parler
-      const browserActuallySpeaking =
-        ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) ||
-        Boolean(activeCloudVoiceAudio && !activeCloudVoiceAudio.paused);
-
-      if (!browserActuallySpeaking && voiceGuideSession.isSpeaking) {
-        voiceGuideSession.isSpeaking = false;
-        updateCharacterStageAnimationState();
-      }
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
@@ -6680,90 +6983,8 @@ function startVoiceCommandListener(forceRestart = false) {
         const norm = normalizeVoiceCommandTranscript(combinedRaw);
         if (!norm) continue;
 
-        // Afficher un retour visuel en direct de ce que le micro entend
         const firstTranscript = (res[0]?.transcript || '').trim();
-        if (firstTranscript) {
-          voiceGuideSession.lastHeardTranscript = firstTranscript;
-          const liveHeardEl = document.getElementById('voice-live-transcript-preview');
-          if (liveHeardEl) {
-            liveHeardEl.textContent = `👂 Entendu : « ${firstTranscript} »`;
-            liveHeardEl.style.display = 'inline-flex';
-          }
-        }
-
-        // Anti-écho : si le haut-parleur prononce la phrase du chef ("Quand vous êtes prêt, dites suivant"),
-        // la phrase captée contient "dites suivant" ou fait plus de 5 mots pendant que le chef parle.
-        // En revanche, si l'utilisateur dit "Pause", "Stop", "Suivant" ou "Répéter" (commande courte), on l'exécute !
-        const wordCount = norm.split(' ').filter(Boolean).length;
-        const looksLikeAssistantEcho =
-          /\b(dites suivant|dis suivant|dites repeter|quand vous etes|quand tu es|nous allons cuisiner|ingredient \d+ sur)\b/.test(norm) ||
-          (browserActuallySpeaking && wordCount > 5);
-
-        if (looksLikeAssistantEcho) {
-          continue;
-        }
-
-        // 1. Commande vocale « PAUSE » (fonctionne même pendant que le chef parle !)
-        if (/\b(pause|mettre en pause|mets en pause|attends|attend|attendre|minute|patiente)\b/.test(norm)) {
-          voiceGuideSession.lastCommandTime = now;
-          triggerVoiceCommandFeedback('« Pause » reconnu ⏸️');
-          pauseVoiceGuide();
-          return;
-        }
-
-        // 2. Commande vocale « REPRENDRE » (relance la lecture / quitte le mode pause)
-        if (/\b(reprendre|reprends|reprend|reprise|repartir|relancer|relance|lecture)\b/.test(norm)) {
-          voiceGuideSession.lastCommandTime = now;
-          triggerVoiceCommandFeedback('« Reprendre » reconnu ▶️');
-          resumeVoiceGuide();
-          return;
-        }
-
-        // Si le chef parle encore (hors commande Pause/Stop), éviter les faux positifs sur les longs segments
-        if (browserActuallySpeaking && wordCount > 3) {
-          continue;
-        }
-
-        // 3. Commande vocale « SUIVANT » (valide l'ingrédient ou l'étape en cours et passe à la suite)
-        if (
-          /\b(suivant|suivante|suivants|continuer|continue|pret|prete|c est bon|valider|valide|etape suivante|ingredient suivant|oui|ok|okay|suite|passe|passer|vas y|go)\b/.test(
-            norm
-          )
-        ) {
-          voiceGuideSession.lastCommandTime = now;
-          voiceGuideSession.isPaused = false;
-          triggerVoiceCommandFeedback('« Suivant » reconnu ✓');
-          nextVoiceGuideStep();
-          return;
-        }
-
-        // 4. Commande vocale « RÉPÉTER » (répète l'ingrédient ou l'étape en cours)
-        if (
-          /\b(repeter|repete|repetez|redire|redis|encore|reecouter|reecoute|relire|relis|comment|quoi|pardon)\b/.test(
-            norm
-          )
-        ) {
-          voiceGuideSession.lastCommandTime = now;
-          voiceGuideSession.isPaused = false;
-          triggerVoiceCommandFeedback('« Répéter » reconnu 🔄');
-          repeatCurrentVoiceGuideStep();
-          return;
-        }
-
-        // 5. Commande vocale « PRÉCÉDENT »
-        if (/\b(precedent|precedente|retour|arriere|avant|etape precedente|ingredient precedent)\b/.test(norm)) {
-          voiceGuideSession.lastCommandTime = now;
-          voiceGuideSession.isPaused = false;
-          triggerVoiceCommandFeedback('« Précédent » reconnu ⏮️');
-          prevVoiceGuideStep();
-          return;
-        }
-
-        // 6. Commande vocale « STOP / ARRÊTER »
-        if (/\b(stop|arreter|arrete|quitter|fermer|terminer)\b/.test(norm)) {
-          voiceGuideSession.lastCommandTime = now;
-          triggerVoiceCommandFeedback('« Stop » reconnu ⏹️');
-          stopVoiceGuide();
+        if (executeNormalizedVoiceCommand(norm, firstTranscript)) {
           return;
         }
       }
@@ -6771,23 +6992,52 @@ function startVoiceCommandListener(forceRestart = false) {
 
     rec.onerror = (e) => {
       const errCode = e && e.error ? e.error : '';
-      if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
+      voiceGuideSession.isStarting = false;
+
+      if (errCode === 'no-speech' || errCode === 'aborted') {
+        return;
+      }
+
+      if (errCode === 'audio-capture') {
+        // Sur smartphone, "audio-capture" survient si le haut-parleur termine encore sa lecture :
+        // ne pas bloquer la permission, on réessaiera automatiquement dès que le canal est libre.
         voiceGuideSession.isListening = false;
         updateCharacterStageAnimationState();
-        showToast('⚠️ Autorisez l\'accès au microphone dans votre navigateur pour utiliser les commandes vocales.');
+        return;
+      }
+
+      if (errCode === 'service-not-allowed' || errCode === 'network' || errCode === 'language-not-supported') {
+        if (voiceGuideSession.recognition) {
+          try {
+            voiceGuideSession.recognition.onend = null;
+            voiceGuideSession.recognition.abort();
+          } catch (err) {}
+          voiceGuideSession.recognition = null;
+        }
+        startFallbackWebAudioCommandListener();
+        return;
+      }
+
+      if (errCode === 'not-allowed') {
+        voiceGuideSession.isListening = false;
+        voiceGuideSession.permissionBlocked = true;
+        updateCharacterStageAnimationState();
+        showToast('⚠️ Micro bloqué : appuyez sur « 🎙️ Activer le micro » ou autorisez le micro dans Chrome/Safari.');
         return;
       }
     };
 
     rec.onend = () => {
+      voiceGuideSession.isStarting = false;
+      if (voiceGuideSession.fallbackMode) return;
       voiceGuideSession.isListening = false;
-      if (voiceGuideSession.active && !voiceGuideSession.finished) {
+      if (voiceGuideSession.active && !voiceGuideSession.finished && !voiceGuideSession.permissionBlocked) {
         clearTimeout(voiceGuideSession.restartRecTimer);
         voiceGuideSession.restartRecTimer = setTimeout(() => {
-          if (voiceGuideSession.active && !voiceGuideSession.finished) {
+          if (voiceGuideSession.active && !voiceGuideSession.finished && !voiceGuideSession.permissionBlocked) {
             startVoiceCommandListener(true);
           }
-        }, 250);
+        }, 300);
       } else {
         updateCharacterStageAnimationState();
       }
@@ -6795,9 +7045,11 @@ function startVoiceCommandListener(forceRestart = false) {
 
     voiceGuideSession.recognition = rec;
     rec.start();
-  } catch (e) {
-    voiceGuideSession.isListening = false;
     updateCharacterStageAnimationState();
+  } catch (e) {
+    voiceGuideSession.isStarting = false;
+    voiceGuideSession.isListening = false;
+    startFallbackWebAudioCommandListener();
   }
 }
 
@@ -6818,15 +7070,18 @@ function startVoiceSessionWatchdog() {
       voiceGuideSession.isSpeaking = false;
       updateCharacterStageAnimationState();
     }
-    if (!voiceGuideSession.isListening) {
+    const isCurrentlyStarting =
+      voiceGuideSession.isStarting && Date.now() - (voiceGuideSession.startingSince || 0) < 7000;
+    if (!voiceGuideSession.isListening && !isCurrentlyStarting && !voiceGuideSession.permissionBlocked) {
       startVoiceCommandListener(true);
     }
-  }, 2200);
+  }, 2500);
 }
 
 function stopVoiceCommandListener() {
   clearTimeout(voiceGuideSession.restartRecTimer);
   clearInterval(voiceGuideSession.recWatchdogTimer);
+  stopFallbackWebAudioListener();
   if (voiceGuideSession.recognition) {
     try {
       voiceGuideSession.recognition.onend = null;
@@ -6836,6 +7091,7 @@ function stopVoiceCommandListener() {
     } catch (e) {}
     voiceGuideSession.recognition = null;
   }
+  voiceGuideSession.isStarting = false;
   voiceGuideSession.isListening = false;
 }
 
@@ -6935,23 +7191,28 @@ async function startInteractiveVoiceGuide() {
   voiceGuideSession.active = true;
   voiceGuideSession.isPaused = false;
   voiceGuideSession.finished = false;
+  voiceGuideSession.permissionBlocked = false;
   voiceGuideSession.lastHeardTranscript = '';
   voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
   voiceGuideSession.currentIndex = 0;
 
-  // IMPORTANT : Démarrer l'écoute microphone immédiatement dans le geste utilisateur du clic !
-  // Cela garantit que le navigateur accorde la permission micro sans bloquer après la fin de la synthèse vocale.
+  // Afficher le guide vocal pas-à-pas dans la Fiche Cuisine dès le clic
+  renderActiveVoiceStageUI();
+
+  // Sur smartphone, demander d'abord l'autorisation micro dans le geste tactile AVANT de lancer le haut-parleur
+  // (sinon la lecture audio annule la popup d'autorisation micro sur Android / iOS)
+  if (isMobilePhoneDevice() && appDevicePermissionsState.mic !== 'granted') {
+    await requestAppMicrophonePermission();
+  }
+
   startVoiceCommandListener(true);
   startVoiceSessionWatchdog();
 
-  // Activer le maintien de l'écran du smartphone allumé
-  await acquireKitchenWakeLock();
-
-  // Afficher le guide vocal pas-à-pas dans la Fiche Cuisine
-  renderActiveVoiceStageUI();
-
   // Lancer la lecture de la 1ère étape ("Nous allons cuisiner...")
   speakCurrentStepInGuide(false);
+
+  // Activer le maintien de l'écran du smartphone allumé
+  acquireKitchenWakeLock();
 }
 
 function renderActiveVoiceStageUI() {
@@ -6975,6 +7236,23 @@ function renderActiveVoiceStageUI() {
       class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''}"
       style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder}; padding: 10px 12px;"
     >
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; font-size:0.84rem;">
+        <span id="voice-mic-status-label" style="color:var(--text-main);"></span>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span id="voice-live-transcript-preview" class="meta-pill" style="display:none; font-size:0.78rem;"></span>
+          <span id="voice-heard-command-pill" class="meta-pill healthy-pill" style="display:none; font-size:0.78rem;"></span>
+          <button
+            type="button"
+            id="btn-stage-reactivate-mic"
+            class="btn btn-outline btn-sm"
+            style="display:${voiceGuideSession.isListening ? 'none' : 'inline-flex'}; padding:3px 10px; font-size:0.78rem;"
+            onclick="manualActivateVoiceGuideMic()"
+          >
+            🎙️ Activer le micro
+          </button>
+        </div>
+      </div>
+
       <div class="voice-stage-controls" style="padding-top: 0; border-top: none;">
         <button
           type="button"
@@ -7012,6 +7290,8 @@ function renderActiveVoiceStageUI() {
       </div>
     </div>
   `;
+
+  updateCharacterStageAnimationState();
 }
 
 function updateCharacterStageAnimationState() {
@@ -7022,16 +7302,23 @@ function updateCharacterStageAnimationState() {
   stage.classList.toggle('is-speaking', !!voiceGuideSession.isSpeaking);
   stage.classList.toggle('is-listening', !voiceGuideSession.isSpeaking && !!voiceGuideSession.isListening);
 
+  const reactivateBtn = document.getElementById('btn-stage-reactivate-mic');
+  if (reactivateBtn) {
+    reactivateBtn.style.display = voiceGuideSession.isListening ? 'none' : 'inline-flex';
+  }
+
   const micLabel = document.getElementById('voice-mic-status-label');
   if (micLabel) {
     if (voiceGuideSession.isPaused) {
       micLabel.innerHTML = `⏸️ <strong>Guide en pause :</strong> Dites <strong>« Reprendre »</strong> ou <strong>« Suivant »</strong> pour continuer`;
     } else if (voiceGuideSession.isSpeaking) {
-      micLabel.innerHTML = `🔊 <strong>${persona.name}</strong> vous parle... (Dites <strong>« Pause »</strong> ou <strong>« Suivant »</strong> à tout moment)`;
+      micLabel.innerHTML = `🔊 <strong>${persona.name}</strong> vous parle... ${voiceGuideSession.isListening ? '(🎙️ Micro actif : dites « Pause » ou « Suivant »)' : ''}`;
     } else if (voiceGuideSession.isListening) {
-      micLabel.innerHTML = `🎙️ <strong>Micro actif :</strong> Quand vous êtes prêt, dites <strong>« Suivant »</strong>, <strong>« Répéter »</strong>, <strong>« Pause »</strong> ou <strong>« Reprendre »</strong>`;
+      micLabel.innerHTML = `🎙️ <strong>Micro actif :</strong> Dites <strong>« Suivant »</strong>, <strong>« Répéter »</strong>, <strong>« Pause »</strong> ou <strong>« Reprendre »</strong>`;
+    } else if (voiceGuideSession.isStarting) {
+      micLabel.innerHTML = `⏳ <strong>Activation du micro en cours...</strong> (Cliquez sur « Autoriser » si le navigateur le demande)`;
     } else {
-      micLabel.innerHTML = `👆 Quand vous êtes prêt, appuyez sur <strong>« Suivant »</strong>, <strong>« Répéter »</strong> ou <strong>« Pause »</strong>`;
+      micLabel.innerHTML = `🔇 <strong>Micro inactif :</strong> Cliquez sur <strong>« 🎙️ Activer le micro »</strong> ou utilisez les boutons`;
     }
   }
 }
@@ -7964,19 +8251,23 @@ Utilise des noms d'ingrédients simples et courants en français (ex: "Œufs", "
 }
 
 // Dictée vocale pendant le scan vidéo (ex: "3 courgettes, 6 œufs, 250 grammes de pâtes")
+function promptManualPantryVoiceFallback() {
+  const manualText = prompt(
+    `🎙️ Saisie rapide pendant le scan (${pantryActiveScanZone === 'fridge' ? '❄️ Frigo' : '🥫 Placard'}) :\n` +
+      `Indiquez vos ingrédients séparés par des virgules (ex: 6 œufs, 2 courgettes, 200g comté) :`
+  );
+  if (manualText) {
+    const added = parseSpokenOrTypedIngredientsToPantry(manualText, pantryActiveScanZone);
+    if (added > 0) showToast(`✅ ${added} ingrédient(s) ajouté(s) !`);
+  }
+}
+
 function togglePantryVoiceRecognition() {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = document.getElementById('btn-voice-scan');
 
   if (!SpeechRec) {
-    const manualText = prompt(
-      `🎙️ Saisie rapide pendant le scan (${pantryActiveScanZone === 'fridge' ? '❄️ Frigo' : '🥫 Placard'}) :\n` +
-        `Indiquez vos ingrédients séparés par des virgules (ex: 6 œufs, 2 courgettes, 200g comté) :`
-    );
-    if (manualText) {
-      const added = parseSpokenOrTypedIngredientsToPantry(manualText, pantryActiveScanZone);
-      if (added > 0) showToast(`✅ ${added} ingrédient(s) ajouté(s) !`);
-    }
+    promptManualPantryVoiceFallback();
     return;
   }
 
@@ -7985,54 +8276,70 @@ function togglePantryVoiceRecognition() {
       pantryVoiceRecognition.stop();
     } catch (e) {}
     pantryVoiceActive = false;
-    if (btn) btn.textContent = '🎙️ Dicter en filmant';
+    if (btn) {
+      btn.textContent = '🎙️ Dicter en filmant';
+      btn.classList.remove('active-autoscan');
+    }
     return;
   }
 
-  const rec = new SpeechRec();
-  rec.lang = 'fr-FR';
-  rec.continuous = true;
-  rec.interimResults = false;
+  try {
+    const rec = new SpeechRec();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = false;
 
-  rec.onstart = () => {
-    pantryVoiceActive = true;
-    if (btn) {
-      btn.textContent = '🔴 Écoute en cours... (Parlez)';
-      btn.classList.add('active-autoscan');
-    }
-    showToast('🎙️ Dites à voix haute ce que vous filmez (ex: "4 œufs, 200 grammes de comté")...');
-  };
+    rec.onstart = () => {
+      pantryVoiceActive = true;
+      appDevicePermissionsState.mic = 'granted';
+      localStorage.setItem('menusemaine_perm_mic_v1', 'granted');
+      updateDevicePermissionsButtonsUI();
+      if (btn) {
+        btn.textContent = '🔴 Écoute en cours... (Parlez)';
+        btn.classList.add('active-autoscan');
+      }
+      showToast('🎙️ Dites à voix haute ce que vous filmez (ex: "4 œufs, 200 grammes de comté")...');
+    };
 
-  rec.onresult = (event) => {
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) {
-        const transcript = event.results[i][0].transcript;
-        const count = parseSpokenOrTypedIngredientsToPantry(transcript, pantryActiveScanZone);
-        if (count > 0) {
-          showToast(`🎙️ Reconnu : "${transcript.trim()}" (${count} ajouté${count > 1 ? 's' : ''})`);
+    rec.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript;
+          const count = parseSpokenOrTypedIngredientsToPantry(transcript, pantryActiveScanZone);
+          if (count > 0) {
+            showToast(`🎙️ Reconnu : "${transcript.trim()}" (${count} ajouté${count > 1 ? 's' : ''})`);
+          }
         }
       }
-    }
-  };
+    };
 
-  rec.onerror = () => {
-    pantryVoiceActive = false;
-    if (btn) {
-      btn.textContent = '🎙️ Dicter en filmant';
-      btn.classList.remove('active-autoscan');
-    }
-  };
+    rec.onerror = (e) => {
+      const errCode = e && e.error ? e.error : '';
+      pantryVoiceActive = false;
+      if (btn) {
+        btn.textContent = '🎙️ Dicter en filmant';
+        btn.classList.remove('active-autoscan');
+      }
+      if (errCode === 'not-allowed' || errCode === 'audio-capture') {
+        showToast('⚠️ Accès au micro bloqué : cliquez sur l\'icône 🔒 dans la barre d\'adresse puis « Autoriser ».');
+      } else if (errCode === 'service-not-allowed' || errCode === 'network') {
+        promptManualPantryVoiceFallback();
+      }
+    };
 
-  rec.onend = () => {
-    pantryVoiceActive = false;
-    if (btn) {
-      btn.textContent = '🎙️ Dicter en filmant';
-      btn.classList.remove('active-autoscan');
-    }
-  };
+    rec.onend = () => {
+      pantryVoiceActive = false;
+      if (btn) {
+        btn.textContent = '🎙️ Dicter en filmant';
+        btn.classList.remove('active-autoscan');
+      }
+    };
 
-  pantryVoiceRecognition = rec;
-  rec.start();
+    pantryVoiceRecognition = rec;
+    rec.start();
+  } catch (e) {
+    promptManualPantryVoiceFallback();
+  }
 }
 
 function parseSpokenOrTypedIngredientsToPantry(rawText, zone) {
