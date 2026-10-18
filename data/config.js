@@ -3,7 +3,7 @@ window.APP_CONFIG = {
   "appName": "MenuSemaine & Panier",
   "appSubtitle": "Semaine & Week-end : 🥗 Équilibré • 🌟 Plaisir • 🍷 Gourmet (Accords Vins)",
   "version": "1.6.2",
-  "lastUpdated": "18/10/2026 à 19:10",
+  "lastUpdated": "18/10/2026 à 20:33",
   "publicUrl": "https://cedtayrac-wq.github.io/projet-menus/",
   "announcement": "",
   "requireAccessCode": false,
@@ -15,12 +15,11 @@ window.APP_CONFIG = {
   "voiceApiKeyEncoded": "msk1_UW1iWTd6RXM1bVV0TnVPRjZpa21PUmE0aVczZWhRV3FXWE9oNHh4ZmJkLS1oc2lmLWtz",
   "fishClonedVoiceIds": {
     "maite": "cae9259cec4343e1b1c837c525f9d268",
-    "lignac": "47a917c325db403191defbb608921d52",
-    "remy": "688e638a7fce4fe4b7ccc177a60b0e28",
-    "bocuse": "32cfb56869b1482f9b2dd47ff45b0934",
-    "marx": "7d0fc461b48f45bcb7a464f698a681c4",
-    "etchebest": "6252cf7fcd604c45a2909f77c54b2d96",
-    "coffe": "357ab2a3e25d4d46b0f811f67420d4a5"
+    "lignac": "f3e595ddbd9c41a6a16cce1372eecbac",
+    "bocuse": "35bdc7c82ae24edb91bbb24507b5c1f3",
+    "marx": "6df60779e006417f8ca9a300cc66f772",
+    "etchebest": "6e01eb6afdc24c97983bdf3841651857",
+    "coffe": "bbaf5b5ace5b4ac6ab66c5b4dc52ec6b"
   },
   "clonedVoiceIds": {
     "maite": "EXAVITQu4vr4xnSDxMaL",
