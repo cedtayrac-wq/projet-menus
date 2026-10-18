@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-semaine-v207';
+const CACHE_NAME = 'menu-semaine-v212';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,6 @@ const ASSETS = [
   './assets/icon-512.png',
   './assets/personas/maite.jpg',
   './assets/personas/lignac.jpg',
-  './assets/personas/remy.jpg',
   './assets/personas/bocuse.jpg',
   './assets/personas/marx.jpg',
   './assets/personas/etchebest.png',
@@ -21,7 +20,6 @@ const ASSETS = [
   './assets/personas/ia_femme.jpg',
   './assets/voices/maite.mp3',
   './assets/voices/lignac.mp3',
-  './assets/voices/remy.mp3',
   './assets/voices/bocuse.mp3',
   './assets/voices/marx.mp3',
   './assets/voices/etchebest.mp3',
