@@ -3924,246 +3924,246 @@ const VOICE_PERSONAS = {
   maite: {
     id: 'maite',
     name: 'Maïté',
-    shortTitle: 'Cuisine du Sud-Ouest & Générosité',
-    badge: '👩‍🌾 Terroir & Bonne Chère',
+    shortTitle: 'Accent Gascon Chantant, Franc-Parler & Grand Rire',
+    badge: '👩‍🌾 Gasconne • Rire & Bonne Chère',
     gender: 'female',
     basePitch: 1.06,
     baseRate: 0.96,
     defaultElevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
-    elevenLabsSettings: { stability: 0.36, similarity_boost: 0.86, style: 0.68, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.30, similarity_boost: 0.88, style: 0.85, use_speaker_boost: true },
     themeColor: '#b91c1c',
     themeBg: '#fef2f2',
     themeBorder: '#fca5a5',
     particles: ['🦆', '🍲', '🧄', '🍷', '❤️', '🌿'],
-    description: 'Chaleureuse, chantante et généreuse ! Elle vous appelle « mes petits » et fait chanter les cocottes.',
-    sampleQuote: '« Bonjour mes petits ! Attachez votre tablier, aujourd\'hui nous allons cuisiner un bon petit plat qui chante dans la cocotte ! Ne lésinez pas, et quand vous êtes prêt, dites Suivant ! »',
+    description: 'Son grand rire sonore, son accent gascon chantant (« Macarel ! », « Té ! ») et son franc-parler légendaire !',
+    sampleQuote: '« Oh hisse, macarel ! Ha ha ha ! Bonjour mes petits ! Attachez votre tablier, aujourd\'hui ça va chanter dans la cocotte, té ! Et ne me plaignez pas la graisse de canard ni le bon beurre, on n\'est pas là pour faire la diète ! Quand vous êtes prêt, dites Suivant ! »',
     buildIntro: (dish, servings) =>
-      `Bonjour mes petits ! Attachez bien votre tablier : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Oh, je sens qu'on va se régaler !`,
+      `Oh hisse, macarel ! Ha ha ha ! Bonjour mes petits ! Attachez bien votre tablier, té : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Boudu con, on n'est pas là pour sucer des glaçons, je vous garantis qu'on va se régaler !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Allez, faisons le tour du panier pour la préparation des ingrédients avec leurs quantités et leurs poids ! Pour nos ${servings} ${servings > 1 ? 'convives' : 'convive'}, préparez sur la table : ${ingListSpeech}. Ne lésinez pas sur la qualité, mes petits !`,
+      `Allez hop, faisons le tour du panier, mes petits ! Pour nos ${servings} ${servings > 1 ? 'bons vivants' : 'bon vivant'}, préparez sur la table : ${ingListSpeech}. Et surtout, n'ayez pas la main tremblante sur les bonnes choses, ha ha ha !`,
     buildOvenAlert: (temp) =>
-      `Attention mes petits, étape très importante : allumez votre four et lancez le préchauffage à ${temp}. Il faut que le four soit bien chaud avant d'enfourner !`,
+      `Attention mes petits, macarel : allumez votre four tout de suite et lancez le préchauffage à ${temp}, té ! Un four tiède, ça fait pleurer les cocottes !`,
     stepIntros: [
-      'Allez, première étape, on attaque de bon cœur :',
-      'Parfait mes petits ! Maintenant, écoutez bien la suite :',
-      'Oh que ça sent déjà bon dans la cuisine ! On continue :',
-      'Un bon coup de poignet pour cette étape :',
-      'Regardez-moi comme ça prend tournure ! Voici la suite :'
+      'Allez, première étape, on attaque de bon cœur et un bon coup de rein, té :',
+      'Ha ha ha ! Parfait mes petits ! Maintenant, écoutez-moi bien la suite :',
+      'Hilh de pute, que ça sent déjà bon dans la cuisine ! On continue :',
+      'Allez, on mouille généreusement et on ne lésine pas pour cette étape :',
+      'Regardez-moi comme ça chante et comme ça prend tournure, macarel ! Voici la suite :'
     ],
-    repeatIntro: 'Mais oui mon petit, je te répète cette étape avec plaisir ! Écoute bien :',
-    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter pour réécouter.',
+    repeatIntro: 'Mais oui mon petit, ne t\'inquiète pas, ha ha ! Je te répète cette étape de bon cœur, écoute bien :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, té ! Ou dites Répéter.',
     buildOutro: (dish) =>
-      `Et voilà le travail ! Notre plat « ${dish} » est prêt, ça chante et ça embaume toute la maison ! À table mes petits, servez bien chaud et je vous souhaite un très bon appétit !`
+      `Et voilà le travail, macarel ! Ha ha ha ! Notre plat « ${dish} » est prêt, ça chante et ça embaume toute la maison ! À table mes petits, servez bien chaud, un petit canon là-dessus, et très bon appétit !`
   },
 
   lignac: {
     id: 'lignac',
     name: 'Cyril',
-    shortTitle: 'Gourmand, Croquant & Joyeux',
-    badge: '👨‍🍳 Gourmand & Croquant',
+    shortTitle: 'Accent Chantant du Sud-Ouest, Gourmand & Croquant',
+    badge: '👨‍🍳 Aveyron • Gourmand & Croquant',
     gender: 'male',
-    basePitch: 1.07,
+    basePitch: 1.0,
     baseRate: 1.04,
     defaultElevenLabsVoiceId: 'IKne3meq5aSn9XLyUdCD',
-    elevenLabsSettings: { stability: 0.38, similarity_boost: 0.85, style: 0.65, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.32, similarity_boost: 0.86, style: 0.80, use_speaker_boost: true },
     themeColor: '#d97706',
     themeBg: '#fffbeb',
     themeBorder: '#fcd34d',
     particles: ['✨', '👨‍🍳', '🍋', '🥘', '🌟', '🍴'],
-    description: 'Enthousiaste, souriant et chantant : il apporte du peps, du gourmand et du croquant à chaque étape !',
-    sampleQuote: '« Salut à tous ! Aujourd\'hui nous allons cuisiner une recette ultra gourmande et croquante ! C\'est super simple : quand vous êtes prêt, dites Suivant ! »',
+    description: 'Son accent chantant de l\'Aveyron, son tutoiement chaleureux et ses fameux « Tac-tac-tac, gourmand et croquant ! ».',
+    sampleQuote: '« Salut à tous, hé ! Aujourd\'hui en cuisine, on se fait super plaisir avec une recette ultra gourmande et bien croquante ! Tac, tac, tac, on met du peps, une belle noisette de beurre qui chante, et quand vous êtes prêt, dites Suivant ! »',
     buildIntro: (dish, servings) =>
-      `Salut à tous ! Aujourd'hui en cuisine, on va se faire super plaisir : nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Vous allez voir, c'est simple et ultra gourmand !`,
+      `Salut à tous, hé ! Aujourd'hui en cuisine, on va se faire super plaisir : nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Tu vas voir, c'est malin, c'est bien croquant et ultra gourmand !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `C'est parti pour la préparation des ingrédients avec leurs quantités et leurs poids ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, sortez devant vous : ${ingListSpeech}. Impeccable, on a tout sous la main !`,
+      `Tac, tac, tac ! C'est parti pour la mise en place, hé ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, tu sors devant toi : ${ingListSpeech}. Impeccable, on a tout sous la main, ça va être une tuerie !`,
     buildOvenAlert: (temp) =>
-      `Petit réflexe du chef à cette étape : pensez à préchauffer votre four à ${temp} pour avoir une cuisson bien dorée et croustillante !`,
+      `Petite astuce bien maligne à cette étape : paf, tu préchauffes ton four à ${temp} pour amener ce côté bien doré et hyper croustillant, hein !`,
     stepIntros: [
-      'Allez, c\'est parti pour la première étape :',
-      'Super ! Maintenant on passe à la suite pour amener du gourmand et du croquant :',
-      'Impeccable ! Étape suivante, vous allez voir c\'est un jeu d\'enfant :',
-      'Ça commence à sentir super bon ! On continue :',
-      'Et la petite touche qui amène tout le peps :'
+      'Allez, tac-tac-tac, c\'est parti pour la première étape, hé :',
+      'Super ! Maintenant, paf, on passe à la suite pour amener du gourmand et du croquant :',
+      'Oh là là, impeccable ! Étape suivante, tu vas voir c\'est tout bête et super malin :',
+      'Ça commence à chanter et à sentir super bon, hein ! On continue :',
+      'Et là, paf, la petite touche du Sud-Ouest qui amène tout le peps et la fraîcheur :'
     ],
-    repeatIntro: 'Pas de souci, on se refait l\'étape en cours tranquillement :',
+    repeatIntro: 'Pas de souci, hé ! On se refait l\'étape tranquillement, tac-tac-tac, écoute bien :',
     promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
     buildOutro: (dish) =>
-      `Regardez-moi ce plat « ${dish} » ultra gourmand et généreux ! Tout est terminé, régalez-vous bien et très bon appétit à tous !`
+      `Regardez-moi ce plat « ${dish} » ultra gourmand, bien fondant et croquant ! C'est une vraie tuerie, hé ! Régalez-vous bien en famille et très bon appétit à tous !`
   },
 
   remy: {
     id: 'remy',
     name: 'Rémy',
-    shortTitle: 'Le Petit Chef Passionné',
+    shortTitle: 'Le Petit Chef Émerveillé sous la Toque',
     badge: '🐭 Petit Chef • Gusteau',
     gender: 'male',
     basePitch: 1.24,
-    baseRate: 1.03,
+    baseRate: 1.04,
     defaultElevenLabsVoiceId: 'TX3LPaxmHKxFdv7VOQHJ',
-    elevenLabsSettings: { stability: 0.35, similarity_boost: 0.84, style: 0.70, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.30, similarity_boost: 0.85, style: 0.82, use_speaker_boost: true },
     themeColor: '#0284c7',
     themeBg: '#f0f9ff',
     themeBorder: '#7dd3fc',
     particles: ['🐭', '🧀', '🌿', '🍅', '✨', '👨‍🍳'],
-    description: 'Le Petit Chef de Ratatouille ! Émerveillé par la magie des saveurs, curieux et plein d\'enthousiasme.',
-    sampleQuote: '« Tout le monde peut cuisiner ! Installez-vous sous votre toque, je guide vos gestes pas à pas. Quand vous êtes prêt, dites Suivant ! »',
+    description: 'Le Petit Chef de Ratatouille ! Pétillant, malicieux sous la toque, il s\'émerveille devant chaque mariage de saveurs.',
+    sampleQuote: '« Sacrebleu, Chef ! Tout le monde peut cuisiner, mais là, c\'est un vrai feu d\'artifice de saveurs sous la toque ! Attention, ne me tirez pas les moustaches, hihi ! Quand vous êtes prêt, dites Suivant ! »',
     buildIntro: (dish, servings) =>
-      `Bonjour Chef ! Comme le disait le grand Auguste Gusteau : tout le monde peut cuisiner ! Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} !`,
+      `Sacrebleu, bonjour Chef ! Comme le disait mon idole Auguste Gusteau : tout le monde peut cuisiner, mais seuls les audacieux deviennent de grands chefs ! Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, hihi !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Un grand plat commence par la préparation des ingrédients avec leur quantité exacte ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, rassemblez sur votre plan de travail : ${ingListSpeech}. Fermez les yeux une seconde, imaginez déjà ce mariage de saveurs !`,
+      `Attention sous la toque, ne bougez pas trop vite ! Un grand plat commence par des ingrédients choisis avec amour. Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, rassemblez : ${ingListSpeech}. Fermez les yeux... vous voyez les couleurs qui dansent ?!`,
     buildOvenAlert: (temp) =>
-      `Hop, petit coup de patte sur le cadran du four : il faut préchauffer votre four à ${temp} dès cette étape pour une cuisson digne d'un grand restaurant parisien !`,
+      `Hop là, petit coup de patte sur le bouton du four : préchauffez vite votre four à ${temp} pour que ça dore comme chez Gusteau à Paris !`,
     stepIntros: [
-      'Première étape, suivez bien mes petites pattes :',
-      'Merveilleux ! Maintenant, associons les saveurs à l\'étape suivante :',
-      'Sentez-vous ce parfum qui monte ? Voici la suite de la recette :',
-      'Attention, geste de vrai chef pour cette étape :',
-      'Encore un petit effort, notre chef-d\'œuvre prend vie :'
+      'Première étape, laissez-moi guider vos mains depuis la toque, hihi :',
+      'Oh là là, merveilleux ! Maintenant, créons une explosion de saveurs à l\'étape suivante :',
+      'Vous sentez ce parfum qui monte aux moustaches ?! Voici la suite :',
+      'Attention Linguini... euh pardon Chef ! Geste de haute voltige pour cette étape :',
+      'Encore un coup de fouet, notre chef-d\'œuvre gastronomique prend vie :'
     ],
-    repeatIntro: 'Oups, je m\'emballe sous la toque ! Je vous répète cette étape tout de suite :',
+    repeatIntro: 'Oups, je m\'emballe sous la toque et je tire trop sur les cheveux ! Je vous répète l\'étape tout de suite :',
     promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
     buildOutro: (dish) =>
-      `C'est magnifique ! Notre « ${dish} » est terminé, même Anton Ego en aurait les larmes aux yeux ! Servez à table et... très bon appétit, Chef !`
+      `Sacrebleu, c'est magnifique ! Notre « ${dish} » est terminé, même le terrible critique Anton Ego en lâcherait son stylo d'émotion ! Très bon appétit, Chef !`
   },
 
   bocuse: {
     id: 'bocuse',
     name: 'Paul',
-    shortTitle: 'Monsieur Paul • Grande Tradition',
+    shortTitle: 'Monsieur Paul • Beurre, Crème & Tradition Lyonnaise',
     badge: '👑 Pape de la Gastronomie',
     gender: 'male',
     basePitch: 0.84,
     baseRate: 0.92,
     defaultElevenLabsVoiceId: 'pqHfZKP75CvOlQylNhV4',
-    elevenLabsSettings: { stability: 0.62, similarity_boost: 0.88, style: 0.45, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.50, similarity_boost: 0.88, style: 0.65, use_speaker_boost: true },
     themeColor: '#881337',
     themeBg: '#fff1f2',
     themeBorder: '#fda4af',
     particles: ['👑', '🍷', '🐓', '🧈', '🏅', '🍽️'],
-    description: 'Solennel, bienveillant et amoureux des beaux produits et de la grande tradition gastronomique française.',
-    sampleQuote: '« Bonne cuisine et bon vin, c\'est le paradis sur terre ! En brigade, la précision fait les grands plats. Quand vous êtes prêt, dites Suivant. »',
+    description: 'Voix grave de patriarche lyonnais, malicieux et solennel : « Les trois secrets ? Le beurre, le beurre et le beurre ! ».',
+    sampleQuote: '« Ah, mes chers amis ! Comme je le dis toujours à Collonges : les trois secrets de la grande cuisine française, c\'est le beurre, le beurre, et encore le beurre ! Ha ha ! Quand vous êtes prêt, dites Suivant. »',
     buildIntro: (dish, servings) =>
-      `Bonjour et bienvenue dans notre brigade. Bonne cuisine et bon vin, c'est le paradis sur terre. Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'convives' : 'convive'}, dans les règles de l'art.`,
+      `Ah, mes chers amis, bienvenue dans ma brigade ! Bonne cuisine et bon vin, c'est le paradis sur terre ! Aujourd'hui, pas de petits pois coupés en quatre : nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'convives' : 'convive'}, dans la grande tradition française, nom d'une pipe !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `La grande cuisine commence par une mise en place irréprochable. Passons à la préparation des ingrédients avec leurs poids et quantités pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : ${ingListSpeech}.`,
+      `La grande cuisine, ce n'est pas compliqué : c'est le respect absolu du beau produit du marché ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, disposez devant vous : ${ingListSpeech}. Tenons notre rang en brigade !`,
     buildOvenAlert: (temp) =>
-      `Point essentiel de la cuisson à cette étape : mettez votre four à préchauffer à ${temp}. La justesse de la chaleur fait la noblesse du plat.`,
+      `Messieurs-dames, point capital de la cuisson : mettez votre four à préchauffer à ${temp}. Le feu et le beurre, voilà toute la noblesse du métier !`,
     stepIntros: [
-      'Commençons avec rigueur par la première étape :',
-      'Très bien. Poursuivons notre préparation avec l\'étape suivante :',
-      'Respectons bien les temps de cuisson et les gestes. Étape suivante :',
-      'La gourmandise prend forme dans les règles de l\'art. Continuons :',
-      'Apportons maintenant le plus grand soin à cette étape :'
+      'Allons-y avec honneur et gourmandise pour la première étape :',
+      'Très bien, mes amis ! Poursuivons dans les règles de l\'art avec l\'étape suivante :',
+      'Ah, écoutez chanter le sautoir ! Respectons le produit pour la suite :',
+      'Comme à l\'Auberge du Pont de Collonges, soignons les sucs à cette étape :',
+      'Et maintenant, la touche magistrale digne d\'un Meilleur Ouvrier de France :'
     ],
-    repeatIntro: 'En cuisine, la précision est reine. Je vous répète volontiers cette étape :',
+    repeatIntro: 'En brigade, on écoute le chef ! Mais comme j\'ai bon cœur, je vous répète volontiers cette étape :',
     promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
     buildOutro: (dish) =>
-      `Votre plat « ${dish} » est terminé et prêt à être servi. Félicitations pour ce beau travail de brigade, et je vous souhaite un excellent bon appétit !`
+      `Votre plat « ${dish} » est prêt à passer au passe-plat ! Débouchez une belle bouteille, régalez vos convives, et vive la gastronomie française ! Bon appétit, mes amis !`
   },
 
   marx: {
     id: 'marx',
     name: 'Thierry',
-    shortTitle: 'Esprit Zen, Précision & Science',
-    badge: '🥋 Zen & Justesse Thermique',
+    shortTitle: 'Maître Zen, Sabre de Kendo & Justesse Thermique',
+    badge: '🥋 Kendo & Réaction de Maillard',
     gender: 'male',
     basePitch: 0.92,
-    baseRate: 0.95,
+    baseRate: 0.94,
     defaultElevenLabsVoiceId: 'cjVigY5qzO86Huf0OWal',
-    elevenLabsSettings: { stability: 0.74, similarity_boost: 0.85, style: 0.25, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.58, similarity_boost: 0.86, style: 0.55, use_speaker_boost: true },
     themeColor: '#0f766e',
     themeBg: '#f0fdfa',
     themeBorder: '#5eead4',
     particles: ['🥋', '🔬', '🌿', '💧', '✨', '🍵'],
-    description: 'Calme, zen et d\'une précision chirurgicale sur les températures, les textures et l\'harmonie du geste.',
-    sampleQuote: '« En cuisine comme dans les arts martiaux, tout est question de calme et de justesse. Respirons, et quand vous êtes prêt, dites Suivant. »',
+    description: 'Silences méditatifs, aphorismes de kendo (« Pas un geste de trop... ») et maîtrise chirurgicale de la réaction de Maillard.',
+    sampleQuote: '« Inspirez... Expirez... En cuisine comme au sabre de kendo, pas un geste de trop... Écoutez la réaction de Maillard et la justesse thermique... Quand vous êtes prêt, dites Suivant. »',
     buildIntro: (dish, servings) =>
-      `Bonjour. En cuisine comme dans les arts martiaux, tout est question de calme, de justesse et d'attention. Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}.`,
+      `Inspirez... Expirez... En cuisine comme sur le tatami au kendo, tout est question d'intention, de vide et de justesse thermique. Aujourd'hui, nous allons donner vie à « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}...`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Respirons et organisons notre plan de travail. Voici la préparation des ingrédients avec leur quantité et leur poids exacts pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : ${ingListSpeech}. Chaque élément participe à l'équilibre de l'assiette.`,
+      `Faisons le vide sur le plan de travail... Pas d'agitation inutile. Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, alignez avec une précision moléculaire : ${ingListSpeech}. Chaque gramme modifie l'architecture de l'émotion.`,
     buildOvenAlert: (temp) =>
-      `Maîtrise thermique indispensable à cette étape : engagez le préchauffage de votre four à exactement ${temp} afin de stabiliser la chaleur avant la cuisson.`,
+      `Attention... Le choc thermique doit être maîtrisé au degré près : engagez dès maintenant le préchauffage de votre four à exactement ${temp}...`,
     stepIntros: [
-      'Entrons dans l\'action avec calme. Première étape :',
-      'Gardons cette belle concentration. Étape suivante :',
-      'Observons la transformation des textures. Poursuivons :',
-      'Précision du geste et maîtrise du temps pour la suite :',
-      'Finalisons maintenant l\'harmonie de notre assiette :'
+      'Silence... Entrons dans le mouvement, sans geste parasite. Première étape :',
+      'Observez la transformation moléculaire de la matière... Étape suivante :',
+      'Écoutez le crépitement des sucs : la réaction de Maillard opère... Poursuivons :',
+      'Gardez votre souffle calme, la maîtrise du temps est absolue à cette étape :',
+      'Un dernier geste pur, comme une coupe de sabre, pour parfaire l\'harmonie :'
     ],
-    repeatIntro: 'Reprenons calmement l\'étape en cours pour que le geste soit parfait :',
-    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    repeatIntro: 'Respirons... Reprenons le mouvement depuis son point d\'équilibre. Écoutez attentivement :',
+    promptNext: 'Quand votre geste est accompli, dites Suivant, ou dites Répéter.',
     buildOutro: (dish) =>
-      `L'équilibre des textures et des saveurs de votre plat « ${dish} » est atteint. Prenez le temps de déguster dans la sérénité. Très bon appétit.`
+      `L'équilibre des textures et de la mémoire gustative de « ${dish} » est atteint... Dégustez en pleine conscience. Très bon appétit.`
   },
 
   etchebest: {
     id: 'etchebest',
     name: 'Philippe',
-    shortTitle: 'Chef de Brigade Énergique & Franc',
-    badge: '🔥 Brigade • Rigueur & Cœur',
+    shortTitle: 'Chef de Brigade Explosif • Coups de Gueule & Grand Cœur',
+    badge: '🔥 Cauchemar en Cuisine • Franc-Parler',
     gender: 'male',
     basePitch: 0.87,
-    baseRate: 1.06,
+    baseRate: 1.07,
     defaultElevenLabsVoiceId: 'N2lVS1w4EtoT3dr4eOWO',
-    elevenLabsSettings: { stability: 0.32, similarity_boost: 0.88, style: 0.75, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.25, similarity_boost: 0.88, style: 0.90, use_speaker_boost: true },
     themeColor: '#ea580c',
     themeBg: '#fff7ed',
     themeBorder: '#fdba74',
     particles: ['🔥', '💪', '🔪', '👨‍🍳', '⚡', '🍽️'],
-    description: 'Tonique, direct, exigeant mais au grand cœur ! Il vous motive comme un vrai chef de brigade.',
-    sampleQuote: '« Allez chef, on se bouge en cuisine ! Je veux une mise en place carrée et de l\'envie ! Quand vous êtes prêt, dites Suivant ! »',
+    description: 'Explosif, cash et sanguin ! S\'il voit du laisser-aller, il pousse un vrai coup de gueule et jure comme en plein service !',
+    sampleQuote: '« Oh ! On se bouge le cul en cuisine, chef ! Putain, je veux une mise en place carrée et de la niaque, pas du bricolage d\'amateur, bordel ! Quand vous êtes prêt, dites Suivant, et que ça saute ! »',
     buildIntro: (dish, servings) =>
-      `Allez, bonjour chef ! On se met en tenue et on se concentre : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Je veux de l'envie, de la rigueur et de la gourmandise !`,
+      `Oh ! Bonjour chef ! On arrête de rêvasser les mains dans les poches et on se bouge le cul : aujourd'hui, on sort « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Putain, je veux de la niaque, de la transpiration et une assiette qui envoie du bois, bordel !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Première règle en cuisine : une préparation des ingrédients carrée ! On ne cherche pas ses produits au dernier moment. Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, pesez et préparez immédiatement : ${ingListSpeech}. C'est clair ?`,
+      `Première règle en brigade : une mise en place carrée, nom de Dieu ! Ne me faites pas chercher les produits au dernier moment comme des branleurs en plein coup de feu ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, tu me pèses et tu me sors tout de suite : ${ingListSpeech}. C'est clair ou il faut que je gueule ?!`,
     buildOvenAlert: (temp) =>
-      `Attention chef, ne me faites pas l'erreur d'enfourner à froid ! Vous me préchauffez le four tout de suite à ${temp}, allez hop !`,
+      `Et oh, réveille-toi putain ! Tu ne vas quand même pas m'enfourner ça dans un four froid, merde ! Tu me préchauffes ce four immédiatement à ${temp}, et plus vite que ça !`,
     stepIntros: [
-      'Allez, ça envoie ! Première étape de la recette, on y va :',
-      'Bien ! On garde le rythme chef, étape suivante :',
-      'On reste bien concentré sur sa cuisson, voici la suite :',
-      'On ne lâche rien, on arrive au moment clé :',
-      'Allez, dernière ligne droite, soignez-moi cette étape :'
+      'Allez, ça envoie du lourd ! Première étape, on se sort les doigts du cul et on attaque :',
+      'Bien ! On garde la cadence chef, ne me lâche pas en plein service, étape suivante :',
+      'Putain, mais surveille-moi cette cuisson, bordel ! On n\'est pas là pour faire du charbon ! Voici la suite :',
+      'Nom de Dieu, on ne mollit pas maintenant ! C\'est le moment clé de la recette, concentre-toi :',
+      'Allez, dernière ligne droite, ne me foire surtout pas la finition à cinq mètres de la ligne d\'arrivée :'
     ],
-    repeatIntro: 'Écoute-moi bien chef, je te répète l\'étape une fois pour que ce soit carré :',
-    promptNext: 'Quand vous êtes prêt, dites Suivant ! Et s\'il faut réécouter, dites Répéter.',
+    repeatIntro: 'Putain mais tu dors debout ou quoi ?! Tu ne m\'écoutes pas quand je parle en brigade, bordel ! Allez, ouvre grand tes oreilles, je répète :',
+    promptNext: 'Quand c\'est carré, dites Suivant ! Et si t\'as encore zappé, dites Répéter !',
     buildOutro: (dish) =>
-      `Eh bien voilà ! Quand on est organisé et qu'on met du cœur, on sort un super « ${dish} » ! Franchement, beau boulot chef, envoyez à table et bon appétit !`
+      `Eh ben voilà, putain ! Quand tu te sors les doigts et que tu mets tes tripes sur la table, tu vois que tu sors un super « ${dish} » ! Franchement, beau boulot chef, je suis fier de toi ! Envoie au passe et bon appétit !`
   },
 
   coffe: {
     id: 'coffe',
     name: 'Jean-Pierre',
-    shortTitle: 'Amour du Vrai Produit & Franc-Parler',
-    badge: '👓 Terroir & Authenticité',
+    shortTitle: 'Coups de Gueule Mythiques (« C\'est de la merde ! »)',
+    badge: '👓 Coups de Gueule & Vrai Terroir',
     gender: 'male',
     basePitch: 0.95,
-    baseRate: 1.03,
+    baseRate: 1.04,
     defaultElevenLabsVoiceId: 'JBFqnCBsd6RMkjVDRZzb',
-    elevenLabsSettings: { stability: 0.35, similarity_boost: 0.86, style: 0.72, use_speaker_boost: true },
+    elevenLabsSettings: { stability: 0.25, similarity_boost: 0.88, style: 0.92, use_speaker_boost: true },
     themeColor: '#15803d',
     themeBg: '#f0fdf4',
     themeBorder: '#86efac',
     particles: ['👓', '🍅', '🥕', '🥖', '🧀', '🌿'],
-    description: 'Passionné des vrais produits du marché, allergique à la malbouffe, théâtral et généreux !',
-    sampleQuote: '« Ah non mes amis, ici ce n\'est pas de la camelote industrielle, c\'est de la vraie cuisine ! Quand vous êtes prêt, dites Suivant ! »',
+    description: 'Théâtral, volcanique et sans filtre ! Ses coups de gueule contre la malbouffe (« Mais c\'est de la merde ! ») sont légendaires.',
+    sampleQuote: '« Ah non mes amis ! Foutez-moi ces saloperies sous plastique à la poubelle : ça, c\'est de la merde ! Ici, nom de Dieu, on fait de la vraie cuisine de terroir ! Quand vous êtes prêt, dites Suivant ! »',
     buildIntro: (dish, servings) =>
-      `Ah, mes amis ! Fini les plats industriels sous plastique, ici on fait de la vraie cuisine ! Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, avec de vrais bons produits !`,
+      `Ah non, non et non mes amis ! Balancez-moi toutes ces barquettes industrielles par la fenêtre : mais c'est de la merde, ça ! De la merde en barre ! Aujourd'hui, nom de Dieu, on se respecte : nous allons cuisiner un vrai « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Regardez-moi la générosité du marché ! Passons à la préparation des ingrédients avec leur quantité et leur poids pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : ${ingListSpeech}. Ça, mes amis, c'est du vrai produit !`,
+      `Regardez-moi la gueule de ces beaux produits ! Pas de la saloperie chimique gonflée à la flotte, bordel ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, préparez avec amour : ${ingListSpeech}. Ça, mes amis, c'est du vrai terroir qui a du goût, nom d'un chien !`,
     buildOvenAlert: (temp) =>
-      `Nom d'un chien, n'oubliez surtout pas le four ! Allumez et préchauffez votre four dès maintenant à ${temp} pour saisir les sucs comme il se doit !`,
+      `Nom de Dieu de bordel de merde, et le four alors ?! Vous voulez massacrer ce beau produit dans un four glacé ?! Préchauffez-moi ce four tout de suite à ${temp} !`,
     stepIntros: [
-      'Allons-y gaiement avec la première étape :',
-      'Magnifique ! Continuons à choyer nos beaux produits à l\'étape suivante :',
-      'Ah, écoutez-moi ça et respirez ces parfums ! Étape suivante :',
-      'Voilà ce que j\'appelle cuisiner avec sincérité ! La suite :',
-      'Et maintenant, l\'étape qui sublime tout notre plat :'
+      'Allons-y avec tripes et passion, nom de Dieu ! Première étape :',
+      'Mais regardez-moi cette merveille ! Ne me bâclez surtout pas la suite, ce serait un crime :',
+      'Ah, putain que ça sent bon ! C\'est quand même autre chose que leur bouffe industrielle de merde ! Étape suivante :',
+      'Attention, ne faites pas les cons sur cette étape, respectez le produit :',
+      'Et maintenant, l\'apothéose qui sublime toute notre casserole :'
     ],
-    repeatIntro: 'Vous n\'avez pas tout saisi ? Mais je vous répète cette étape bien volontiers, écoutez :',
-    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    repeatIntro: 'Mais enfin, qu\'est-ce que vous me foutez là ?! Vous avez les oreilles bouchées, bordel ?! Écoutez-moi bien, je vous répète l\'étape :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, nom d\'une pipe ! Ou dites Répéter.',
     buildOutro: (dish) =>
-      `Et voilà un vrai « ${dish} » fait maison, authentique et généreux ! Mettez-vous à table avec ceux que vous aimez, et je vous souhaite un formidable bon appétit !`
+      `Et voilà un vrai « ${dish} » fait maison, généreux, sincère, et pas de la merde industrielle ! Mettez-vous à table avec des amis, ouvrez un bon coup à boire, et nom de Dieu, je vous souhaite un formidable bon appétit !`
   },
 
   ia_homme: {
@@ -4240,17 +4240,10 @@ const VOICE_PERSONAS = {
 let runtimeClonedVoicesInactive = false;
 
 function areClonedVoicesActive() {
-  if (runtimeClonedVoicesInactive) return false;
   const cfg = window.APP_CONFIG || {};
   if (cfg.clonedVoicesEnabled === false || cfg.aiVoiceEnabled === false) return false;
   if (state.voiceSettings?.engine === 'system' || state.voiceSettings?.clonesActive === false) return false;
-
-  const hasConfiguredCloneIds =
-    (cfg.fishClonedVoiceIds && Object.keys(cfg.fishClonedVoiceIds).length > 0) ||
-    (cfg.clonedVoiceIds && Object.keys(cfg.clonedVoiceIds).some((k) => k !== 'ia_homme' && k !== 'ia_femme')) ||
-    (state.voiceSettings?.clonedVoiceIds && Object.keys(state.voiceSettings.clonedVoiceIds).length > 0);
-
-  return Boolean(hasConfiguredCloneIds);
+  return true;
 }
 
 function getAvailableVoicePersonas() {
@@ -4261,28 +4254,12 @@ function getAvailableVoicePersonas() {
 }
 
 function deactivateClonedVoicesFallback() {
-  if (runtimeClonedVoicesInactive) return;
-  runtimeClonedVoicesInactive = true;
-  const prevPersona = VOICE_PERSONAS[state.voiceSettings?.persona];
-  const fallbackId = prevPersona && prevPersona.gender === 'male' ? 'ia_homme' : 'ia_femme';
-  if (state.voiceSettings) {
-    state.voiceSettings.persona = fallbackId;
-    saveStateToStorage();
-  }
-  renderVoiceGuideSettings();
+  // Conservé par compatibilité : ne jamais écraser la personnalité choisie par l'utilisateur dans les paramètres !
 }
 
 function getActiveVoicePersona() {
   const personaId = state.voiceSettings?.persona || 'lignac';
-  if (!areClonedVoicesActive() && personaId !== 'ia_femme' && personaId !== 'ia_homme') {
-    const prev = VOICE_PERSONAS[personaId];
-    const fallbackId = prev && prev.gender === 'male' ? 'ia_homme' : 'ia_femme';
-    if (state.voiceSettings) {
-      state.voiceSettings.persona = fallbackId;
-    }
-    return VOICE_PERSONAS[fallbackId];
-  }
-  return VOICE_PERSONAS[personaId] || (areClonedVoicesActive() ? VOICE_PERSONAS.lignac : VOICE_PERSONAS.ia_femme);
+  return VOICE_PERSONAS[personaId] || VOICE_PERSONAS.lignac;
 }
 
 const PERSONA_PUBLIC_PHOTOS = {
@@ -4559,11 +4536,39 @@ function buildPersonaFallbackIllustrationSVG(personaId) {
 // MAINTIEN DU SMARTPHONE ACTIF DURANT LE MODE VOCAL (WAKE LOCK + AUDIO KEEP-ALIVE)
 // ============================================================================
 let screenWakeLockSentinel = null;
-let wakeLockKeepAliveAudioCtx = null;
-let wakeLockKeepAliveTimer = null;
+let essentialBeepAudioCtx = null;
+let lastEssentialBeepTime = 0;
+
+// Bip sonore discret uniquement pour les événements essentiels (ex: validation d'une commande vocale reconnue)
+function playEssentialVoiceBeep(type = 'command') {
+  const now = Date.now();
+  if (now - lastEssentialBeepTime < 900) return;
+  lastEssentialBeepTime = now;
+
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!essentialBeepAudioCtx) {
+      essentialBeepAudioCtx = new AudioCtx();
+    }
+    if (essentialBeepAudioCtx.state === 'suspended') {
+      essentialBeepAudioCtx.resume().catch(() => {});
+    }
+    const osc = essentialBeepAudioCtx.createOscillator();
+    const gain = essentialBeepAudioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(type === 'pause' ? 440 : 660, essentialBeepAudioCtx.currentTime);
+    gain.gain.setValueAtTime(0.035, essentialBeepAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, essentialBeepAudioCtx.currentTime + 0.09);
+    osc.connect(gain);
+    gain.connect(essentialBeepAudioCtx.destination);
+    osc.start();
+    osc.stop(essentialBeepAudioCtx.currentTime + 0.09);
+  } catch (e) {}
+}
 
 async function acquireKitchenWakeLock() {
-  // 1. Screen Wake Lock API standard (Android Chrome, iOS 16.4+, Edge)
+  // Screen Wake Lock API standard (sans oscillateur périodique pour éviter tout bip parasite)
   if ('wakeLock' in navigator && navigator.wakeLock && typeof navigator.wakeLock.request === 'function') {
     try {
       if (!screenWakeLockSentinel || screenWakeLockSentinel.released) {
@@ -4577,37 +4582,6 @@ async function acquireKitchenWakeLock() {
       // Fallback silencieux si refusé ou en arrière-plan
     }
   }
-
-  // 2. Fallback Audio Keep-Alive inaudible pour empêcher la mise en veille sur tous les smartphones
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (AudioCtx) {
-      if (!wakeLockKeepAliveAudioCtx) {
-        wakeLockKeepAliveAudioCtx = new AudioCtx();
-      }
-      if (wakeLockKeepAliveAudioCtx.state === 'suspended') {
-        await wakeLockKeepAliveAudioCtx.resume().catch(() => {});
-      }
-      if (!wakeLockKeepAliveTimer) {
-        wakeLockKeepAliveTimer = setInterval(() => {
-          if (!voiceGuideSession.active || !wakeLockKeepAliveAudioCtx) return;
-          try {
-            if (wakeLockKeepAliveAudioCtx.state === 'suspended') {
-              wakeLockKeepAliveAudioCtx.resume().catch(() => {});
-            }
-            const osc = wakeLockKeepAliveAudioCtx.createOscillator();
-            const gain = wakeLockKeepAliveAudioCtx.createGain();
-            gain.gain.value = 0.0001; // Totalement inaudible mais garde le thread média mobile éveillé
-            osc.connect(gain);
-            gain.connect(wakeLockKeepAliveAudioCtx.destination);
-            osc.start();
-            osc.stop(wakeLockKeepAliveAudioCtx.currentTime + 0.05);
-          } catch (e) {}
-        }, 15000);
-      }
-    }
-  } catch (e) {}
-
   updateWakeLockBadgeUI(true);
 }
 
@@ -4617,10 +4591,6 @@ async function releaseKitchenWakeLock() {
       await screenWakeLockSentinel.release();
     } catch (e) {}
     screenWakeLockSentinel = null;
-  }
-  if (wakeLockKeepAliveTimer) {
-    clearInterval(wakeLockKeepAliveTimer);
-    wakeLockKeepAliveTimer = null;
   }
   updateWakeLockBadgeUI(false);
 }
@@ -4649,6 +4619,7 @@ let voiceGuideSession = {
   isStarting: false,
   startingSince: 0,
   permissionBlocked: false,
+  consecutiveSilentEnds: 0,
   fallbackMode: false,
   fallbackStream: null,
   fallbackAudioCtx: null,
@@ -4736,29 +4707,67 @@ function analyzeRecipeOvenRequirements(title, steps) {
   };
 }
 
-// Construire la séquence complète pas-à-pas selon le plat et la personnalité choisie
+// Transitions fluides et concises pour les ingrédients suivants (sans répéter le numéro ni les consignes)
+function buildPersonaIngredientFollowup(personaId, ingNum, totalIngs, singleIngSpeech) {
+  const connectors = ['Ensuite,', 'Puis,', 'Préparez aussi', 'Ajoutez sur le plan de travail'];
+  const conn = connectors[(ingNum - 2) % connectors.length] || 'Ensuite,';
+  switch (personaId) {
+    case 'maite':
+      return `${conn} ${singleIngSpeech}, mes petits.`;
+    case 'lignac':
+      return `${conn} ${singleIngSpeech}, bien gourmand.`;
+    case 'remy':
+      return `${conn} ${singleIngSpeech}, Chef.`;
+    case 'bocuse':
+      return `${conn} ${singleIngSpeech}, mes amis.`;
+    case 'marx':
+      return `${conn} ${singleIngSpeech}.`;
+    case 'etchebest':
+      return `${conn} ${singleIngSpeech}, chef.`;
+    case 'coffe':
+      return `${conn} ${singleIngSpeech}, bien frais.`;
+    default:
+      return `${conn} ${singleIngSpeech}.`;
+  }
+}
+
+// Consignes vocales complètes données UNE SEULE FOIS au tout début du guide vocal
+function buildInitialVoiceCommandsInstruction(personaId) {
+  switch (personaId) {
+    case 'maite':
+      return 'Pour avancer à votre rythme tout au long de la recette, dites simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+    case 'lignac':
+      return 'Pour naviguer à la voix pendant toute la recette, dis simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+    case 'etchebest':
+      return 'Pour piloter la recette à la voix, dis simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+    default:
+      return 'Pour naviguer à la voix tout au long de la recette, dites simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+  }
+}
+
+// Construire la séquence complète pas-à-pas : consignes données uniquement au début, étapes fluides sans répétition des consignes
 function buildStepByStepVoiceSequence(ctx) {
   const persona = getActiveVoicePersona();
   const dish = ctx.title || 'notre plat du jour';
   const servings = ctx.servings || 2;
   const sequence = [];
 
-  // 1. D'abord le nom du plat préparé : "Nous allons cuisiner 'nom du plat'"
+  // 1. Présentation du plat + Consignes vocales complètes données UNE SEULE FOIS au début
   const introMain = persona.buildIntro(dish, servings);
+  const initialInstructions = buildInitialVoiceCommandsInstruction(persona.id);
   sequence.push({
     type: 'intro',
     badge: '1️⃣ Présentation du plat',
     title: `🍽️ Nous allons cuisiner « ${dish} »`,
     visualText: `${introMain}`,
-    spokenText: `${introMain} ${persona.promptNext}`,
-    repeatSpokenText: `${persona.repeatIntro} ${introMain} ${persona.promptNext}`,
+    spokenText: `${introMain} ${initialInstructions}`,
+    repeatSpokenText: `${introMain} ${initialInstructions}`,
     ovenTemp: null,
     ingredientIdx: -1,
     recipeStepIdx: -1
   });
 
-  // 2. Puis préparation des ingrédients UN PAR UN avec leur quantité ou poids,
-  // en proposant « Suivant » et « Répéter » pour CHAQUE ingrédient à préparer !
+  // 2. Préparation des ingrédients de façon fluide (sans redonner les consignes à chaque ingrédient)
   const ingredientsList = ctx.ingredients || [];
   if (ingredientsList.length > 0) {
     const totalIngs = ingredientsList.length;
@@ -4772,21 +4781,18 @@ function buildStepByStepVoiceSequence(ctx) {
 
       let ingSpokenBody = '';
       if (idx === 0) {
-        // Pour le 1er ingrédient, on annonce le début de la pesée / préparation pour X personnes avec la personnalité du chef
-        ingSpokenBody = `${persona.buildIngredients(servings, singleIngSpeech)} (Ingrédient 1 sur ${totalIngs}).`;
+        ingSpokenBody = `${persona.buildIngredients(servings, singleIngSpeech)}`;
       } else {
-        ingSpokenBody = `Ingrédient ${ingNum} sur ${totalIngs} à préparer : prenez ${singleIngSpeech}.`;
+        ingSpokenBody = buildPersonaIngredientFollowup(persona.id, ingNum, totalIngs, singleIngSpeech);
       }
-
-      const repeatIngBody = `Ingrédient ${ingNum} sur ${totalIngs} pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : préparez ${singleIngSpeech}.`;
 
       sequence.push({
         type: 'ingredient',
         badge: `🛒 Ingrédient ${ingNum} / ${totalIngs} à préparer`,
         title: `🛒 Ingrédient ${ingNum} sur ${totalIngs} (${servings} ${servings > 1 ? 'parts' : 'part'})`,
         visualText: `Préparez sur le plan de travail : <strong style="font-size: 1.08rem; color: var(--primary);">${ing.qtyText}</strong> — <strong>${ing.name}</strong>`,
-        spokenText: `${ingSpokenBody} ${persona.promptNext}`,
-        repeatSpokenText: `${persona.repeatIntro} ${repeatIngBody} ${persona.promptNext}`,
+        spokenText: ingSpokenBody,
+        repeatSpokenText: `Je répète : ${singleIngSpeech}.`,
         ovenTemp: null,
         ingredientIdx: idx,
         recipeStepIdx: -1
@@ -4799,22 +4805,34 @@ function buildStepByStepVoiceSequence(ctx) {
       badge: '🛒 Préparation des ingrédients',
       title: `🛒 Préparation des ingrédients (${servings} ${servings > 1 ? 'parts' : 'part'})`,
       visualText: 'Préparez vos ingrédients sur le plan de travail.',
-      spokenText: `${fallbackSpeech} ${persona.promptNext}`,
-      repeatSpokenText: `${persona.repeatIntro} ${fallbackSpeech} ${persona.promptNext}`,
+      spokenText: fallbackSpeech,
+      repeatSpokenText: fallbackSpeech,
       ovenTemp: null,
       ingredientIdx: 0,
       recipeStepIdx: -1
     });
   }
 
-  // 3. Puis étapes de la recette (avec détection du préchauffage du four et de sa température à la bonne étape)
+  // 3. Étapes de la recette : fluides, directes et SANS redonner les consignes vocales à chaque étape
   const rawSteps = ctx.steps || [];
   const ovenInfo = analyzeRecipeOvenRequirements(dish, rawSteps);
+  const fluidStepTransitions = [
+    'Première étape :',
+    'Ensuite :',
+    'Puis :',
+    'On continue :',
+    'Étape suivante :'
+  ];
 
   rawSteps.forEach((stepText, idx) => {
     const stepNum = idx + 1;
     const totalSteps = rawSteps.length;
-    const introPhrase = persona.stepIntros[idx % persona.stepIntros.length] || `Étape ${stepNum} :`;
+    const transitionPhrase =
+      idx === 0
+        ? 'Première étape :'
+        : idx === totalSteps - 1 && totalSteps > 1
+        ? 'Dernière étape :'
+        : fluidStepTransitions[idx % fluidStepTransitions.length];
     const isPreheatStep = ovenInfo.usesOven && ovenInfo.preheatStepIdx === idx;
     const isBakeStep = ovenInfo.usesOven && ovenInfo.bakeStepIdx === idx && idx !== ovenInfo.preheatStepIdx;
 
@@ -4825,11 +4843,9 @@ function buildStepByStepVoiceSequence(ctx) {
     if (isPreheatStep) {
       ovenVisualCallout = `🔥 Préchauffage du four : ${ovenInfo.tempText}`;
       if (!/préchauff|prechauff/i.test(stepText)) {
-        ovenPrefixSpeech = `${persona.buildOvenAlert(ovenInfo.tempText.replace('°C', ' degrés Celsius'))} Ensuite : `;
+        ovenPrefixSpeech = `Préchauffez d'abord le four à ${ovenInfo.tempText.replace('°C', ' degrés Celsius')}. `;
       } else if (!/\d{3}/.test(stepText)) {
         ovenPrefixSpeech = `Préchauffez le four à ${ovenInfo.tempText.replace('°C', ' degrés Celsius')}. `;
-      } else {
-        ovenPrefixSpeech = `${persona.buildOvenAlert(ovenInfo.tempText.replace('°C', ' degrés Celsius'))} `;
       }
     } else if (isBakeStep) {
       ovenVisualCallout = `🔥 Cuisson au four : ${ovenInfo.tempText}`;
@@ -4838,15 +4854,15 @@ function buildStepByStepVoiceSequence(ctx) {
       }
     }
 
-    const fullStepSpeech = `Étape ${stepNum} sur ${totalSteps}. ${introPhrase} ${ovenPrefixSpeech}${spokenStepBody}`;
+    const fullStepSpeech = `${transitionPhrase} ${ovenPrefixSpeech}${spokenStepBody}`;
 
     sequence.push({
       type: 'step',
       badge: `👩‍🍳 Étape ${stepNum} / ${totalSteps} de la recette`,
       title: `Étape ${stepNum} sur ${totalSteps}`,
       visualText: stepText,
-      spokenText: `${fullStepSpeech} ${persona.promptNext}`,
-      repeatSpokenText: `${persona.repeatIntro} ${fullStepSpeech} ${persona.promptNext}`,
+      spokenText: fullStepSpeech,
+      repeatSpokenText: `Je répète l'étape ${stepNum} : ${ovenPrefixSpeech}${spokenStepBody}`,
       ovenTemp: ovenVisualCallout,
       ingredientIdx: -1,
       recipeStepIdx: idx
@@ -6105,7 +6121,7 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
   });
 }
 
-// 1. Synthèse Vocale via le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + Windows OneCore Microsoft Paul/Hortense)
+// 1. Synthèse Vocale via le Moteur de Voix Clonées & Neuronales Local (/api/tts : Fish Audio S2.1 Pro + Edge Neural + Windows OneCore)
 async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   const reqId = options.reqId;
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
@@ -6128,7 +6144,7 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
     try {
       const controller = new AbortController();
       activeTtsFetchController = controller;
-      const timeoutId = setTimeout(() => controller.abort(), 5500);
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
       const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -6147,17 +6163,36 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
       if (!blob || blob.size < 200) continue;
 
       const audioUrl = URL.createObjectURL(blob);
-      // Le serveur /api/tts a déjà appliqué la vitesse (rate) et la hauteur (pitchHz), on joue à vitesse 1.0
-      const prevRate = state.voiceSettings?.rate;
-      if (state.voiceSettings) state.voiceSettings.rate = 1.0;
+      // Le serveur /api/tts a déjà généré l'audio cloné, on applique la vitesse choisie par l'utilisateur
       const played = await playAudioBlobOrUrl(audioUrl, true, persona, options);
-      if (state.voiceSettings && typeof prevRate === 'number') state.voiceSettings.rate = prevRate;
       if (played) return true;
     } catch (e) {
       if (reqId && reqId !== currentVoiceRequestSeq) return true;
     }
   }
   return false;
+}
+
+// Pré-charger en arrière-plan les 2 prochaines étapes de la fiche cuisine sur /api/tts (cache Fish Audio S2.1 Pro instantané)
+function warmUpNextVoiceGuideSteps() {
+  if (!voiceGuideSession.active || !Array.isArray(voiceGuideSession.sequence)) return;
+  const persona = getActiveVoicePersona();
+  const curIdx = voiceGuideSession.currentIndex || 0;
+  const nextIndices = [curIdx + 1, curIdx + 2];
+
+  nextIndices.forEach((idx) => {
+    const item = voiceGuideSession.sequence[idx];
+    if (!item || !item.spokenText) return;
+    fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: item.spokenText,
+        persona: persona.id,
+        rate: state.voiceSettings?.rate || 1.0
+      })
+    }).catch(() => {});
+  });
 }
 
 // 2. Lecture de l'extrait vocal cloné Fish Audio S2.1 Pro pré-généré embarqué (assets/voices/<persona>.mp3) — fonctionne 100% hors-ligne et sur PaaS/GitHub Pages
@@ -6167,7 +6202,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=160`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=162`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
@@ -6175,13 +6210,13 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
 }
 
 // ============================================================================
-// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 7 VRAIS EXTRAITS TV/INA NETTOYÉS DES CHEFS)
+// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 7 VRAIS EXTRAITS TV/INA/RADIO NETTOYÉS DES CHEFS)
 // ============================================================================
 const FISH_AUDIO_CLONE_MODEL_IDS = {
   maite: 'cae9259cec4343e1b1c837c525f9d268',
-  lignac: 'c1121a436103470087c6b1821d0c9a67',
+  lignac: '47a917c325db403191defbb608921d52',
   remy: '688e638a7fce4fe4b7ccc177a60b0e28',
-  bocuse: 'f99923d0b02b4c2a82eba0415fb5e861',
+  bocuse: '32cfb56869b1482f9b2dd47ff45b0934',
   marx: '7d0fc461b48f45bcb7a464f698a681c4',
   etchebest: '6252cf7fcd604c45a2909f77c54b2d96',
   coffe: '357ab2a3e25d4d46b0f811f67420d4a5'
@@ -6238,7 +6273,7 @@ async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = 
 async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options = {}) {
   const reqId = options.reqId;
   if (reqId && reqId !== currentVoiceRequestSeq) return true;
-  if (!voiceApiKey || voiceApiKey.startsWith('sk_') || voiceApiKey.startsWith('xi-')) return false;
+  if (!voiceApiKey || voiceApiKey.startsWith('sk_') || voiceApiKey.startsWith('xi-') || voiceApiKey.startsWith('sk-fish-')) return false;
 
   const isFemale = persona.gender === 'female';
 
@@ -6309,7 +6344,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     return;
   }
 
-  let persona = getActiveVoicePersona();
+  const persona = getActiveVoicePersona();
   if (options.isSamplePreview) {
     activePreviewPersonaId = persona.id;
   }
@@ -6321,7 +6356,6 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
   // En Mode Voix Clonée & Imitation Réaliste (par défaut) :
   if (isCloneEngine) {
     // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter"), lire immédiatement l'échantillon cloné Fish Audio S2.1 Pro embarqué (assets/voices/<persona>.mp3)
-    // pour un démarrage instantané et un arrêt immédiat au second clic sans latence réseau !
     if (options.isSamplePreview) {
       const playedFastSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
       if (playedFastSample || reqId !== currentVoiceRequestSeq) return;
@@ -6335,7 +6369,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
     if (playedBundledSample || reqId !== currentVoiceRequestSeq) return;
 
-    // 4. Si une clé ElevenLabs externe est configurée (sur GitHub Pages sans serveur local), l'utiliser en relais
+    // 4. Si une clé ElevenLabs externe est configurée, l'utiliser en relais
     if (xiKey) {
       const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, reqOptions);
       if (playedXi || reqId !== currentVoiceRequestSeq) return;
@@ -6345,13 +6379,6 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     if (voiceApiKey) {
       const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, reqOptions);
       if (playedCloud || reqId !== currentVoiceRequestSeq) return;
-    }
-
-    // Si aucun moteur de voix clonée ne répond pour une personnalité clonée hors extrait,
-    // basculer automatiquement sur les seules Voix Femme (IA) et Voix Homme (IA)
-    if (!options.isSamplePreview && persona.id !== 'ia_femme' && persona.id !== 'ia_homme') {
-      deactivateClonedVoicesFallback();
-      persona = getActiveVoicePersona();
     }
   } else {
     // En Mode Voix Système Standard :
@@ -7044,16 +7071,46 @@ function triggerVoiceCommandFeedback(text) {
 // INTERFACE VISUELLE & THÉÂTRE D'ANIMATION DU GUIDE VOCAL DANS LA FICHE CUISINE
 // ============================================================================
 function buildModalVoiceToolbarHTML() {
+  const persona = getActiveVoicePersona();
+  const availablePersonas = getAvailableVoicePersonas();
+  const optionsHTML = availablePersonas
+    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name} — ${p.shortTitle}</option>`)
+    .join('');
+
   return `
     <div id="modal-voice-guide-wrapper" class="modal-voice-guide-wrapper" style="margin: 12px 0;">
-      <button
-        type="button"
-        class="btn btn-primary btn-launch-voice-guide"
-        style="width: 100%; justify-content: center;"
-        onclick="startInteractiveVoiceGuide()"
+      <div
+        style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:10px 14px; border-radius:14px; background:${persona.themeBg}; border:2px solid ${persona.themeBorder};"
       >
-        🎙️ Guide vocal
-      </button>
+        <div style="display:flex; align-items:center; gap:10px; min-width:200px; flex:1;">
+          <div class="voice-persona-avatar-mini" style="width:46px; height:46px; flex-shrink:0;">
+            ${buildPersonaAnimatedAvatarSVG(persona.id)}
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <strong style="font-size:0.96rem; color:${persona.themeColor};">🧬 ${persona.name}</strong>
+              <span class="voice-persona-badge" style="font-size:0.72rem;">${persona.badge}</span>
+            </div>
+            <div style="margin-top:4px;">
+              <select
+                aria-label="Changer de chef pour le guide vocal"
+                onchange="selectVoicePersona(this.value, false)"
+                style="font-size:0.78rem; padding:3px 8px; border-radius:8px; border:1px solid ${persona.themeBorder}; background:#fff; color:var(--text-main); max-width:100%;"
+              >
+                ${optionsHTML}
+              </select>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn btn-primary btn-launch-voice-guide"
+          style="justify-content: center; background:${persona.themeColor}; border-color:${persona.themeColor}; font-weight:800;"
+          onclick="startInteractiveVoiceGuide()"
+        >
+          🎙️ Guide vocal avec ${persona.name}
+        </button>
+      </div>
     </div>
   `;
 }
@@ -7094,6 +7151,11 @@ function renderActiveVoiceStageUI() {
   if (!wrapper || !voiceGuideSession.active) return;
 
   const persona = getActiveVoicePersona();
+  const availablePersonas = getAvailableVoicePersonas();
+  const personaOptionsHTML = availablePersonas
+    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name}</option>`)
+    .join('');
+
   const seq = voiceGuideSession.sequence || [];
   const idx = voiceGuideSession.currentIndex || 0;
   const item = seq[idx] || seq[0];
@@ -7108,10 +7170,29 @@ function renderActiveVoiceStageUI() {
     <div
       id="voice-character-stage"
       class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''}"
-      style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder}; padding: 10px 12px;"
+      style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder}; padding: 12px 14px;"
     >
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px; font-size:0.84rem;">
-        <span id="voice-mic-status-label" style="color:var(--text-main);"></span>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="voice-persona-avatar-mini ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''}" style="width:48px; height:48px; flex-shrink:0;">
+            ${buildPersonaAnimatedAvatarSVG(persona.id)}
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <strong style="font-size:0.96rem; color:${persona.themeColor};">🧬 ${persona.name}</strong>
+              <span class="voice-persona-badge" style="font-size:0.72rem;">${item.badge || persona.badge}</span>
+              <select
+                aria-label="Changer de personnalité vocale"
+                onchange="selectVoicePersona(this.value, false)"
+                style="font-size:0.75rem; padding:2px 6px; border-radius:6px; border:1px solid ${persona.themeBorder}; background:#fff;"
+              >
+                ${personaOptionsHTML}
+              </select>
+            </div>
+            <div id="voice-mic-status-label" style="font-size:0.8rem; color:var(--text-main); margin-top:2px;"></div>
+          </div>
+        </div>
+
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
           <span id="voice-live-transcript-preview" class="meta-pill" style="display:none; font-size:0.78rem;"></span>
           <span id="voice-heard-command-pill" class="meta-pill healthy-pill" style="display:none; font-size:0.78rem;"></span>
@@ -7124,7 +7205,27 @@ function renderActiveVoiceStageUI() {
           >
             🎙️ Activer le micro
           </button>
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            style="padding:3px 9px; font-size:0.78rem; color:#b91c1c; border-color:#fca5a5;"
+            onclick="stopVoiceGuide()"
+            title="Fermer le guide vocal"
+          >
+            ⏹️ Quitter
+          </button>
         </div>
+      </div>
+
+      ${
+        item.ovenTemp
+          ? `<div style="margin-bottom:8px; padding:6px 10px; border-radius:8px; background:#fef3c7; border:1px solid #f59e0b; color:#92400e; font-size:0.84rem; font-weight:800;">${item.ovenTemp}</div>`
+          : ''
+      }
+
+      <div style="background:rgba(255,255,255,0.88); border-radius:10px; padding:9px 12px; margin-bottom:10px; border:1px solid ${persona.themeBorder}; font-size:0.9rem; line-height:1.45; color:var(--text-main);">
+        <div style="font-weight:800; color:${persona.themeColor}; margin-bottom:3px;">${item.title || ''}</div>
+        <div>${item.visualText || ''}</div>
       </div>
 
       <div class="voice-stage-controls" style="padding-top: 0; border-top: none;">
@@ -7239,6 +7340,9 @@ function speakCurrentStepInGuide(isRepeat = false) {
 
   // Maintenir l'écoute vocale active en continu
   startVoiceCommandListener(false);
+
+  // Pré-générer en arrière-plan les 2 étapes suivantes sur Fish Audio S2.1 Pro (/api/tts)
+  warmUpNextVoiceGuideSteps();
 
   const textToRead = isRepeat ? item.repeatSpokenText : item.spokenText;
   const isFinalOutro = item.type === 'outro';
