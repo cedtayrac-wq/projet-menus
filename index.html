@@ -523,6 +523,122 @@
         <!-- Grille de sélection des 9 personnalités (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe, IA Homme, IA Femme) -->
         <div id="voice-persona-grid" class="voice-persona-grid" style="margin-top: 14px; margin-bottom: 16px;"></div>
 
+        <!-- Atelier Voix Clonée Haute-Fidélité (ElevenLabs Neural v2 & Clonage Instantané) -->
+        <div id="elevenlabs-clone-panel" class="voice-clone-studio-box" style="margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+            <div>
+              <h4 style="font-size: 0.98rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                🎭 Mode Voix Clonée &amp; Imitation Réaliste (ElevenLabs Neural v2)
+              </h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                Obtenez le <strong>vrai grain de voix, l'accent et les intonations</strong> de chaque chef grâce au clonage vocal neuronal <em>ElevenLabs Multilingual v2</em> (avec repli automatique hors-ligne).
+              </p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span id="elevenlabs-status-badge" class="meta-pill">⚡ Prêt à connecter</span>
+              <select
+                id="voice-engine-select"
+                class="input-field"
+                style="width: auto; font-weight: 800; padding: 6px 12px; font-size: 0.82rem;"
+                onchange="handleVoiceEngineChange(this.value)"
+              >
+                <option value="elevenlabs">🎭 Voix Clonée Réaliste (ElevenLabs IA)</option>
+                <option value="system">📱 Voix Système Standard (Hors-ligne)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 1. Clé API ElevenLabs & Synchronisation -->
+          <div class="voice-clone-grid">
+            <div class="voice-clone-subcard">
+              <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">
+                🔑 1. Connexion ElevenLabs &amp; Voix Clonées
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 8px;">
+                Collez votre clé API <strong>ElevenLabs</strong> (<code>xi-api-key</code>) pour activer les timbres neuronaux Haute-Fidélité et synchroniser votre bibliothèque de voix clonées.
+              </p>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <input
+                  type="password"
+                  id="elevenlabs-api-key"
+                  class="input-field"
+                  style="flex: 1 1 180px; font-size: 0.82rem; padding: 7px 10px;"
+                  placeholder="Collez votre clé xi-api-key ElevenLabs..."
+                />
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveElevenLabsKeyAndSync()">
+                  🔌 Connecter &amp; Synchroniser
+                </button>
+              </div>
+              <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                <label for="persona-custom-voiceid-input" style="font-size: 0.76rem; font-weight: 700; color: var(--text-main);">
+                  🎙️ Voice ID du chef sélectionné (<span id="active-persona-clone-label">Cyril Lignac</span>) :
+                </label>
+                <div style="display: flex; gap: 6px; flex: 1 1 200px;">
+                  <input
+                    type="text"
+                    id="persona-custom-voiceid-input"
+                    class="input-field"
+                    style="font-size: 0.78rem; padding: 5px 8px;"
+                    placeholder="ID de voix clonée ElevenLabs (ou auto)"
+                  />
+                  <button type="button" class="btn btn-outline btn-sm" onclick="saveCustomVoiceIdForActivePersona()">
+                    ✓ Associer ID
+                  </button>
+                </div>
+              </div>
+              <div id="elevenlabs-library-select-row" style="margin-top: 6px; display: none;">
+                <select
+                  id="elevenlabs-library-voices-select"
+                  class="input-field"
+                  style="font-size: 0.78rem; padding: 5px 8px;"
+                  onchange="assignLibraryVoiceToActivePersona(this.value)"
+                >
+                  <option value="">📚 Choisir une voix de votre bibliothèque ElevenLabs...</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 2. Clonage Vocal Instantané (Upload MP3/WAV -> Clone ElevenLabs) -->
+            <div class="voice-clone-subcard">
+              <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">
+                🧬 2. Cloner la vraie voix d'un Chef (Instant Voice Cloning)
+              </div>
+              <p style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 8px;">
+                Importez un extrait audio (30 à 90 sec en MP3/WAV/M4A d'une émission ou recette de <em>Maïté, Lignac, Etchebest, Coffe, Bocuse...</em>) pour cloner sa vraie voix et l'associer automatiquement :
+              </p>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                <select id="clone-target-persona" class="input-field" style="flex: 1 1 140px; font-size: 0.8rem; padding: 6px 8px; font-weight: 700;">
+                  <option value="maite">👩‍🌾 Cloner pour Maïté</option>
+                  <option value="lignac" selected>👨‍🍳 Cloner pour Cyril Lignac</option>
+                  <option value="remy">🐭 Cloner pour Rémy (Ratatouille)</option>
+                  <option value="bocuse">👑 Cloner pour Paul Bocuse</option>
+                  <option value="marx">🥋 Cloner pour Thierry Marx</option>
+                  <option value="etchebest">🔥 Cloner pour Philippe Etchebest</option>
+                  <option value="coffe">👓 Cloner pour Jean-Pierre Coffe</option>
+                  <option value="ia_homme">🤖👨 Cloner pour Voix IA Homme</option>
+                  <option value="ia_femme">🤖👩 Cloner pour Voix IA Femme</option>
+                </select>
+                <input
+                  type="file"
+                  id="clone-audio-files"
+                  accept="audio/*,.mp3,.wav,.m4a,.ogg"
+                  multiple
+                  class="input-field"
+                  style="flex: 1 1 170px; font-size: 0.75rem; padding: 4px 6px;"
+                />
+              </div>
+              <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span id="clone-upload-status" style="font-size: 0.74rem; color: var(--text-muted);">
+                   Sans fichier cloné, un profil neuronal expressif pré-réglé est utilisé.
+                </span>
+                <button type="button" id="btn-create-voice-clone" class="btn btn-primary btn-sm" onclick="createInstantVoiceCloneFromFiles()">
+                  🧬 Créer le clone vocal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="studio-form-box" style="margin-bottom: 0;">
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: end;">
             <div>
@@ -547,7 +663,7 @@
             <div>
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;">
                 <label for="voice-guide-select" style="font-size: 0.84rem; font-weight: 800; color: var(--text-main);">
-                  🗣️ Timbre système (Synthèse vocale) :
+                  🗣️ Timbre système (Repli hors-ligne) :
                 </label>
                 <label style="font-size: 0.76rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; cursor: pointer;">
                   <input type="checkbox" id="voice-french-only-checkbox" checked onchange="handleVoiceFilterToggle(this.checked)" />
