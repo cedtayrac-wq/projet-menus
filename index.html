@@ -31,7 +31,7 @@
         </div>
         <div>
           <div class="brand-title">MenuSemaine <span class="brand-amp">&amp;</span> Keep</div>
-          <div class="brand-subtitle">L'atelier des menus malins • Semaine Healthy &amp; Week-end Gourmand</div>
+          <div class="brand-subtitle">L'atelier des menus malins • 🥗 Équilibré • 🌟 Plaisir • 🍷 Gourmet &amp; Vin</div>
         </div>
       </div>
 
@@ -118,9 +118,9 @@
       <!-- Semaine : Lundi à Vendredi (5 déjeuners + 5 dîners) -->
       <div id="weekday-section-banner" class="section-banner">
         <div class="banner-text-col">
-          <h2>🥗 Semaine Frais &amp; Équilibré <span class="banner-sub-badge">Lundi &rarr; Vendredi</span></h2>
+          <h2>🥗 Semaine : 3 Styles d'Assiette au Choix <span class="banner-sub-badge">Lundi &rarr; Vendredi</span></h2>
           <p>
-            Des recettes saines, rapides et économiques. Envie de vous faire plaisir en semaine ? Basculez n'importe quel repas en <strong>Menu Plaisir 🌟</strong> ou ignorez un repas pris à l'extérieur.
+            Sur chaque repas, choisissez librement entre <strong>🥗 Équilibré</strong> (sain, simple &amp; rapide), <strong>🌟 Plaisir</strong> (gourmand, simple &amp; rapide) ou <strong>🍷 Gourmet</strong> (ingrédients nobles, recette simple &amp; suggestion de vin).
           </p>
         </div>
         <div class="banner-controls-col">
@@ -133,7 +133,7 @@
             onclick="document.getElementById('week-start-date').showPicker && document.getElementById('week-start-date').showPicker()"
             title="Cliquez pour choisir le lundi de début de semaine"
           />
-          <span id="weekday-pleasure-pill" class="meta-pill healthy-pill">10 Healthy • 0 Plaisir</span>
+          <span id="weekday-pleasure-pill" class="meta-pill healthy-pill">10 Équilibré 🥗 • 0 Plaisir 🌟 • 0 Gourmet 🍷</span>
         </div>
       </div>
 
@@ -142,9 +142,9 @@
       <!-- Week-end : Samedi et Dimanche (2 déjeuners + 2 dîners) -->
       <div id="weekend-section-banner" class="section-banner weekend-banner">
         <div class="banner-text-col">
-          <h2>🌟 Week-end Bistrot &amp; Douceurs <span class="banner-sub-badge weekend-sub-badge">Samedi &amp; Dimanche</span></h2>
+          <h2>🍷 Week-end Équilibré, Plaisir &amp; Gourmet <span class="banner-sub-badge weekend-sub-badge">Samedi &amp; Dimanche</span></h2>
           <p>
-            Place à la convivialité avec <strong>2 Menus Plaisir</strong> et une <strong>note sucrée 🍰</strong> proposée pour chaque repas (<span id="weekend-banner-dates" style="font-weight: 700;"></span>).
+            Alternez selon vos envies entre <strong>🥗 Équilibré</strong>, <strong>🌟 Plaisir</strong> et <strong>🍷 Gourmet</strong> (avec accord vin &amp; note sucrée 🍰) sur tout le week-end (<span id="weekend-banner-dates" style="font-weight: 700;"></span>).
           </p>
         </div>
         <div class="banner-controls-col">
@@ -157,7 +157,7 @@
             onclick="document.getElementById('week-start-date').showPicker && document.getElementById('week-start-date').showPicker()"
             title="Cliquez pour choisir le lundi de début de semaine"
           />
-          <span id="pleasure-counter-pill" class="meta-pill pleasure-pill">2 Menus Plaisir sélectionnés</span>
+          <span id="pleasure-counter-pill" class="meta-pill pleasure-pill">2 Équilibré 🥗 • 1 Plaisir 🌟 • 1 Gourmet 🍷</span>
         </div>
       </div>
 
@@ -337,15 +337,16 @@
               <input type="password" id="gemini-api-key" class="input-field" placeholder="AIzaSy..." />
               <button class="btn btn-outline" onclick="saveGeminiKey()">Enregistrer</button>
             </div>
-            <label style="font-size: 0.82rem; font-weight: 700; margin-top: 6px;">Style d'assiette souhaité :</label>
+            <label style="font-size: 0.82rem; font-weight: 700; margin-top: 6px;">Type de repas souhaité :</label>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <select id="ai-meal-type" class="input-field" style="flex: 1;">
-                <option value="weekday">🥗 Repas de semaine (Healthy, rapide, économique)</option>
-                <option value="weekend-pleasure">🌟 Menu Plaisir du week-end (Gourmand &amp; convivial)</option>
-                <option value="weekend-balanced">🍽️ Repas de week-end équilibré</option>
+                <option value="weekday">🥗 Équilibré — Semaine (Sain, simple &amp; rapide)</option>
+                <option value="weekend-balanced">🍽️ Équilibré — Week-end (Sain, simple &amp; rapide)</option>
+                <option value="weekend-pleasure">🌟 Plaisir (Gourmand, simple &amp; rapide)</option>
+                <option value="gourmet">🍷 Gourmet (Ingrédients nobles, simple + suggestion de vin)</option>
               </select>
             </div>
-            <input type="text" id="ai-custom-prompt" class="input-field" placeholder="Qu'avez-vous au frigo ? (ex: courgettes, saumon, sans lactose, parfums d'Asie...)" />
+            <input type="text" id="ai-custom-prompt" class="input-field" placeholder="Qu'avez-vous au frigo ? (ex: courgettes, saumon, Saint-Jacques, sans lactose...)" />
             <button id="btn-generate-ai" class="btn btn-primary" onclick="generateRecipeWithAI()">
               ✨ Concocter et ajouter à ma semaine
             </button>
@@ -355,15 +356,17 @@
 
           <h3 class="panel-cookbook-title">✍️ Écrire une recette de famille</h3>
           <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="manual-title" class="input-field" placeholder="Nom du plat (ex: Gratin de courgettes au chèvre)" />
+            <input type="text" id="manual-title" class="input-field" placeholder="Nom du plat (ex: Noix de Saint-Jacques snackées ou Gratin de courgettes)" />
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
               <select id="manual-type" class="input-field">
-                <option value="weekday">🥗 Semaine (Healthy &amp; Économique)</option>
-                <option value="weekend-pleasure">🌟 Menu Plaisir Week-end</option>
-                <option value="weekend-balanced">🍽️ Repas Week-end Équilibré</option>
+                <option value="weekday">🥗 Équilibré (Semaine)</option>
+                <option value="weekend-balanced">🍽️ Équilibré (Week-end)</option>
+                <option value="weekend-pleasure">🌟 Menu Plaisir (Simple &amp; rapide)</option>
+                <option value="gourmet">🍷 Menu Gourmet (Ingrédients nobles)</option>
               </select>
-              <input type="text" id="manual-time" class="input-field" placeholder="Temps (ex: 15 min)" value="15 min" />
+              <input type="text" id="manual-time" class="input-field" placeholder="Temps (ex: 12 min)" value="12 min" />
             </div>
+            <input type="text" id="manual-wine" class="input-field" placeholder="🍷 Suggestion de vin (optionnel, pour les menus Gourmet — ex: Chablis 1er Cru)" />
             <textarea id="manual-ingredients" class="input-field" rows="3" placeholder="Ingrédients pour 2 adultes (1 par ligne : Nom | Quantité | Unité)&#10;Ex: Courgettes | 2 | pièces&#10;Chèvre frais | 100 | g"></textarea>
             <textarea id="manual-steps" class="input-field" rows="3" placeholder="Étapes de préparation (1 étape par ligne)"></textarea>
             <button class="btn btn-outline" onclick="addManualRecipe()">+ Ajouter à mon livre de recettes</button>
