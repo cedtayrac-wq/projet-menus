@@ -3,7 +3,7 @@
 // ============================================================================
 
 const STORAGE_KEYS = {
-  CURRENT_WEEK: 'menusemaine_current_week_v3',
+  CURRENT_WEEK: 'menusemaine_current_week_v4',
   WEEK_START_DATE: 'menusemaine_week_start_date_v2',
   STOCK_STATE: 'menusemaine_stock_state_v1',
   CUSTOM_ITEMS: 'menusemaine_custom_items_v1',
@@ -467,6 +467,98 @@ function generateFullWeekPlan() {
   saveStateToStorage();
 }
 
+// ============================================================================
+// ANIMATIONS LUDIQUES & UNIVERS CUISINE (CONFETTIS D'INGRÉDIENTS & CÉLÉBRATIONS)
+// ============================================================================
+const CULINARY_PARTICLES = ['🥗', '🥕', '🍅', '🌿', '🍳', '🧑‍🍳', '✨', '🥖', '🧀', '🍋', '🥑', '🍽️'];
+const PLEASURE_PARTICLES = ['🌟', '🍰', '🍫', '🥂', '🍝', '🧀', '🍓', '✨', '👨‍🍳'];
+
+function getDishEmoji(recipe, slot) {
+  const t = ((recipe && recipe.title) || '').toLowerCase();
+  if (t.includes('saumon') || t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('truite')) return '🐟';
+  if (t.includes('crevette') || t.includes('gambas') || t.includes('saint-jacques')) return '🦐';
+  if (t.includes('poulet') || t.includes('dinde') || t.includes('volaille') || t.includes('canard')) return '🍗';
+  if (t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('haché') || t.includes('bourguignon')) return '🥩';
+  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('ravioli')) return '🍝';
+  if (t.includes('risotto') || t.includes('riz') || t.includes('paella') || t.includes('curry') || t.includes('tikka') || t.includes('dahl')) return '🍛';
+  if (t.includes('wok') || t.includes('nouilles') || t.includes('pad thaï') || t.includes('asiatique')) return '🥢';
+  if (t.includes('salade') || t.includes('bowl') || t.includes('poke') || t.includes('buddha') || t.includes('taboulé')) return '🥗';
+  if (t.includes('velouté') || t.includes('soupe') || t.includes('bouillon') || t.includes('minestrone')) return '🥣';
+  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche')) return '🥧';
+  if (t.includes('omelette') || t.includes('œuf') || t.includes('oeuf') || t.includes('frittata') || t.includes('chakchouka')) return '🍳';
+  if (t.includes('wrap') || t.includes('fajita') || t.includes('quesadilla') || t.includes('tacos') || t.includes('burger')) return '🌮';
+  if (t.includes('gratin') || t.includes('parmentier') || t.includes('poêlée') || t.includes('mijoté') || t.includes('ratatouille')) return '🥘';
+  return slot && slot.isPleasure ? '🍽️' : '🥗';
+}
+
+function spawnCulinaryConfetti(options = {}) {
+  const layer = document.getElementById('culinary-fx-layer');
+  if (!layer) return;
+
+  const count = options.count || 16;
+  const emojis = options.emojis || CULINARY_PARTICLES;
+  const originX = typeof options.x === 'number' ? options.x : window.innerWidth / 2;
+  const originY = typeof options.y === 'number' ? options.y : window.innerHeight * 0.45;
+  const spread = options.spread || 170;
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('span');
+    el.className = 'culinary-particle';
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+    const distance = 45 + Math.random() * spread;
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance - (40 + Math.random() * 60);
+    const rot = (Math.random() - 0.5) * 320;
+    const dur = 850 + Math.floor(Math.random() * 450);
+
+    el.style.left = `${originX}px`;
+    el.style.top = `${originY}px`;
+    el.style.setProperty('--tx', `${tx.toFixed(1)}px`);
+    el.style.setProperty('--ty', `${ty.toFixed(1)}px`);
+    el.style.setProperty('--rot', `${rot.toFixed(0)}deg`);
+    el.style.setProperty('--dur', `${dur}ms`);
+
+    layer.appendChild(el);
+    setTimeout(() => {
+      el.remove();
+    }, dur + 60);
+  }
+}
+
+function showDayCelebrationBanner(title, subtitle, emoji = '👨‍🍳') {
+  const layer = document.getElementById('culinary-fx-layer');
+  if (!layer) return;
+
+  const existing = layer.querySelector('.day-celebration-banner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.className = 'day-celebration-banner';
+  banner.innerHTML = `
+    <span class="celeb-emoji">${emoji}</span>
+    <div class="celeb-title">${title}</div>
+    <div class="celeb-sub">${subtitle}</div>
+  `;
+  layer.appendChild(banner);
+
+  setTimeout(() => {
+    banner.remove();
+  }, 1700);
+}
+
+function animateCardElement(slotId, animClass) {
+  requestAnimationFrame(() => {
+    const card = document.getElementById(`meal-card-${slotId}`);
+    if (!card) return;
+    card.classList.remove(animClass);
+    void card.offsetWidth;
+    card.classList.add(animClass);
+    setTimeout(() => card.classList.remove(animClass), 550);
+  });
+}
+
 // Supprimer un repas (ne pas le comptabiliser) ou le rétablir (le comptabiliser)
 function toggleSlotActive(slotId) {
   const slot = state.slots.find((s) => s.slotId === slotId);
@@ -478,12 +570,12 @@ function toggleSlotActive(slotId) {
 
   showToast(
     slot.active
-      ? `✅ ${slot.day} (${slot.mealLabel}) est de nouveau comptabilisé !`
-      : `🗑️ ${slot.day} (${slot.mealLabel}) supprimé (non comptabilisé dans le budget et les courses)`
+      ? `🍽️ ${slot.day} (${slot.mealLabel}) est remis à table !`
+      : `🚫 ${slot.day} (${slot.mealLabel}) mis de côté (0,00 € • non comptabilisé)`
   );
 }
 
-function replaceMealInSlot(slotId) {
+function replaceMealInSlot(slotId, evt) {
   const slot = state.slots.find((s) => s.slotId === slotId);
   if (!slot) return;
 
@@ -496,7 +588,18 @@ function replaceMealInSlot(slotId) {
   slot.active = true;
   saveStateToStorage();
   renderAll();
-  showToast(`Nouvelle proposition pour ${slot.day} (${slot.mealLabel}) !`);
+  animateCardElement(slotId, 'anim-shuffle');
+
+  if (evt && evt.clientX) {
+    spawnCulinaryConfetti({
+      x: evt.clientX,
+      y: evt.clientY,
+      count: 7,
+      spread: 80,
+      emojis: ['🎲', '✨', '🍳', '🌿']
+    });
+  }
+  showToast(`🎲 Nouvelle idée du Chef pour ${slot.day} (${slot.mealLabel}) !`);
 }
 
 function replaceDessertInSlot(slotId) {
@@ -510,11 +613,12 @@ function replaceDessertInSlot(slotId) {
   slot.dessertId = nextDessert.id;
   saveStateToStorage();
   renderAll();
-  showToast(`Nouveau dessert proposé pour ${slot.day} (${slot.mealLabel}) !`);
+  animateCardElement(slotId, 'anim-shuffle');
+  showToast(`🍰 Nouvelle douceur proposée pour ${slot.day} (${slot.mealLabel}) !`);
 }
 
 // Basculer en Menu Plaisir aussi bien pour la Semaine que pour le Week-end
-function togglePleasureMode(slotId) {
+function togglePleasureMode(slotId, evt) {
   const slot = state.slots.find((s) => s.slotId === slotId);
   if (!slot) return;
 
@@ -546,21 +650,33 @@ function togglePleasureMode(slotId) {
   slot.validated = false;
   saveStateToStorage();
   renderAll();
+  animateCardElement(slotId, 'anim-shuffle');
+
+  if (slot.isPleasure && evt && evt.clientX) {
+    spawnCulinaryConfetti({
+      x: evt.clientX,
+      y: evt.clientY,
+      count: 10,
+      spread: 110,
+      emojis: PLEASURE_PARTICLES
+    });
+  }
 
   showToast(
     slot.isPleasure
-      ? `${slot.day} (${slot.mealLabel}) basculé en Menu Plaisir 🌟 (+ dessert) !`
-      : `${slot.day} (${slot.mealLabel}) basculé en Menu ${slot.isWeekend ? 'Équilibré' : 'Healthy & Rapide'} 🥗`
+      ? `🌟 ${slot.day} (${slot.mealLabel}) passe en Menu Plaisir (+ dessert gourmand) !`
+      : `🥗 ${slot.day} (${slot.mealLabel}) repasse en Menu ${slot.isWeekend ? 'Équilibré' : 'Healthy & Rapide'}`
   );
 }
 
 function regenerateUnvalidatedMeals() {
   const unvalidated = state.slots.filter((s) => s.active !== false && !s.validated);
   if (unvalidated.length === 0) {
-    if (confirm('Tous vos repas actifs sont validés. Voulez-vous générer une toute nouvelle semaine ?')) {
+    if (confirm('Tous vos repas actifs sont validés. Voulez-vous tirer au sort une toute nouvelle semaine ?')) {
       generateFullWeekPlan();
       renderAll();
-      showToast('Nouvelle semaine générée !');
+      spawnCulinaryConfetti({ count: 18, spread: 200 });
+      showToast('🎲 Nouvelle semaine concoctée par le Chef !');
     }
     return;
   }
@@ -590,7 +706,8 @@ function regenerateUnvalidatedMeals() {
 
   saveStateToStorage();
   renderAll();
-  showToast(`${unvalidated.length} repas non validé(s) renouvelé(s) !`);
+  spawnCulinaryConfetti({ count: 14, spread: 160, emojis: ['🎲', '🥗', '🥘', '✨', '🧑‍🍳'] });
+  showToast(`🎲 ${unvalidated.length} repas non validé(s) renouvelé(s) !`);
 }
 
 // ============================================================================
@@ -629,7 +746,7 @@ function updateSlotServings(slotId, newServings) {
 
   const badge = document.getElementById(`servings-badge-${slotId}`);
   if (badge) {
-    badge.textContent = `${count} ${count > 1 ? 'parts' : 'part'}${count === 2 ? ' (2 adultes)' : ''}`;
+    badge.textContent = `${count} ${count > 1 ? 'convives' : 'convive'}${count === 2 ? ' (2 adultes)' : ''}`;
   }
 
   const costEl = document.getElementById(`cost-summary-${slotId}`);
@@ -653,17 +770,54 @@ function stepSlotServings(slotId, delta) {
   updateSlotServings(slotId, slot.servings + delta);
 }
 
-function toggleValidateSlot(slotId) {
+function toggleValidateSlot(slotId, evt) {
   const slot = state.slots.find((s) => s.slotId === slotId);
   if (!slot) return;
   slot.validated = !slot.validated;
   saveStateToStorage();
   renderAll();
-  const validatedCount = state.slots.filter((s) => s.active !== false && s.validated).length;
+
+  const activeSlots = state.slots.filter((s) => s.active !== false);
+  const validatedCount = activeSlots.filter((s) => s.validated).length;
+
+  if (slot.validated) {
+    animateCardElement(slotId, 'anim-validate-pop');
+
+    const originX = evt && evt.clientX ? evt.clientX : window.innerWidth / 2;
+    const originY = evt && evt.clientY ? evt.clientY : window.innerHeight / 2;
+    spawnCulinaryConfetti({
+      x: originX,
+      y: originY,
+      count: 14,
+      spread: 130,
+      emojis: slot.isPleasure ? PLEASURE_PARTICLES : CULINARY_PARTICLES
+    });
+
+    // Vérifier si toute la journée vient d'être bouclée !
+    const dayActive = state.slots.filter((s) => s.dayOffset === slot.dayOffset && s.active !== false);
+    const isDayNowComplete = dayActive.length > 0 && dayActive.every((s) => s.validated);
+    const isWeekNowComplete = activeSlots.length > 0 && validatedCount === activeSlots.length;
+
+    if (isWeekNowComplete) {
+      spawnCulinaryConfetti({ count: 32, spread: 260 });
+      showDayCelebrationBanner(
+        '🏆 Semaine 100% prête !',
+        `Les ${validatedCount} repas sont validés • Votre panier Google Keep vous attend !`,
+        '🧑‍🍳'
+      );
+    } else if (isDayNowComplete) {
+      showDayCelebrationBanner(
+        `🎉 ${slot.day} est au menu !`,
+        `Déjeuner & Dîner validés (${formatEuro(evaluateDayCost(slot.dayOffset))})`,
+        slot.isWeekend ? '🌟' : '👩‍🍳'
+      );
+    }
+  }
+
   showToast(
     slot.validated
-      ? `✓ ${slot.day} (${slot.mealLabel}) validé — Liste de courses mise à jour (${validatedCount} repas)`
-      : `↺ ${slot.day} (${slot.mealLabel}) retiré de la liste de courses (${validatedCount} repas)`
+      ? `✅ ${slot.day} (${slot.mealLabel}) validé — Ajouté au panier (${validatedCount}/${activeSlots.length})`
+      : `↺ ${slot.day} (${slot.mealLabel}) retiré du panier (${validatedCount}/${activeSlots.length})`
   );
 }
 
@@ -677,10 +831,20 @@ function toggleValidateAllMeals() {
   });
   saveStateToStorage();
   renderAll();
+
+  if (!allValidated) {
+    spawnCulinaryConfetti({ count: 30, spread: 250 });
+    showDayCelebrationBanner(
+      '🏆 Toute la semaine est validée !',
+      `${activeSlots.length} repas prêts pour votre liste de courses Google Keep`,
+      '👨‍🍳'
+    );
+  }
+
   showToast(
     !allValidated
-      ? `Les ${activeSlots.length} repas comptabilisés sont validés — Liste de courses mise à jour ✓`
-      : 'Validation réinitialisée — Liste de courses vidée'
+      ? `🎉 Les ${activeSlots.length} repas comptabilisés sont validés — Panier prêt !`
+      : '↺ Validation réinitialisée — Panier vidé'
   );
 }
 
@@ -690,7 +854,8 @@ function validateAllAndRefreshShopping() {
   });
   saveStateToStorage();
   renderAll();
-  showToast('Tous les repas comptabilisés sont validés et ajoutés à la liste de courses !');
+  spawnCulinaryConfetti({ count: 26, spread: 220 });
+  showToast('🎉 Tous les repas comptabilisés sont validés et ajoutés au panier !');
 }
 
 function handleGenerateShoppingListClick() {
@@ -698,9 +863,10 @@ function handleGenerateShoppingListClick() {
   saveStateToStorage();
   renderAll();
   if (validatedSlots.length === 0) {
-    showToast('Aucun repas validé : validez vos repas pour remplir la liste de courses !');
+    showToast('ℹ️ Validez vos plats pour remplir automatiquement votre panier !');
   } else {
-    showToast(`Liste de courses mise à jour avec vos ${validatedSlots.length} repas validé(s) !`);
+    spawnCulinaryConfetti({ count: 16, spread: 160, emojis: ['🧺', '🥕', '🍅', '🥖', '✨'] });
+    showToast(`🧺 Panier prêt avec vos ${validatedSlots.length} repas validé(s) !`);
   }
   switchView('shopping');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -749,13 +915,27 @@ function renderValidationStatus() {
   const bar = document.getElementById('validation-progress-bar');
   const txt = document.getElementById('validation-progress-text');
   const btnAll = document.getElementById('btn-validate-all');
+  const moodBadge = document.getElementById('chef-mood-badge');
 
   if (bar) bar.style.width = `${pct}%`;
   if (txt) {
-    txt.textContent = `${validated} / ${total} repas validés${skippedCount > 0 ? ` (${skippedCount} supprimé${skippedCount > 1 ? 's' : ''})` : ''}`;
+    txt.textContent = `${validated} / ${total} repas validés${skippedCount > 0 ? ` (${skippedCount} ignoré${skippedCount > 1 ? 's' : ''})` : ''}`;
   }
   if (btnAll) {
     btnAll.textContent = total > 0 && validated === total ? '↺ Dévalider tout' : '✓ Tout valider';
+  }
+  if (moodBadge) {
+    if (pct === 0) {
+      moodBadge.textContent = '🧑‍🍳 À vos tabliers !';
+    } else if (pct < 40) {
+      moodBadge.textContent = '🔪 Ça découpe sec !';
+    } else if (pct < 80) {
+      moodBadge.textContent = '🥘 Ça mijote bien !';
+    } else if (pct < 100) {
+      moodBadge.textContent = '🍽️ Presque à table !';
+    } else {
+      moodBadge.textContent = '🏆 Chef Étoilé (100%)';
+    }
   }
 
   // Compteurs Healthy vs Plaisir en semaine et week-end (sur les repas comptabilisés)
@@ -779,7 +959,7 @@ function renderValidationStatus() {
   const totalWeekCost = evaluateTotalWeekCost();
   const totalCostBadge = document.getElementById('total-week-cost-badge');
   if (totalCostBadge) {
-    totalCostBadge.textContent = `💶 Validés : ${formatEuro(validatedCost)} (Total prévu : ${formatEuro(totalWeekCost)})`;
+    totalCostBadge.textContent = `💶 Validés : ${formatEuro(validatedCost)} (Prévu : ${formatEuro(totalWeekCost)})`;
   }
 }
 
@@ -787,19 +967,19 @@ function buildSlotCostBadgeInnerHTML(slot, costInfo) {
   if (slot.active === false) {
     return `
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; font-size: 0.83rem; color: var(--text-muted);">
-        <span>💶 <strong>Montant évalué :</strong></span>
+        <span>💶 <strong>Budget estimé :</strong></span>
         <span>0,00 € (Repas non comptabilisé)</span>
       </div>
     `;
   }
 
   const details = slot.dessertId
-    ? `Plat ${formatEuro(costInfo.dishCost)} + Dessert ${formatEuro(costInfo.dessertCost)}`
+    ? `Plat ${formatEuro(costInfo.dishCost)} + Douceur ${formatEuro(costInfo.dessertCost)}`
     : `${formatEuro(costInfo.perPersonCost)} / part`;
 
   return `
     <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; font-size: 0.83rem;">
-      <span>💶 <strong>Montant évalué du menu :</strong></span>
+      <span>💶 <strong>Budget de l'assiette :</strong></span>
       <span style="font-weight: 800; color: var(--primary-hover); font-size: 0.92rem;">
         ${formatEuro(costInfo.totalCost)} <small style="font-weight: 600; color: var(--text-muted);">(${details})</small>
       </span>
@@ -813,7 +993,9 @@ function createMealCardHTML(slot) {
   const dessert = slot.dessertId ? findDessertById(slot.dessertId) : null;
   const isFav = state.favorites.includes(recipe.id);
   const costInfo = evaluateSlotCost(slot);
-  const mealIcon = slot.mealLabel === 'Déjeuner' ? '☀️' : '🌙';
+  const isLunch = slot.mealLabel === 'Déjeuner';
+  const mealIcon = isLunch ? '☀️' : '🌙';
+  const dishEmoji = getDishEmoji(recipe, slot);
 
   const cardClasses = [
     'meal-card',
@@ -827,27 +1009,27 @@ function createMealCardHTML(slot) {
   // Si le repas est supprimé / non comptabilisé
   if (isSkipped) {
     return `
-      <article class="${cardClasses}">
+      <article id="meal-card-${slot.slotId}" class="${cardClasses}">
         <div class="meal-card-header">
-          <span class="slot-label" style="background: #e2e8f0; color: #475569;">
-            ${mealIcon} ${slot.mealLabel} — Non comptabilisé
+          <span class="slot-label" style="background: #e2e8f0; color: #475569; border-color: #cbd5e1;">
+            ${mealIcon} ${slot.mealLabel} — Ignoré
           </span>
           <button
             class="btn btn-primary btn-sm"
             onclick="toggleSlotActive('${slot.slotId}')"
-            title="Cliquer pour rétablir et comptabiliser ce repas"
+            title="Cliquer pour remettre ce repas au menu"
           >
-            ➕ Comptabiliser ce repas
+            🍽️ Remettre au menu
           </button>
         </div>
 
         <div style="padding: 18px 8px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
-          <p>🚫 <strong>Ce ${slot.mealLabel.toLowerCase()} est supprimé pour ${slot.day}.</strong></p>
+          <p>🚫 <strong>Pas de cuisine prévue pour ce ${slot.mealLabel.toLowerCase()} (${slot.day}).</strong></p>
           <p style="font-size: 0.8rem; margin-top: 4px;">
-            Ses ingrédients et son coût (0,00 €) ne sont pas comptabilisés dans la liste de courses.
+            Aucun ingrédient ni budget (0,00 €) n'est ajouté à votre liste de courses.
           </p>
           <p style="font-size: 0.78rem; margin-top: 6px; opacity: 0.85;">
-            (Idée en réserve : <em>${recipe.title}</em>)
+            (Suggestion gardée sous le coude : <em>${recipe.title}</em>)
           </p>
         </div>
       </article>
@@ -861,15 +1043,18 @@ function createMealCardHTML(slot) {
     : '🥗 Healthy & Rapide';
 
   return `
-    <article class="${cardClasses}">
+    <article id="meal-card-${slot.slotId}" class="${cardClasses}">
       <div>
         <div class="meal-card-header">
-          <span class="slot-label">${mealIcon} ${slot.mealLabel}</span>
+          <div class="slot-label-group">
+            <span class="slot-label ${!isLunch ? 'dinner-slot' : ''}">${mealIcon} ${slot.mealLabel}</span>
+            ${slot.validated ? '<span class="chef-stamp-badge">✓ Validé</span>' : ''}
+          </div>
           <div class="card-top-badges">
             <button
               class="btn btn-sm ${slot.isPleasure ? 'btn-pleasure' : 'btn-outline'}"
-              onclick="togglePleasureMode('${slot.slotId}')"
-              title="Cliquer pour basculer entre Menu Healthy/Équilibré et Menu Plaisir 🌟"
+              onclick="togglePleasureMode('${slot.slotId}', event)"
+              title="Basculer entre Menu Healthy/Équilibré et Menu Plaisir 🌟"
             >
               ${modeButtonLabel}
             </button>
@@ -877,30 +1062,34 @@ function createMealCardHTML(slot) {
               class="btn btn-outline btn-sm"
               style="padding: 4px 8px; color: #b91c1c; border-color: #fecaca;"
               onclick="toggleSlotActive('${slot.slotId}')"
-              title="Supprimer ce repas (ne pas le comptabiliser)"
+              title="Ignorer ce repas (repas extérieur / restes)"
             >
-              🗑️ Supprimer
+              🚫 Ignorer
             </button>
-            <button class="fav-btn" onclick="toggleFavorite('${recipe.id}')" title="Ajouter/Retirer des favoris">
+            <button class="fav-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite('${recipe.id}', event)" title="Ajouter ou retirer de mon carnet de favoris">
               ${isFav ? '❤️' : '🤍'}
             </button>
           </div>
         </div>
 
-        <h3 class="meal-title" style="margin-top: 10px;">${recipe.title}</h3>
-        <p class="meal-desc" style="margin-top: 4px;">${recipe.description || ''}</p>
+        <div class="meal-title-row">
+          <div class="meal-dish-avatar" onclick="openRecipeModal('${slot.slotId}')" style="cursor:pointer;" title="Voir la fiche recette">
+            ${dishEmoji}
+          </div>
+          <div style="flex: 1;">
+            <h3 class="meal-title" onclick="openRecipeModal('${slot.slotId}')">${recipe.title}</h3>
+            <p class="meal-desc">${recipe.description || ''}</p>
+          </div>
+        </div>
 
         <div class="meal-meta" style="margin-top: 10px;">
-          <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Cuisson ${recipe.cookTime}</span>
+          <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Feu ${recipe.cookTime}</span>
           <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
           <span class="meta-pill">${recipe.budget}</span>
         </div>
 
         <!-- Évaluation du montant du menu -->
-        <div
-          id="cost-summary-${slot.slotId}"
-          style="margin-top: 10px; padding: 8px 10px; background: var(--primary-soft); border: 1px solid #a7f3d0; border-radius: var(--radius-sm);"
-        >
+        <div id="cost-summary-${slot.slotId}" class="slot-cost-box">
           ${buildSlotCostBadgeInnerHTML(slot, costInfo)}
         </div>
 
@@ -909,9 +1098,9 @@ function createMealCardHTML(slot) {
             ? `
           <div class="dessert-box" style="margin-top: 10px;">
             <div class="dessert-header">
-              <span class="dessert-tag">🍰 Proposition de dessert incluse</span>
+              <span class="dessert-tag">🍰 Note sucrée du repas</span>
               <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem;" onclick="replaceDessertInSlot('${slot.slotId}')">
-                🔄 Autre dessert
+                🎲 Autre dessert
               </button>
             </div>
             <div class="dessert-title">${dessert.title}</div>
@@ -924,17 +1113,17 @@ function createMealCardHTML(slot) {
         }
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
         <!-- Curseur du nombre de parts du repas -->
         <div class="servings-control">
           <div class="servings-label-row">
-            <label for="slider-${slot.slotId}">👥 Parts pour ce ${slot.mealLabel.toLowerCase()} :</label>
+            <label for="slider-${slot.slotId}">🍽️ À table (${slot.mealLabel.toLowerCase()}) :</label>
             <span id="servings-badge-${slot.slotId}" class="servings-badge">
-              ${slot.servings} ${slot.servings > 1 ? 'parts' : 'part'}${slot.servings === 2 ? ' (2 adultes)' : ''}
+              ${slot.servings} ${slot.servings > 1 ? 'convives' : 'convive'}${slot.servings === 2 ? ' (2 adultes)' : ''}
             </span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
-            <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-weight: 800;" onclick="stepSlotServings('${slot.slotId}', -1)">−</button>
+            <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', -1)" aria-label="Moins une part">−</button>
             <input
               id="slider-${slot.slotId}"
               type="range"
@@ -945,23 +1134,23 @@ function createMealCardHTML(slot) {
               value="${slot.servings}"
               oninput="updateSlotServings('${slot.slotId}', this.value)"
             />
-            <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-weight: 800;" onclick="stepSlotServings('${slot.slotId}', 1)">+</button>
+            <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus une part">+</button>
           </div>
         </div>
 
         <!-- Boutons Recette / Autre idée / Valider -->
         <div class="meal-card-actions">
           <button class="btn btn-outline btn-sm" onclick="openRecipeModal('${slot.slotId}')">
-            📖 Voir la recette
+            📖 Fiche cuisine
           </button>
-          <button class="btn btn-outline btn-sm" onclick="replaceMealInSlot('${slot.slotId}')">
-            🔄 Autre idée
+          <button class="btn btn-outline btn-sm" onclick="replaceMealInSlot('${slot.slotId}', event)">
+            🎲 Autre idée
           </button>
           <button
             class="btn btn-validate ${slot.validated ? 'validated' : ''}"
-            onclick="toggleValidateSlot('${slot.slotId}')"
+            onclick="toggleValidateSlot('${slot.slotId}', event)"
           >
-            ${slot.validated ? '✓ Menu validé (Cliquer pour modifier)' : 'Valider ce plat'}
+            ${slot.validated ? '✅ Plat validé au menu (Modifier)' : '👩‍🍳 Valider ce plat'}
           </button>
         </div>
       </div>
@@ -994,12 +1183,12 @@ function togglePlannerViewMode() {
   renderPlannerCards();
   showToast(
     state.plannerViewMode === 'day'
-      ? '📱 Mode 1 page par journée (Déjeuner & Dîner)'
-      : '🗓️ Mode Semaine complète (7 jours déroulants)'
+      ? '📱 Vue Semainier : 1 page par journée (Midi & Soir)'
+      : '🗓️ Vue Semaine complète : les 7 jours d\'un coup d\'œil'
   );
 }
 
-function validateDayAndNext(dayOffset) {
+function validateDayAndNext(dayOffset, evt) {
   const daySlots = state.slots.filter((s) => s.dayOffset === dayOffset && s.active !== false);
   daySlots.forEach((s) => {
     s.validated = true;
@@ -1007,15 +1196,39 @@ function validateDayAndNext(dayOffset) {
   saveStateToStorage();
 
   const dayName = DAY_NAMES_LIST[dayOffset] || 'Journée';
+  const dayCost = formatEuro(evaluateDayCost(dayOffset));
+
+  const originX = evt && evt.clientX ? evt.clientX : window.innerWidth / 2;
+  const originY = evt && evt.clientY ? evt.clientY : window.innerHeight * 0.7;
+
+  spawnCulinaryConfetti({
+    x: originX,
+    y: originY,
+    count: 24,
+    spread: 210,
+    emojis: dayOffset >= 5 ? PLEASURE_PARTICLES : CULINARY_PARTICLES
+  });
+
   if (dayOffset < 6) {
+    const nextDayName = DAY_NAMES_LIST[dayOffset + 1];
+    showDayCelebrationBanner(
+      `👩‍🍳 ${dayName} bouclé !`,
+      `Budget du jour : ${dayCost} • En route pour ${nextDayName} !`,
+      dayOffset >= 5 ? '🌟' : '🥗'
+    );
     state.selectedDayOffset = dayOffset + 1;
     renderAll();
-    showToast(`✓ ${dayName} validé ! Passage à ${DAY_NAMES_LIST[dayOffset + 1]}`);
+    showToast(`✅ ${dayName} validé ! Place au menu de ${nextDayName}`);
     const pagerEl = document.getElementById('day-pager-container');
     if (pagerEl) pagerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } else {
+    showDayCelebrationBanner(
+      '🏆 Semaine bouclée avec brio !',
+      `${dayName} validé (${dayCost}) • Prêt à exporter vers Google Keep !`,
+      '🎉'
+    );
     renderAll();
-    showToast(`✓ ${dayName} validé ! Toute la semaine est parcourue.`);
+    showToast(`🎉 ${dayName} validé ! Toute votre semaine est prête.`);
   }
 }
 
@@ -1035,14 +1248,15 @@ function renderDayPager() {
       const daySlots = state.slots.filter((s) => s.dayOffset === offset);
       const activeSlots = daySlots.filter((s) => s.active !== false);
       const validatedCount = activeSlots.filter((s) => s.validated).length;
+      const isComplete = activeSlots.length > 0 && validatedCount === activeSlots.length;
 
       let statusIcon = '⚪';
       if (activeSlots.length === 0) {
         statusIcon = '➖';
-      } else if (validatedCount === activeSlots.length) {
+      } else if (isComplete) {
         statusIcon = '✅';
       } else if (validatedCount > 0) {
-        statusIcon = '🟡';
+        statusIcon = '🥘';
       }
 
       const isWeekend = offset >= 5;
@@ -1051,7 +1265,7 @@ function renderDayPager() {
       return `
         <button
           type="button"
-          class="day-tab-btn ${isWeekend ? 'is-weekend-tab' : ''} ${isActive ? 'active' : ''}"
+          class="day-tab-btn ${isWeekend ? 'is-weekend-tab' : ''} ${isComplete ? 'is-day-complete' : ''} ${isActive ? 'active' : ''}"
           onclick="if(state.plannerViewMode!=='day'){state.plannerViewMode='day';} selectPlannerDay(${offset})"
           title="${DAY_NAMES_LIST[offset]} ${dayNum}"
         >
@@ -1068,16 +1282,16 @@ function renderDayPager() {
       <div class="day-pager-top-row">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 0.88rem; font-weight: 800; color: var(--primary-hover);">
-            ${isDayMode ? `📄 Page ${curOffset + 1} / 7 — ${curDayName}` : '🗓️ Vue Semaine complète (7 jours)'}
+            ${isDayMode ? `📖 Semainier • Jour ${curOffset + 1}/7 (${curDayName})` : '🗓️ Vue d\'ensemble des 7 jours'}
           </span>
         </div>
         <button
           type="button"
           class="btn btn-outline btn-sm"
           onclick="togglePlannerViewMode()"
-          style="font-weight: 700; font-size: 0.78rem;"
+          style="font-weight: 800; font-size: 0.78rem;"
         >
-          ${isDayMode ? '🗓️ Voir toute la semaine' : '📱 Vue 1 Page / Jour'}
+          ${isDayMode ? '🗓️ Déplier les 7 jours' : '📱 Mode 1 Jour / Page'}
         </button>
       </div>
 
@@ -1099,7 +1313,7 @@ function renderDayPager() {
           </button>
 
           <div class="day-pager-current-label">
-            📅 ${curFullTitle}
+            🍽️ ${curFullTitle}
           </div>
 
           <button
@@ -1145,14 +1359,17 @@ function createDayGroupHTML(dayOffset) {
 
         <button
           type="button"
-          class="btn ${allDayValidated ? 'btn-outline' : 'btn-primary'} btn-sm"
-          onclick="validateDayAndNext(${dayOffset})"
-          style="font-weight: 800;"
+          class="btn btn-day-validate-next ${allDayValidated ? 'is-done' : ''}"
+          onclick="validateDayAndNext(${dayOffset}, event)"
         >
           ${
-            dayOffset < 6
-              ? `✓ Valider ${dayName} & passer à ${DAY_NAMES_LIST[dayOffset + 1]} ▶`
-              : `✓ Valider ${dayName}`
+            allDayValidated
+              ? dayOffset < 6
+                ? `🎉 ${dayName} est validé ! Passer à ${DAY_NAMES_LIST[dayOffset + 1]} ▶`
+                : `🎉 ${dayName} est validé !`
+              : dayOffset < 6
+              ? `✨ Valider ${dayName} & passer à ${DAY_NAMES_LIST[dayOffset + 1]} ▶`
+              : `✨ Valider mon ${dayName} !`
           }
         </button>
 
@@ -1173,7 +1390,7 @@ function createDayGroupHTML(dayOffset) {
             class="btn btn-keep btn-sm"
             onclick="handleGenerateShoppingListClick()"
           >
-            🛒 Voir Liste Keep ▶
+            🧺 Mon Panier Keep ▶
           </button>
         `
         }
@@ -1182,33 +1399,34 @@ function createDayGroupHTML(dayOffset) {
     : '';
 
   return `
-    <div class="day-group">
+    <div class="day-group ${allDayValidated ? 'day-fully-validated' : ''}">
       <div class="day-group-header">
         <div class="day-title-box">
-          <h3 class="day-title">📅 ${fullDayTitle}</h3>
+          <h3 class="day-title">🍽️ ${fullDayTitle}</h3>
+          ${allDayValidated ? '<span class="day-validated-ribbon">🎉 Journée validée !</span>' : ''}
           <span id="day-cost-badge-${dayOffset}" class="meta-pill healthy-pill">
             💶 Journée : ${formatEuro(dayCost)}
           </span>
           <span class="meta-pill">
-            ${activeCount} / ${daySlots.length} repas comptabilisé${activeCount > 1 ? 's' : ''}
+            ${activeCount} / ${daySlots.length} repas à cuisiner
           </span>
         </div>
 
         <!-- Curseur Parts globales sur chaque journée -->
         <div class="day-global-servings">
-          <span style="font-size: 0.82rem; font-weight: 700;">👥 Parts globales (${dayName}) :</span>
-          <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-weight: 800;" onclick="stepDayGlobalServings(${dayOffset}, -1)">−</button>
+          <span style="font-size: 0.82rem; font-weight: 800;">👥 Table du ${dayName} :</span>
+          <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepDayGlobalServings(${dayOffset}, -1)">−</button>
           <input
             type="range"
             class="servings-slider"
-            style="width: 110px;"
+            style="width: 100px;"
             min="1"
             max="10"
             step="1"
             value="${dayServings}"
             oninput="updateDayGlobalServings(${dayOffset}, this.value)"
           />
-          <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-weight: 800;" onclick="stepDayGlobalServings(${dayOffset}, 1)">+</button>
+          <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepDayGlobalServings(${dayOffset}, 1)">+</button>
           <span class="servings-badge">${dayServings} ${dayServings > 1 ? 'parts' : 'part'}</span>
         </div>
       </div>
@@ -1536,7 +1754,21 @@ function renderShoppingList() {
   });
 
   const navBadge = document.getElementById('nav-shopping-count');
-  if (navBadge) navBadge.textContent = toBuyCount;
+  if (navBadge) {
+    if (navBadge.textContent !== String(toBuyCount)) {
+      navBadge.textContent = toBuyCount;
+      navBadge.classList.remove('pop');
+      void navBadge.offsetWidth;
+      navBadge.classList.add('pop');
+      setTimeout(() => navBadge.classList.remove('pop'), 300);
+    }
+  }
+
+  const mobileBadge = document.getElementById('mobile-shopping-count');
+  if (mobileBadge) {
+    mobileBadge.textContent = toBuyCount;
+    mobileBadge.style.display = toBuyCount > 0 ? 'inline-flex' : 'none';
+  }
 
   const toBuyEl = document.getElementById('to-buy-count');
   const inStockEl = document.getElementById('in-stock-count');
@@ -1684,14 +1916,9 @@ function ensureNoteReadyForKeepExport() {
   const activeSlots = state.slots.filter((s) => s.active !== false);
   const validatedSlots = activeSlots.filter((s) => s.validated);
 
-  // Si aucun repas n'était encore validé au moment d'envoyer vers Keep, valider automatiquement les repas comptabilisés
-  if (validatedSlots.length === 0 && state.customItems.length === 0 && activeSlots.length > 0) {
-    state.slots.forEach((s) => {
-      if (s.active !== false) s.validated = true;
-    });
-    saveStateToStorage();
-    renderAll();
-    showToast('✓ Repas validés automatiquement pour remplir votre liste Keep !');
+  if (validatedSlots.length === 0 && state.customItems.length === 0) {
+    showToast('⚠️ Validez d\'abord au moins un plat avant d\'envoyer la liste dans Google Keep !');
+    return null;
   }
 
   return document.getElementById('keep-note-preview')?.textContent || '';
@@ -1699,6 +1926,7 @@ function ensureNoteReadyForKeepExport() {
 
 function openGoogleKeepAndroidDirect() {
   const noteText = ensureNoteReadyForKeepExport();
+  if (!noteText) return;
   const title = `🛒 Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
 
   // Copier aussi dans le presse-papiers par sécurité
@@ -1733,6 +1961,7 @@ function openGoogleKeepAndroidDirect() {
 
 async function shareToGoogleKeepMobile() {
   const noteText = ensureNoteReadyForKeepExport();
+  if (!noteText) return;
   const title = `🛒 Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
 
   // Toujours copier en parallèle dans le presse-papiers
@@ -1762,6 +1991,7 @@ async function shareToGoogleKeepMobile() {
 
 function copyAndOpenGoogleKeep() {
   const noteText = ensureNoteReadyForKeepExport();
+  if (!noteText) return;
 
   // 1. Copie synchrone immédiate (pour ne pas bloquer l'ouverture de l'onglet Keep)
   fallbackCopyText(noteText);
@@ -1778,6 +2008,7 @@ function copyAndOpenGoogleKeep() {
 
 async function copyKeepListOnly() {
   const noteText = ensureNoteReadyForKeepExport();
+  if (!noteText) return;
   try {
     await navigator.clipboard.writeText(noteText);
     showToast('Liste de courses copiée dans le presse-papiers 📋');
@@ -1803,14 +2034,23 @@ function fallbackCopyText(text) {
 // ============================================================================
 // FAVORIS & HISTORIQUE DES SEMAINES
 // ============================================================================
-function toggleFavorite(recipeId) {
+function toggleFavorite(recipeId, evt) {
   const idx = state.favorites.indexOf(recipeId);
   if (idx === -1) {
     state.favorites.push(recipeId);
-    showToast('Ajouté à vos recettes favorites ❤️');
+    if (evt && evt.clientX) {
+      spawnCulinaryConfetti({
+        x: evt.clientX,
+        y: evt.clientY,
+        count: 9,
+        spread: 90,
+        emojis: ['❤️', '✨', '🍽️', '⭐']
+      });
+    }
+    showToast('Ajouté à votre carnet de coups de cœur ❤️');
   } else {
     state.favorites.splice(idx, 1);
-    showToast('Retiré des favoris');
+    showToast('Retiré de vos coups de cœur');
   }
   saveStateToStorage();
   renderAll();
