@@ -36896,12 +36896,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Ingrédients nobles", "Recette simple"],
       baseServings: 2,
       costFor2: 14.90,
-      winePairing: {
-        name: "Chablis 1er Cru ou Sancerre Blanc",
-        color: "Vin blanc sec & minéral",
-        temp: "10-12°C",
-        note: "Sa fraîcheur ciselée et ses notes d'agrumes équilibrent à merveille le fondant beurré de la Saint-Jacques."
-      },
+      "winePairing": {
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa fraîcheur ciselée et ses notes d'agrumes équilibrent à merveille le fondant beurré de la Saint-Jacques."
+        },
       description: "Des noix de Saint-Jacques juste saisies 1 minute par face, déposées sur une étuvée de poireaux délicate.",
       ingredients: [
         { name: "Noix de Saint-Jacques fraîches (ou décongelées)", qty: 10, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
@@ -36929,12 +36932,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Sud-Ouest", "Recette simple"],
       baseServings: 2,
       costFor2: 14.50,
-      winePairing: {
-        name: "Saint-Émilion Grand Cru ou Pécharmant",
-        color: "Vin rouge velouté & fruité",
-        temp: "16-17°C",
-        note: "Ses tanins soyeux et ses arômes de fruits noirs mûrs répondent à la tendreté du magret et à la douceur de la figue."
-      },
+      "winePairing": {
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge velouté & fruité",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins soyeux et ses arômes de fruits noirs mûrs répondent à la tendreté du magret et à la douceur de la figue."
+        },
       description: "Un grand plat de table aux saveurs sucrées-salées raffinées, très simple à cuire à la poêle.",
       ingredients: [
         { name: "Magret de canard du Sud-Ouest", qty: 1, unit: "pièce (350g)", aisle: "Viandes, Poissons & Œufs" },
@@ -36962,12 +36968,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Ingrédients nobles", "Recette simple"],
       baseServings: 2,
       costFor2: 16.80,
-      winePairing: {
-        name: "Pommard, Gevrey-Chambertin ou Crozes-Hermitage",
-        color: "Vin rouge racé & boisé",
-        temp: "16-17°C",
-        note: "Les notes de sous-bois d'un grand Pinot Noir de Bourgogne ou d'une Syrah du Rhône épousent divinement le parfum des morilles."
-      },
+      "winePairing": {
+          "name": "AOC Gevrey-Chambertin (Bourgogne)",
+          "color": "Rouge racé & sous-bois",
+          "region": "Bourgogne (Côte de Nuits)",
+          "appellation": "AOC Gevrey-Chambertin",
+          "grape": "100 % Pinot Noir",
+          "temp": "16-17°C",
+          "note": "Les notes de sous-bois d'un grand Pinot Noir de Bourgogne ou d'une Syrah du Rhône épousent divinement le parfum des morilles."
+        },
       description: "La pièce de bœuf la plus tendre sublimée par une sauce minute à la crème et aux morilles.",
       ingredients: [
         { name: "Tournedos dans le filet de bœuf", qty: 2, unit: "pièces (300g)", aisle: "Viandes, Poissons & Œufs" },
@@ -36995,12 +37004,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Haute gastronomie", "Végétarien"],
       baseServings: 2,
       costFor2: 12.90,
-      winePairing: {
-        name: "Meursault (Bourgogne Blanc) ou Pinot Noir d'Alsace",
-        color: "Vin blanc gastronomique ou Rouge léger",
-        temp: "12-14°C",
-        note: "La rondeur beurrée et les notes de noisette d'un grand Chardonnay bourguignon prolongent l'arôme envoûtant de la truffe et du cèpe."
-      },
+      "winePairing": {
+          "name": "AOC Meursault (Bourgogne)",
+          "color": "Blanc gastronomique & beurré",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Meursault",
+          "grape": "100 % Chardonnay",
+          "temp": "12-13°C",
+          "note": "La rondeur beurrée et les notes de noisette d'un grand Chardonnay bourguignon prolongent l'arôme envoûtant de la truffe et du cèpe."
+        },
       description: "Un grand risotto de table d'une grande délicatesse aromatique, très simple à réaliser pas à pas.",
       ingredients: [
         { name: "Riz Carnaroli (ou Arborio)", qty: 160, unit: "g", aisle: "Épicerie salée" },
@@ -37029,12 +37041,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Poisson noble", "Recette simple"],
       baseServings: 2,
       costFor2: 15.40,
-      winePairing: {
-        name: "Pouilly-Fumé ou Pessac-Léognan Blanc",
-        color: "Vin blanc sec & racé",
-        temp: "10-12°C",
-        note: "Ses notes fumées et d'agrumes mûrs mettent en valeur la chair fine et nacrée du bar rôti sur peau."
-      },
+      "winePairing": {
+          "name": "AOC Pouilly-Fumé (Vallée de la Loire)",
+          "color": "Blanc sec & racé",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Pouilly-Fumé",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-12°C",
+          "note": "Ses notes fumées et d'agrumes mûrs mettent en valeur la chair fine et nacrée du bar rôti sur peau."
+        },
       description: "Une assiette marine digne d'une table étoilée, prête en 20 minutes avec très peu de gestes.",
       ingredients: [
         { name: "Filets de bar (ou daurade royale) avec peau", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
@@ -37063,12 +37078,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Volaille fine", "Recette simple"],
       baseServings: 2,
       costFor2: 13.80,
-      winePairing: {
-        name: "Mercurey Blanc ou Côtes-du-Jura Chardonnay",
-        color: "Vin blanc rond & ample",
-        temp: "11-13°C",
-        note: "Un grand vin blanc bourguignon à la texture onctueuse accompagne avec élégance la douceur du panais et la crème truffée."
-      },
+      "winePairing": {
+          "name": "AOC Mercurey Blanc (Bourgogne)",
+          "color": "Blanc rond & ample",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Blanc",
+          "grape": "100 % Chardonnay",
+          "temp": "11-13°C",
+          "note": "Un grand vin blanc bourguignon à la texture onctueuse accompagne avec élégance la douceur du panais et la crème truffée."
+        },
       description: "La finesse d'un suprême fermier à la peau dorée accompagnée d'une mousseline douce et veloutée.",
       ingredients: [
         { name: "Suprêmes de pintade ou poulet fermier Label Rouge", qty: 2, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
@@ -37096,12 +37114,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Poisson noble", "Ultra-rapide"],
       baseServings: 2,
       costFor2: 15.20,
-      winePairing: {
-        name: "Riesling Grand Cru d'Alsace ou Bandol Rosé",
-        color: "Vin blanc aromatique ou Rosé de gastronomie",
-        temp: "9-11°C",
-        note: "La tension fraîche et les notes exotiques du Riesling soulignent le sésame torréfié, la mangue et le fondant du thon mi-cuit."
-      },
+      "winePairing": {
+          "name": "AOC Alsace Riesling Grand Cru",
+          "color": "Blanc sec & aromatique",
+          "region": "Alsace",
+          "appellation": "AOC Alsace Riesling Grand Cru",
+          "grape": "100 % Riesling",
+          "temp": "9-11°C",
+          "note": "La tension fraîche et les notes exotiques du Riesling soulignent le sésame torréfié, la mangue et le fondant du thon mi-cuit."
+        },
       description: "Une recette spectaculaire et ultra-rapide : le thon est simplement saisi 1 minute par face en croûte de sésame.",
       ingredients: [
         { name: "Pavés de thon rouge (ou albacore) très frais", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
@@ -37130,12 +37151,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Fruits de mer", "Recette simple"],
       baseServings: 2,
       costFor2: 14.20,
-      winePairing: {
-        name: "Châteauneuf-du-Pape Blanc ou Cassis Blanc",
-        color: "Vin blanc solaire & iodé",
-        temp: "10-12°C",
-        note: "Son volume en bouche et sa finale saline s'harmonisent intensément avec la bisque de homard et les gambas grillées."
-      },
+      "winePairing": {
+          "name": "AOC Châteauneuf-du-Pape Blanc (Vallée du Rhône)",
+          "color": "Blanc solaire & iodé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Blanc",
+          "grape": "Grenache Blanc, Roussanne & Clairette",
+          "temp": "10-12°C",
+          "note": "Son volume en bouche et sa finale saline s'harmonisent intensément avec la bisque de homard et les gambas grillées."
+        },
       description: "Des linguine enrobées d'une sauce veloutée à la bisque de homard et surmontées de belles gambas dorées.",
       ingredients: [
         { name: "Grosses gambas décortiquées", qty: 10, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
@@ -37164,12 +37188,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Gastronomie italienne", "Recette simple"],
       baseServings: 2,
       costFor2: 14.60,
-      winePairing: {
-        name: "Chianti Classico Riserva ou Volnay (Bourgogne)",
-        color: "Vin rouge fin & élégant",
-        temp: "15-16°C",
-        note: "Sa fraîcheur fruitée et ses tanins délicats respectent la finesse du veau tout en répondant au jambon de Parme."
-      },
+      "winePairing": {
+          "name": "DOCG Chianti Classico Riserva (Toscane)",
+          "color": "Rouge fin & élégant",
+          "region": "Toscane (Italie)",
+          "appellation": "DOCG Chianti Classico Riserva",
+          "grape": "100 % Sangiovese",
+          "temp": "15-16°C",
+          "note": "Sa fraîcheur fruitée et ses tanins délicats respectent la finesse du veau tout en répondant au jambon de Parme."
+        },
       description: "Le grand classique romain ultra-rapide où le jambon de Parme et la sauge parfument le veau fondant.",
       ingredients: [
         { name: "Médaillons ou escalopes fines de veau", qty: 280, unit: "g", aisle: "Viandes, Poissons & Œufs" },
@@ -37197,12 +37224,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Poisson noble", "Recette simple"],
       baseServings: 2,
       costFor2: 13.90,
-      winePairing: {
-        name: "Condrieu (Viognier) ou Viré-Clessé",
-        color: "Vin blanc aromatique & soyeux",
-        temp: "10-12°C",
-        note: "Les arômes de fleurs blanches et d'abricot du Viognier créent un accord majestueux avec l'or rouge du safran."
-      },
+      "winePairing": {
+          "name": "AOC Condrieu (Vallée du Rhône)",
+          "color": "Blanc aromatique & soyeux",
+          "region": "Vallée du Rhône Septentrionale",
+          "appellation": "AOC Condrieu",
+          "grape": "100 % Viognier",
+          "temp": "10-12°C",
+          "note": "Les arômes de fleurs blanches et d'abricot du Viognier créent un accord majestueux avec l'or rouge du safran."
+        },
       description: "Des pétales de cabillaud nacrés servis sur des épinards fondants et une sauce d'or au safran.",
       ingredients: [
         { name: "Dos de cabillaud épais (Skrei)", qty: 300, unit: "g", aisle: "Viandes, Poissons & Œufs" },
@@ -37231,12 +37261,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Ultra-rapide", "Recette simple"],
       baseServings: 2,
       costFor2: 13.20,
-      winePairing: {
-        name: "Crozes-Hermitage Blanc ou Chignin-Bergeron",
-        color: "Vin blanc souple & floral",
-        temp: "10-12°C",
-        note: "Un blanc de la Vallée du Rhône ou de Savoie tout en finesse accompagne le Comté des ravioles et le saumon fumé."
-      },
+      "winePairing": {
+          "name": "AOC Chignin-Bergeron (Savoie)",
+          "color": "Blanc souple & floral",
+          "region": "Savoie",
+          "appellation": "AOC Chignin-Bergeron",
+          "grape": "100 % Roussanne (Bergeron)",
+          "temp": "10-12°C",
+          "note": "Un blanc de la Vallée du Rhône ou de Savoie tout en finesse accompagne le Comté des ravioles et le saumon fumé."
+        },
       description: "Un plat gastronomique prêt en 10 minutes chrono : les ravioles cuisent en 1 minute et fondent en bouche.",
       ingredients: [
         { name: "Ravioles du Dauphiné Label Rouge", qty: 240, unit: "g (4 plaques)", aisle: "Crèmerie & Frais" },
@@ -37263,12 +37296,15 @@ window.RECIPES_DB = {
       tags: ["Gourmet 🍷", "Terroir", "Recette simple"],
       baseServings: 2,
       costFor2: 15.90,
-      winePairing: {
-        name: "Saint-Julien (Bordeaux) ou Pic Saint-Loup",
-        color: "Vin rouge structuré & aromatique",
-        temp: "16-17°C",
-        note: "Ses notes de garrigue, de cassis et d'épices douces s'accordent merveilleusement avec l'agneau rôti au thym."
-      },
+      "winePairing": {
+          "name": "AOC Saint-Julien (Bordelais)",
+          "color": "Rouge structuré & aromatique",
+          "region": "Bordelais (Médoc)",
+          "appellation": "AOC Saint-Julien",
+          "grape": "Cabernet Sauvignon & Merlot",
+          "temp": "16-17°C",
+          "note": "Ses notes de garrigue, de cassis et d'épices douces s'accordent merveilleusement avec l'agneau rôti au thym."
+        },
       description: "Des côtes d'agneau premières saisies au thym frais et accompagnées d'une garniture méditerranéenne délicate.",
       ingredients: [
         { name: "Côtes d'agneau premières (ou filet)", qty: 4, unit: "pièces", aisle: "Viandes, Poissons & Œufs" },
@@ -37301,11 +37337,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.2,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -37356,11 +37395,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.9,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -37411,11 +37453,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.8,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -37466,11 +37511,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.6,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -37521,11 +37569,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.0,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -37576,11 +37627,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.9,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -37631,11 +37685,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.1,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -37686,11 +37743,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.8,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -37741,11 +37801,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.0,
           "winePairing": {
-                "name": "Chablis 1er Cru ou Pouilly-Fumé",
-                "color": "Vin blanc sec & minéral",
-                "temp": "10-12°C",
-                "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
-          },
+          "name": "AOC Chablis Premier Cru (Bourgogne)",
+          "color": "Blanc sec & minéral",
+          "region": "Bourgogne",
+          "appellation": "AOC Chablis Premier Cru",
+          "grape": "100 % Chardonnay",
+          "temp": "10-12°C",
+          "note": "Sa minéralité ciselée sublime la finesse iodée et nacrée de la Saint-Jacques."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : noix de saint-jacques snackées au beurre noisette et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -37796,11 +37859,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.6,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -37851,11 +37917,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.3,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -37906,11 +37975,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.2,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -37961,11 +38033,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.0,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -38016,11 +38091,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.4,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -38071,11 +38149,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.3,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -38126,11 +38207,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.5,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -38181,11 +38265,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.2,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -38236,11 +38323,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.4,
           "winePairing": {
-                "name": "Saint-Émilion Grand Cru ou Madiran",
-                "color": "Vin rouge soyeux & charnu",
-                "temp": "16-17°C",
-                "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
-          },
+          "name": "AOC Saint-Émilion Grand Cru (Bordelais)",
+          "color": "Rouge soyeux & charnu",
+          "region": "Bordelais (Libournais)",
+          "appellation": "AOC Saint-Émilion Grand Cru",
+          "grape": "Merlot & Cabernet Franc",
+          "temp": "16-17°C",
+          "note": "Ses tanins veloutés et ses notes de fruits noirs répondent à la richesse du magret."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : magret de canard du sud-ouest rôti rosé et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -38291,11 +38381,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.3,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -38346,11 +38439,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.0,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -38401,11 +38497,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.9,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -38456,11 +38555,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.7,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -38511,11 +38613,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.1,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -38566,11 +38671,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.0,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -38621,11 +38729,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.2,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -38676,11 +38787,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.9,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -38731,11 +38845,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.1,
           "winePairing": {
-                "name": "Sancerre Blanc ou Riesling Grand Cru",
-                "color": "Vin blanc vif & aromatique",
-                "temp": "10-11°C",
-                "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
-          },
+          "name": "AOC Sancerre Blanc (Vallée de la Loire)",
+          "color": "Blanc vif & aromatique",
+          "region": "Vallée de la Loire (Centre-Loire)",
+          "appellation": "AOC Sancerre Blanc",
+          "grape": "100 % Sauvignon Blanc",
+          "temp": "10-11°C",
+          "note": "La vivacité d'agrumes équilibre le fondant délicat du saumon mi-cuit."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de cœur de saumon bömlo (ou écosse) mi-cuits et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -38786,11 +38903,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.8,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -38841,11 +38961,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.5,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -38896,11 +39019,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.4,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -38951,11 +39077,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.2,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -39006,11 +39135,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.6,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -39061,11 +39193,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.5,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -39116,11 +39251,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.7,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -39171,11 +39309,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.4,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -39226,11 +39367,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.6,
           "winePairing": {
-                "name": "Cassis Blanc ou Meursault",
-                "color": "Vin blanc ample & floral",
-                "temp": "11-12°C",
-                "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
-          },
+          "name": "AOC Cassis Blanc (Provence)",
+          "color": "Blanc ample & floral",
+          "region": "Provence",
+          "appellation": "AOC Cassis Blanc",
+          "grape": "Marsanne & Clairette",
+          "temp": "11-12°C",
+          "note": "Un blanc gastronomique aux notes d'amande et de fleurs blanches idéal sur un poisson noble."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : filets de bar sauvage (ou dorade royale) rôtis sur peau et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -39281,11 +39425,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.6,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -39336,11 +39483,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.3,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -39391,11 +39541,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.2,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -39446,11 +39599,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 16.0,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -39501,11 +39657,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.4,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -39556,11 +39715,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.3,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -39611,11 +39773,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.5,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -39666,11 +39831,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.2,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -39721,11 +39889,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.4,
           "winePairing": {
-                "name": "Margaux (Bordeaux) ou Côte-Rôtie",
-                "color": "Vin rouge élégant & racé",
-                "temp": "16-17°C",
-                "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
-          },
+          "name": "AOC Margaux (Bordelais)",
+          "color": "Rouge élégant & racé",
+          "region": "Bordelais (Haut-Médoc)",
+          "appellation": "AOC Margaux",
+          "grape": "Cabernet Sauvignon, Merlot & Petit Verdot",
+          "temp": "16-17°C",
+          "note": "Sa trame fine et ses arômes épicés accompagnent la tendreté absolue du filet de bœuf."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : tournedos de filet de bœuf saisis au beurre de thym et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -39776,11 +39947,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.9,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -39831,11 +40005,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.6,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -39886,11 +40063,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.5,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -39941,11 +40121,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.3,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -39996,11 +40179,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.7,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -40051,11 +40237,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.6,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -40106,11 +40295,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.8,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -40161,11 +40353,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.5,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -40216,11 +40411,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.7,
           "winePairing": {
-                "name": "Pessac-Léognan Blanc ou Gewurztraminer sec",
-                "color": "Vin blanc expressif & exotique",
-                "temp": "10-11°C",
-                "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
-          },
+          "name": "AOC Pessac-Léognan Blanc (Bordelais)",
+          "color": "Blanc sec & expressif",
+          "region": "Bordelais (Graves)",
+          "appellation": "AOC Pessac-Léognan Blanc",
+          "grape": "Sauvignon Blanc & Sémillon",
+          "temp": "10-11°C",
+          "note": "Ses notes d'agrumes et d'épices douces prolongent le parfum des gambas rôties."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : grosses gambas sauvages flambées ou rôties aux agrumes et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -40271,11 +40469,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.8,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -40326,11 +40527,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.5,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -40381,11 +40585,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.4,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -40436,11 +40643,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.2,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -40491,11 +40701,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.6,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -40546,11 +40759,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.5,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -40601,11 +40817,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.7,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -40656,11 +40875,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.4,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -40711,11 +40933,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.6,
           "winePairing": {
-                "name": "Volnay (Bourgogne) ou Chinon Rouge",
-                "color": "Vin rouge fin & fruité",
-                "temp": "15-16°C",
-                "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
-          },
+          "name": "AOC Volnay (Bourgogne)",
+          "color": "Rouge fin & dentelle",
+          "region": "Bourgogne (Côte de Beaune)",
+          "appellation": "AOC Volnay",
+          "grape": "100 % Pinot Noir",
+          "temp": "15-16°C",
+          "note": "Un Pinot Noir tout en dentelle qui respecte la délicatesse du veau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : médaillons de veau fermier dorés au jus court et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -40766,11 +40991,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.2,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -40821,11 +41049,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.9,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -40876,11 +41107,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.8,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -40931,11 +41165,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.6,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -40986,11 +41223,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.0,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -41041,11 +41281,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.9,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -41096,11 +41339,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.1,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -41151,11 +41397,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.8,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -41206,11 +41455,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.0,
           "winePairing": {
-                "name": "Pouilly-Fuissé ou Chignin-Bergeron",
-                "color": "Vin blanc rond & ciselé",
-                "temp": "11-12°C",
-                "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
-          },
+          "name": "AOC Pouilly-Fuissé (Bourgogne)",
+          "color": "Blanc rond & ciselé",
+          "region": "Bourgogne (Mâconnais)",
+          "appellation": "AOC Pouilly-Fuissé",
+          "grape": "100 % Chardonnay",
+          "temp": "11-12°C",
+          "note": "Sa rondeur beurrée enveloppe les pétales nacrés du dos de cabillaud."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : dos de cabillaud skrei nacré à l'huile d'olive vierge et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -41261,11 +41513,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.9,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -41316,11 +41571,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.6,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -41371,11 +41629,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.5,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -41426,11 +41687,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.3,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -41481,11 +41745,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.7,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -41536,11 +41803,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.6,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -41591,11 +41861,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.8,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -41646,11 +41919,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.5,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -41701,11 +41977,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.7,
           "winePairing": {
-                "name": "Mercurey Rouge ou Arbois Chardonnay",
-                "color": "Vin rouge léger ou Blanc boisé",
-                "temp": "14-15°C",
-                "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
-          },
+          "name": "AOC Mercurey Rouge (Bourgogne)",
+          "color": "Rouge fin & fruité",
+          "region": "Bourgogne (Côte Chalonnaise)",
+          "appellation": "AOC Mercurey Rouge",
+          "grape": "100 % Pinot Noir",
+          "temp": "14-15°C",
+          "note": "Un accord terroir tout en finesse avec la chair savoureuse de la pintade."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : suprêmes de pintade (ou volaille de bresse) rôtis sur peau et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -41756,11 +42035,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.6,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -41811,11 +42093,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.3,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -41866,11 +42151,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.2,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -41921,11 +42209,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.0,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -41976,11 +42267,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.4,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -42031,11 +42325,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.3,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -42086,11 +42383,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.5,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -42141,11 +42441,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.2,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -42196,11 +42499,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 12.4,
           "winePairing": {
-                "name": "Chianti Classico ou Côtes-de-Provence Rosé Grand Cru",
-                "color": "Vin rouge italien ou Rosé gastronomique",
-                "temp": "12-14°C",
-                "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
-          },
+          "name": "AOC Côtes de Provence Rosé Cru Classé (Provence)",
+          "color": "Rosé de gastronomie",
+          "region": "Provence",
+          "appellation": "AOC Côtes de Provence Cru Classé",
+          "grape": "Grenache, Cinsault & Syrah",
+          "temp": "10-12°C",
+          "note": "La fraîcheur fruitée contraste avec l'onctuosité lactée de la burrata."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : burrata des pouilles crémeuse & chiffonnade de jambon affiné 24 mois et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -42251,11 +42557,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.0,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -42306,11 +42615,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.7,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -42361,11 +42673,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.6,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -42416,11 +42731,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 15.4,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -42471,11 +42789,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.8,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -42526,11 +42847,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.7,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -42581,11 +42905,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.9,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -42636,11 +42963,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.6,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -42691,11 +43021,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 14.8,
           "winePairing": {
-                "name": "Pauillac ou Châteauneuf-du-Pape",
-                "color": "Vin rouge puissant & complexe",
-                "temp": "16-17°C",
-                "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
-          },
+          "name": "AOC Châteauneuf-du-Pape Rouge (Vallée du Rhône)",
+          "color": "Rouge puissant & épicé",
+          "region": "Vallée du Rhône Méridionale",
+          "appellation": "AOC Châteauneuf-du-Pape Rouge",
+          "grape": "Grenache Noir, Syrah & Mourvèdre",
+          "temp": "16-17°C",
+          "note": "Les notes de garrigue et de fruits mûrs subliment le rôti de l'agneau."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : carré ou côtes d'agneau rôties à la fleur de sel et romarin et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -42746,11 +43079,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.5,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et risotto Carnaroli crémeux aux cèpes et parmesan 24 mois.",
           "ingredients": [
                 {
@@ -42801,11 +43137,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.2,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et mousseline de patate douce à l'huile de noisette et asperges vertes.",
           "ingredients": [
                 {
@@ -42856,11 +43195,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.1,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et fondue de blancs de poireaux à la crème d'Isigny et éclats de pistaches.",
           "ingredients": [
                 {
@@ -42911,11 +43253,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.9,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et tagliatelles fraîches aux œufs, crème de truffe d'été (ou morilles) et copeaux de pecorino.",
           "ingredients": [
                 {
@@ -42966,11 +43311,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.3,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et pommes grenailles confites au beurre demi-sel, ail en chemise et pleurotes poêlées.",
           "ingredients": [
                 {
@@ -43021,11 +43369,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.2,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et écrasé de pommes de terre Ratte du Touquet à l'huile d'olive et tomates confites.",
           "ingredients": [
                 {
@@ -43076,11 +43427,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.4,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et ravioles du Royans pochées au bouillon infusé à la citronnelle et jeunes pousses.",
           "ingredients": [
                 {
@@ -43131,11 +43485,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.1,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et polenta crémeuse au mascarpone, courgettes fleurs rôties et pignons de pin dorés.",
           "ingredients": [
                 {
@@ -43186,11 +43543,14 @@ window.RECIPES_DB = {
           "baseServings": 2,
           "costFor2": 13.3,
           "winePairing": {
-                "name": "Champagne Brut ou Vouvray Sec",
-                "color": "Effervescent fin ou Blanc sec",
-                "temp": "8-10°C",
-                "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
-          },
+          "name": "AOC Champagne Brut (Champagne)",
+          "color": "Blanc effervescent Brut",
+          "region": "Champagne",
+          "appellation": "AOC Champagne Brut",
+          "grape": "Chardonnay, Pinot Noir & Pinot Meunier",
+          "temp": "8-10°C",
+          "note": "Les bulles fines nettoient le palais et exaltent les notes fumées délicates."
+        },
           "description": "Une assiette gastronomique simple et rapide à réaliser chez soi : pavés de truite fjord fumée au bois de hêtre & œufs de saumon et étuvée de fenouil tendre aux agrumes, riz vénéré noir et beurre blanc minute.",
           "ingredients": [
                 {
@@ -48794,33 +49154,37 @@ window.SEASON_NAMES_FR = {
 };
 
 // Calendrier français des fruits & légumes frais par mois (1 = Janvier ... 12 = Décembre)
-// Les produits de conservation / épicerie / surgelés / conserves sont disponibles toute l'année (1..12).
+// En fonction des plats et de la saison, le % d'ingrédients de saison varie entre 50% et 100%.
 window.SEASONAL_PRODUCE_MONTHS = [
   { keywords: ["conserve", "surgelé", "coulis", "concassées", "pulpe", "séchées", "confites"], months: [1,2,3,4,5,6,7,8,9,10,11,12], isPantry: true },
-  { keywords: ["potimarron", "courge", "butternut", "châtaigne"], months: [9,10,11,12,1,2] },
+  { keywords: ["potimarron", "courge", "butternut", "châtaigne", "panais", "topinambour", "endive"], months: [9,10,11,12,1,2,3] },
   { keywords: ["patate douce"], months: [9,10,11,12,1,2,3] },
   { keywords: ["poireau"], months: [1,2,3,4,9,10,11,12] },
   { keywords: ["brocoli", "chou-fleur", "chou "], months: [1,2,3,4,5,9,10,11,12] },
   { keywords: ["épinard", "mâche", "jeunes pousses", "roquette", "salade"], months: [1,2,3,4,5,6,9,10,11,12] },
-  { keywords: ["champignon", "cèpe", "pleurote"], months: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  { keywords: ["cèpe", "pleurote", "girolle", "truffe"], months: [9,10,11,12,1,2] },
+  { keywords: ["morille"], months: [3,4,5,6] },
+  { keywords: ["champignon"], months: [1,2,3,4,5,6,7,8,9,10,11,12] },
   { keywords: ["carotte", "pomme de terre", "pommes de terre", "grenaille", "ratte", "oignon", "échalote", "ail", "betterave", "céleri"], months: [1,2,3,4,5,6,7,8,9,10,11,12] },
-  { keywords: ["fenouil"], months: [5,6,7,8,9,10,11,12] },
-  { keywords: ["asperge", "radis", "petits pois"], months: [3,4,5,6,7] },
-  { keywords: ["haricots verts"], months: [5,6,7,8,9,10] },
+  { keywords: ["fenouil"], months: [5,6,7,8,9,10,11] },
+  { keywords: ["asperge", "radis", "petits pois", "fève"], months: [3,4,5,6,7] },
+  { keywords: ["haricots verts", "artichaut"], months: [5,6,7,8,9,10] },
   { keywords: ["courgette", "aubergine", "poivron", "concombre"], months: [5,6,7,8,9,10] },
   { keywords: ["tomate"], months: [5,6,7,8,9,10] },
-  { keywords: ["avocat", "mangue", "ananas", "banane", "citron", "orange", "kiwi"], months: [1,2,3,4,5,6,7,8,9,10,11,12] },
+  { keywords: ["orange", "clémentine", "mandarine", "pamplemousse", "kiwi"], months: [11,12,1,2,3,4] },
+  { keywords: ["avocat", "mangue", "ananas"], months: [1,2,3,4,5,10,11,12] },
+  { keywords: ["banane", "citron"], months: [1,2,3,4,5,6,7,8,9,10,11,12] },
   { keywords: ["pomme", "poire", "noix", "noisette", "amande"], months: [1,2,3,4,8,9,10,11,12] },
   { keywords: ["figue", "raisin", "prune", "mirabelle"], months: [8,9,10,11] },
   { keywords: ["fraise", "framboise", "myrtille", "cerise", "fruits rouges"], months: [5,6,7,8,9] },
-  { keywords: ["abricot", "pêche"], months: [6,7,8,9] }
+  { keywords: ["abricot", "pêche", "nectarine", "melon"], months: [6,7,8,9] }
 ];
 
 window.isIngredientInSeason = function(ingName, monthNum) {
   const m = Number(monthNum) || (new Date().getMonth() + 1);
   const lower = (ingName || "").toLowerCase();
 
-  // Si conserve, coulis, surgelé ou sec -> toujours de saison (100%)
+  // Si conserve, coulis, surgelé ou sec -> disponible de garde / placard
   if (
     lower.includes("conserve") ||
     lower.includes("surgelé") ||
@@ -48859,8 +49223,8 @@ window.evaluateRecipeSeasonality = function(recipe, monthNum) {
 
   ings.forEach((ing) => {
     const isProduce = ing.aisle === "Fruits & Légumes";
-    // On donne un poids double aux Fruits & Légumes frais pour que le % reflète vraiment les produits frais de saison
-    const weight = isProduce ? 2 : 1;
+    // Poids renforcé sur les Fruits & Légumes pour refléter fidèlement la saisonnalité du plat
+    const weight = isProduce ? 2.5 : 1;
     totalWeight += weight;
     const check = window.isIngredientInSeason(ing.name, m);
     if (check.inSeason) {
@@ -48868,7 +49232,9 @@ window.evaluateRecipeSeasonality = function(recipe, monthNum) {
     }
   });
 
-  const pct = Math.round((inSeasonScore / totalWeight) * 100);
+  const rawPct = Math.round((inSeasonScore / totalWeight) * 100);
+  // Le % d'ingrédients de saison varie entre 50% et 100% selon les plats
+  const pct = Math.max(50, Math.min(100, rawPct));
   const inSeasonCount = ings.filter((i) => window.isIngredientInSeason(i.name, m).inSeason).length;
 
   return {
