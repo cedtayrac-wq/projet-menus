@@ -3013,4 +3013,649 @@ body {
   border: 1px solid #7dd3fc;
 }
 
+/* =========================================================================
+   GUIDE VOCAL INTERACTIF PAS-À-PAS & PERSONNAGES ANIMÉS (PARAMÈTRES & FICHE CUISINE)
+   ========================================================================= */
+
+/* Grille des 9 personnalités dans la section Paramètres */
+.voice-persona-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.voice-persona-card {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.voice-persona-card:hover {
+  border-color: var(--persona-border, var(--primary));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.voice-persona-card.is-selected {
+  background: var(--persona-bg, #fff7ed);
+  border-color: var(--persona-color, var(--primary));
+  box-shadow: 0 8px 22px rgba(45, 35, 20, 0.12);
+}
+
+.voice-persona-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.voice-persona-avatar-mini {
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--persona-border, var(--border-color));
+  padding: 2px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  transition: transform 0.25s ease;
+}
+
+.voice-persona-card:hover .voice-persona-avatar-mini {
+  transform: scale(1.06) rotate(-3deg);
+}
+
+.voice-persona-avatar-mini.is-speaking {
+  animation: characterTalkBounce 0.55s ease-in-out infinite alternate;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.28);
+}
+
+.voice-persona-avatar-mini.is-speaking .svg-mouth {
+  animation: svgMouthSpeak 0.26s ease-in-out infinite alternate;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.persona-svg-avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.voice-persona-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-persona-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.96rem;
+  color: var(--text-main);
+}
+
+.voice-persona-active-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--persona-color, var(--primary));
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.voice-persona-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--persona-color, var(--primary-hover));
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--persona-border, var(--border-color));
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-top: 3px;
+}
+
+.voice-persona-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.voice-persona-quote {
+  font-size: 0.77rem;
+  font-style: italic;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.85);
+  border-left: 3px solid var(--persona-color, var(--primary));
+  padding: 6px 9px;
+  border-radius: 6px;
+  line-height: 1.35;
+}
+
+.voice-persona-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* Bandeau d'appel du Guide Vocal dans la Fiche Cuisine */
+.modal-voice-guide-wrapper {
+  margin: 12px 0 14px 0;
+}
+
+.voice-launch-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--persona-bg, #fff7ed);
+  border: 2px solid var(--persona-border, #fdba74);
+  box-shadow: var(--shadow-sm);
+}
+
+.voice-launch-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 260px;
+}
+
+.voice-launch-avatar {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2.5px solid var(--persona-color, var(--primary));
+  padding: 2px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.22s ease;
+}
+
+.voice-launch-avatar:hover {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.voice-launch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-quick-persona-select {
+  width: auto !important;
+  min-width: 165px;
+  padding: 7px 10px !important;
+  font-size: 0.82rem !important;
+  font-weight: 700;
+  border-color: var(--persona-border, var(--border-color)) !important;
+}
+
+.btn-launch-voice-guide {
+  padding: 10px 16px !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  background: linear-gradient(135deg, var(--persona-color, #059669) 0%, #1e293b 160%) !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.16);
+}
+
+/* Scène animée avec le personnage sélectionné quand la commande vocale est activée */
+.voice-character-stage {
+  background: var(--persona-bg, #fff7ed);
+  border: 2.5px solid var(--persona-color, var(--primary));
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: 0 12px 30px rgba(31, 36, 33, 0.14);
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn 0.25s ease;
+}
+
+.voice-stage-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.voice-stage-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--persona-color, var(--primary));
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.voice-wakelock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.voice-heard-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #166534;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  animation: popInChip 0.22s ease;
+}
+
+.voice-stage-progress-track {
+  width: 100%;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--persona-border, var(--border-color));
+}
+
+.voice-stage-progress-fill {
+  height: 100%;
+  background: var(--persona-color, var(--primary));
+  border-radius: 999px;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.voice-stage-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 560px) {
+  .voice-stage-main {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.voice-character-Theater {
+  position: relative;
+  width: 126px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.voice-character-portrait {
+  width: 98px;
+  height: 98px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3.5px solid var(--persona-color, var(--primary));
+  padding: 3px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+  transition: transform 0.3s ease;
+}
+
+.voice-character-halo {
+  position: absolute;
+  top: 7px;
+  width: 98px;
+  height: 98px;
+  border-radius: 50%;
+  background: var(--persona-color, var(--primary));
+  opacity: 0.15;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Animation du personnage quand il parle (synthèse vocale en cours) */
+.voice-character-stage.is-speaking .voice-character-portrait {
+  animation: characterTalkBounce 0.52s ease-in-out infinite alternate;
+}
+
+.voice-character-stage.is-speaking .voice-character-halo {
+  animation: characterHaloPulse 1.1s ease-out infinite;
+  opacity: 0.35;
+}
+
+.voice-character-stage.is-speaking .svg-mouth {
+  animation: svgMouthSpeak 0.24s ease-in-out infinite alternate;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Animation du personnage quand l'écoute de la commande vocale ("Suivant" / "Répéter") est active */
+.voice-character-stage.is-listening .voice-character-portrait {
+  animation: characterListenBreathe 2s ease-in-out infinite;
+  box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.28);
+}
+
+.voice-character-stage.is-listening .voice-character-halo {
+  background: #10b981;
+  animation: characterRadarListen 1.5s ease-out infinite;
+  opacity: 0.35;
+}
+
+/* Animation de célébration finale ("Bon appétit !") */
+.voice-character-stage.is-celebrating .voice-character-portrait {
+  animation: characterCelebrateJump 0.65s ease-in-out infinite alternate;
+}
+
+/* Particules flottantes autour du personnage */
+.voice-character-float-particles {
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.voice-character-float-particles span {
+  position: absolute;
+  font-size: 1.05rem;
+  animation: floatChefParticle 2.6s ease-in-out infinite;
+}
+
+.voice-character-float-particles span:nth-child(1) {
+  top: 0;
+  left: 4px;
+  animation-delay: 0s;
+}
+
+.voice-character-float-particles span:nth-child(2) {
+  top: 4px;
+  right: 2px;
+  animation-delay: 0.8s;
+}
+
+.voice-character-float-particles span:nth-child(3) {
+  bottom: 24px;
+  left: -2px;
+  animation-delay: 1.5s;
+}
+
+/* Barres d'égaliseur vocal sous l'avatar */
+.voice-wave-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 16px;
+  margin-top: 6px;
+  z-index: 2;
+}
+
+.voice-wave-bars span {
+  width: 4px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--persona-color, var(--primary));
+  opacity: 0.45;
+  transition: height 0.15s ease;
+}
+
+.voice-character-stage.is-speaking .voice-wave-bars span {
+  opacity: 1;
+  animation: voiceWaveEqualizer 0.45s ease-in-out infinite alternate;
+}
+
+.voice-character-stage.is-listening .voice-wave-bars span {
+  background: #10b981;
+  opacity: 0.85;
+  animation: voiceWaveEqualizer 0.85s ease-in-out infinite alternate;
+}
+
+.voice-wave-bars span:nth-child(1) { animation-delay: 0.05s; }
+.voice-wave-bars span:nth-child(2) { animation-delay: 0.18s; }
+.voice-wave-bars span:nth-child(3) { animation-delay: 0.02s; }
+.voice-wave-bars span:nth-child(4) { animation-delay: 0.24s; }
+.voice-wave-bars span:nth-child(5) { animation-delay: 0.12s; }
+
+.voice-character-name-tag {
+  margin-top: 4px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--persona-color, var(--text-main));
+  background: #ffffff;
+  border: 1px solid var(--persona-border, var(--border-color));
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* Bulle de dialogue du Chef */
+.voice-speech-bubble {
+  flex: 1;
+  background: #ffffff;
+  border: 2px solid var(--persona-border, var(--border-color));
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.voice-speech-title {
+  font-family: var(--font-display);
+  font-size: 1.04rem;
+  font-weight: 800;
+  color: var(--persona-color, var(--text-main));
+  margin-bottom: 6px;
+}
+
+.voice-oven-alert-box {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1.5px solid #f87171;
+  color: #991b1b;
+  font-size: 0.86rem;
+}
+
+.voice-speech-text {
+  font-size: 0.95rem;
+  line-height: 1.52;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.voice-mic-prompt-box {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  color: #065f46;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mic-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: micDotPulse 1.4s infinite;
+}
+
+.voice-bon-appetit-banner {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fef3c7 0%, #dcfce7 100%);
+  border: 1.5px solid #34d399;
+  color: #065f46;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.voice-stage-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px dashed var(--persona-border, var(--border-color));
+}
+
+.btn-voice-repeat {
+  background: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.btn-voice-next {
+  flex: 1 1 150px;
+  justify-content: center;
+  padding: 10px 18px !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+}
+
+/* Mise en évidence de l'étape ou des ingrédients en cours dans la Fiche Cuisine */
+.voice-active-ingredients-highlight {
+  background: #f0fdf4;
+  border: 2px solid #34d399;
+  border-radius: 10px;
+  padding: 8px 12px !important;
+  transition: all 0.25s ease;
+}
+
+.voice-active-step-highlight {
+  background: #fffbeb !important;
+  border-left: 4px solid var(--primary);
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+
+@keyframes characterTalkBounce {
+  0% {
+    transform: translateY(0) scale(1) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(-5px) scale(1.05) rotate(2deg);
+  }
+}
+
+@keyframes svgMouthSpeak {
+  0% {
+    transform: scaleY(0.85) scaleX(0.95);
+  }
+  100% {
+    transform: scaleY(1.9) scaleX(1.12);
+  }
+}
+
+@keyframes characterHaloPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.42;
+  }
+  100% {
+    transform: scale(1.38);
+    opacity: 0;
+  }
+}
+
+@keyframes characterListenBreathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes characterRadarListen {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.42);
+    opacity: 0;
+  }
+}
+
+@keyframes characterCelebrateJump {
+  0% {
+    transform: translateY(0) rotate(-4deg) scale(1);
+  }
+  100% {
+    transform: translateY(-8px) rotate(4deg) scale(1.08);
+  }
+}
+
+@keyframes floatChefParticle {
+  0%, 100% {
+    transform: translateY(0) scale(0.95);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateY(-7px) scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes voiceWaveEqualizer {
+  0% {
+    height: 4px;
+  }
+  100% {
+    height: 16px;
+  }
+}
+
+@keyframes micDotPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+
 
