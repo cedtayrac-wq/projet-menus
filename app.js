@@ -2433,6 +2433,8 @@ function openRecipeModal(slotId) {
     servings: slot.servings,
     ingredients: (recipe.ingredients || []).map((ing) => ({
       name: ing.name,
+      qtyRaw: formatScaledQty(ing.qty, ratio),
+      unitRaw: ing.unit,
       qtyText: `${formatScaledQty(ing.qty, ratio)} ${ing.unit}`
     })),
     steps: recipe.steps || [],
@@ -2508,7 +2510,7 @@ function openRecipeModal(slotId) {
         ${seasonMeta.icon} ${seasInfo.pct}% d'ingrédients de saison (${seasInfo.inSeasonCount}/${seasInfo.totalCount})
       </span>
     </h3>
-    <ul style="list-style: none;">
+    <ul id="modal-ingredients-list" style="list-style: none;">
       ${ingredientsHTML}
     </ul>
 
@@ -5695,6 +5697,33 @@ function renderPantryAiKeyStatus() {
 // ============================================================================
 // SCANNER VIDÉO EN DIRECT : FRIGO & PLACARD (CAMÉRA + GEMINI VISION + CODE-BARRES + VOIX)
 // ============================================================================
+function switchActiveCameraZone() {
+  const nextZone = pantryActiveScanZone === 'fridge' ? 'cupboard' : 'fridge';
+  pantryActiveScanZone = nextZone;
+  const zoneLabel = pantryActiveScanZone === 'fridge' ? '❄️ Scan du Frigo' : '🥫 Scan du Placard';
+
+  const badgeEl = document.getElementById('pantry-active-zone-badge');
+  const statusPill = document.getElementById('pantry-scan-status-pill');
+  const hudMsg = document.getElementById('pantry-scan-Hud-msg');
+  const btnFridge = document.getElementById('btn-scan-fridge');
+  const btnCupboard = document.getElementById('btn-scan-cupboard');
+
+  if (btnFridge) btnFridge.classList.toggle('active-scan', pantryActiveScanZone === 'fridge');
+  if (btnCupboard) btnCupboard.classList.toggle('active-scan', pantryActiveScanZone === 'cupboard');
+
+  if (badgeEl) {
+    badgeEl.textContent = `${zoneLabel} en direct`;
+    badgeEl.style.color = pantryActiveScanZone === 'fridge' ? '#38bdf8' : '#fbbf24';
+  }
+  if (statusPill) {
+    statusPill.textContent = `${zoneLabel} actif`;
+  }
+  if (hudMsg) {
+    hudMsg.textContent = `Filmez l'intérieur du ${pantryActiveScanZone === 'fridge' ? 'frigo' : 'placard'}...`;
+  }
+  showToast(`Basculé sur ${zoneLabel}`);
+}
+
 async function startPantryCamera(zone) {
   pantryActiveScanZone = zone === 'cupboard' ? 'cupboard' : 'fridge';
   const zoneLabel = pantryActiveScanZone === 'fridge' ? '❄️ Scan du Frigo' : '🥫 Scan du Placard';
@@ -5716,7 +5745,7 @@ async function startPantryCamera(zone) {
   }
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('⚠️ Caméra directe non disponible sur ce navigateur : utilisez le bouton "Prendre / Importer une photo".');
+    showToast('⚠️ Caméra non disponible sur cet appareil.');
     return;
   }
 
@@ -5741,7 +5770,10 @@ async function startPantryCamera(zone) {
     }
 
     pantryCameraStream = stream;
-    if (camContainer) camContainer.style.display = 'block';
+    if (camContainer) {
+      camContainer.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
     if (videoEl) {
       videoEl.srcObject = stream;
       await videoEl.play().catch(() => {});
@@ -5755,10 +5787,10 @@ async function startPantryCamera(zone) {
     }
 
     setupPantryAutoScanLoops();
-    showToast(`📹 ${zoneLabel} ouvert : filmez vos étagères !`);
+    showToast(`📹 ${zoneLabel} ouvert en plein écran !`);
   } catch (err) {
     console.error('Erreur ouverture caméra :', err);
-    showToast('⚠️ Impossible d\'accéder à la caméra. Autorisez la caméra ou utilisez "Prendre une photo".');
+    showToast('⚠️ Impossible d\'accéder à la caméra. Autorisez l\'accès caméra sur votre téléphone.');
   }
 }
 
@@ -5787,6 +5819,7 @@ function stopPantryCamera() {
 
   const camContainer = document.getElementById('pantry-camera-container');
   if (camContainer) camContainer.style.display = 'none';
+  document.body.style.overflow = '';
 
   const btnFridge = document.getElementById('btn-scan-fridge');
   const btnCupboard = document.getElementById('btn-scan-cupboard');
@@ -6476,16 +6509,13 @@ function renderPantrySection() {
 
     if (filtered.length === 0) {
       listEl.innerHTML = `
-        <div style="padding: 22px 14px; text-align: center; background: var(--bg-subtle); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.85rem;">
+        <div style="padding: 20px 14px; text-align: center; background: var(--bg-subtle); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.85rem;">
           <p style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
-            🗄️ Votre liste Garde-manger est vide
+            🗄️ Aucun ingrédient dans cette liste
           </p>
-          <p style="margin-bottom: 10px;">
-            Lancez un <strong>❄️ Scan Frigo</strong> ou un <strong>🥫 Scan Placard</strong> avec la caméra, cliquez sur les boutons rapides ci-dessus, ou chargez un exemple.
+          <p>
+            Lancez un <strong>❄️ Scan Frigo</strong> ou un <strong>🥫 Scan Placard</strong> pour filmer vos étagères, ou saisissez un ingrédient ci-dessus.
           </p>
-          <button type="button" class="btn btn-outline btn-sm" onclick="loadSamplePantryStock()">
-            ✨ Charger un exemple de Frigo &amp; Placard
-          </button>
         </div>
       `;
     } else {
@@ -6505,7 +6535,6 @@ function renderPantrySection() {
                 </span>
                 <div style="min-width: 0;">
                   <div class="pantry-item-name" title="${item.name}">${item.name}</div>
-                  <div style="font-size: 0.71rem; color: var(--text-muted);">${item.aisle || 'Garde-manger'}</div>
                 </div>
               </div>
 
@@ -6555,25 +6584,25 @@ function renderPantrySection() {
     syncBox.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
         <div>
-          <strong>🧺 Impact sur la liste des courses de la semaine :</strong><br />
+          <strong>🧺 Liste des courses de la semaine :</strong>
           ${
             allPantry.length === 0
-              ? 'Scannez ou ajoutez vos ingrédients pour déduire automatiquement votre stock de votre panier de courses.'
-              : `<strong>${covered} ingrédient(s)</strong> déjà en stock suffisant et <strong>${partial} quantité(s)</strong> réduite(s) sur les repas validés.`
+              ? 'Scannez votre frigo/placard pour ajuster les courses.'
+              : `<strong>${covered} en stock</strong> et <strong>${partial} quantité(s) réduite(s)</strong>.`
           }
         </div>
         <button type="button" class="btn btn-primary btn-sm" onclick="syncPantryWithWeeklyShopping(true)">
-          🔄 Ajuster &amp; Voir la liste des courses
+          🔄 Ajuster la liste des courses
         </button>
       </div>
     `;
   }
 
-  // Badge nombre de convives global du garde-manger
+  // Badge nombre de parts global du garde-manger
   const servingsBadge = document.getElementById('pantry-servings-badge');
   if (servingsBadge) {
     const s = state.pantryServings || 2;
-    servingsBadge.textContent = `${s} ${s > 1 ? 'convives' : 'convive'}`;
+    servingsBadge.textContent = `${s} ${s > 1 ? 'parts' : 'part'}`;
   }
 
   renderPantryMenusGrid();
@@ -6756,6 +6785,8 @@ function openPantryRecipeModal(recipeId, servings) {
     servings: s,
     ingredients: (recipe.ingredients || []).map((ing) => ({
       name: ing.name,
+      qtyRaw: formatScaledQty(ing.qty, ratio),
+      unitRaw: ing.unit,
       qtyText: `${formatScaledQty(ing.qty, ratio)} ${ing.unit}`
     })),
     steps: recipe.steps || [],
@@ -6780,7 +6811,7 @@ function openPantryRecipeModal(recipeId, servings) {
     ${voiceToolbarHTML}
 
     <div class="modal-section-title">🛒 Ingrédients (calculés pour ${s} ${s > 1 ? 'parts' : 'part'})</div>
-    <ul class="modal-ing-list">${ingredientsHTML}</ul>
+    <ul id="modal-ingredients-list" class="modal-ing-list">${ingredientsHTML}</ul>
 
     <div class="modal-section-title">👩‍🍳 Étapes de préparation <small style="font-weight: 600; font-size: 0.78rem; color: var(--text-muted);">(Touchez une étape pour l'écouter 🔊)</small></div>
     <ol class="modal-steps-list">${stepsHTML}</ol>
