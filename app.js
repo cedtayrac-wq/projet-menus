@@ -1530,10 +1530,40 @@ function replaceDessertInSlot(slotId) {
   const pool = styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts;
   const nextDessert = pickRandomAvoiding(pool, usedDesserts, getSlotMonthNum(slot));
   slot.dessertId = nextDessert.id;
+  slot.lastRemovedDessertId = null;
   saveStateToStorage();
   renderAll();
   animateCardElement(slotId, 'anim-shuffle');
   showToast(`🍰 Nouvelle douceur proposée pour ${slot.day} (${slot.mealLabel}) !`);
+}
+
+function toggleDessertInSlot(slotId) {
+  const slot = state.slots.find((s) => s.slotId === slotId);
+  if (!slot) return;
+
+  if (slot.dessertId) {
+    slot.lastRemovedDessertId = slot.dessertId;
+    slot.dessertId = null;
+    saveStateToStorage();
+    renderAll();
+    showToast(`🚫 Note sucrée retirée pour ${slot.day} (${slot.mealLabel})`);
+  } else {
+    if (slot.lastRemovedDessertId && findDessertById(slot.lastRemovedDessertId)) {
+      slot.dessertId = slot.lastRemovedDessertId;
+    } else {
+      const usedDesserts = new Set(state.slots.filter((s) => s.dessertId).map((s) => s.dessertId));
+      const style = getSlotStyle(slot);
+      const styleDesserts = window.RECIPES_DB.weekendDesserts.filter((d) => d.style === style);
+      const pool = styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts;
+      const nextDessert = pickRandomAvoiding(pool, usedDesserts, getSlotMonthNum(slot));
+      slot.dessertId = nextDessert.id;
+    }
+    saveStateToStorage();
+    renderAll();
+    animateCardElement(slotId, 'anim-shuffle');
+    const restored = findDessertById(slot.dessertId);
+    showToast(`🍰 Note sucrée ajoutée : ${restored ? restored.title : 'Dessert'} !`);
+  }
 }
 
 // Choisir directement entre les 3 types de repas (Équilibré, Plaisir, Gourmet) en Semaine comme le Week-end
@@ -2110,12 +2140,15 @@ function createMealCardHTML(slot) {
           <div class="dessert-box" style="margin-top: 10px;">
             <div class="dessert-header">
               <span class="dessert-tag">🍰 Note sucrée du repas</span>
-              <div style="display: flex; gap: 4px;">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                 <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem;" onclick="openCatalogModal('${slot.slotId}', 'dessert')" title="Choisir un dessert dans le catalogue">
                   📚 Choisir
                 </button>
                 <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem;" onclick="replaceDessertInSlot('${slot.slotId}')">
                   🎲 Autre dessert
+                </button>
+                <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem; color: #b91c1c; border-color: #fecaca;" onclick="toggleDessertInSlot('${slot.slotId}')" title="Enlever la note sucrée de ce repas">
+                  ✕ Enlever
                 </button>
               </div>
             </div>
@@ -2125,14 +2158,26 @@ function createMealCardHTML(slot) {
             </div>
           </div>
         `
-            : ''
+            : `
+          <div style="margin-top: 10px;">
+            <button
+              type="button"
+              class="btn btn-outline btn-sm"
+              style="width: 100%; justify-content: center; border-style: dashed; border-color: #f59e0b; color: var(--pleasure-hover); background: rgba(254, 243, 199, 0.35); font-size: 0.8rem;"
+              onclick="toggleDessertInSlot('${slot.slotId}')"
+              title="Remettre ou ajouter une note sucrée (dessert) à ce repas"
+            >
+              🍰 ${slot.lastRemovedDessertId ? 'Remettre la note sucrée' : '+ Ajouter une note sucrée'}
+            </button>
+          </div>
+        `
         }
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
         <!-- Boutons Recette / Catalogue / Valider -->
         <div class="meal-card-actions">
-          <button class="btn btn-outline btn-sm" onclick="openRecipeModal('${slot.slotId}')">
+          <button class="btn btn-outline btn-fiche-cuisine" onclick="openRecipeModal('${slot.slotId}')">
             📖 Fiche cuisine
           </button>
           <button class="btn btn-outline btn-sm" onclick="openCatalogModal('${slot.slotId}')" title="Parcourir tout le catalogue de menus">
@@ -5350,9 +5395,11 @@ function updateVoiceStatusIndicators(isSpeaking, labelText) {
 }
 
 // ============================================================================
-// SYNTHÈSE VOCALE & RECONNAISSANCE DES COMMANDES VOCALES ("SUIVANT" / "RÉPÉTER")
+// SYNTHÈSE VOCALE (CLONE ELEVENLABS v2 / CLOUD / NAVIGATEUR) & RECONNAISSANCE
+// VOCALE CONTINUE (« SUIVANT », « RÉPÉTER », « PAUSE », « REPRENDRE »)
 // ============================================================================
 let activeCloudVoiceAudio = null;
+window._activeVoiceUtterance = null; // Référence globale pour empêcher le Garbage Collector Chrome/Android de supprimer onend !
 
 function stopActiveCloudVoiceAudio() {
   if (activeCloudVoiceAudio) {
@@ -5361,6 +5408,79 @@ function stopActiveCloudVoiceAudio() {
       activeCloudVoiceAudio.src = '';
     } catch (e) {}
     activeCloudVoiceAudio = null;
+  }
+}
+
+// Mode 3 : Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2)
+async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = {}) {
+  try {
+    const voiceId = getResolvedElevenLabsVoiceId(persona.id);
+    const voiceSettings = persona.elevenLabsSettings || {
+      stability: 0.45,
+      similarity_boost: 0.85,
+      style: 0.55,
+      use_speaker_boost: true
+    };
+
+    const resp = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': xiKey,
+          'Content-Type': 'application/json',
+          Accept: 'audio/mpeg'
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          model_id: 'eleven_multilingual_v2',
+          voice_settings: voiceSettings
+        })
+      }
+    );
+
+    if (!resp.ok) return false;
+    const blob = await resp.blob();
+    if (!blob || blob.size < 100) return false;
+
+    stopActiveCloudVoiceAudio();
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    const userRate = state.voiceSettings?.rate || 1.0;
+    audio.playbackRate = Math.max(0.75, Math.min(1.35, userRate));
+    activeCloudVoiceAudio = audio;
+
+    audio.onplay = () => {
+      voiceGuideSession.isSpeaking = true;
+      updateVoiceStatusIndicators(true, options.statusLabel || `🧬 ${persona.name} (Voix Clonée)...`);
+      updateCharacterStageAnimationState();
+      renderVoiceGuideSettings();
+    };
+
+    const cleanupAndFinish = () => {
+      try {
+        URL.revokeObjectURL(audioUrl);
+      } catch (e) {}
+      if (activeCloudVoiceAudio === audio) {
+        activeCloudVoiceAudio = null;
+      }
+      voiceGuideSession.isSpeaking = false;
+      voiceGuideSession.lastSpokenEndTime = Date.now();
+      updateVoiceStatusIndicators(false);
+      updateCharacterStageAnimationState();
+      renderVoiceGuideSettings();
+      if (typeof options.onEnd === 'function') {
+        options.onEnd();
+      }
+    };
+
+    audio.onended = cleanupAndFinish;
+    audio.onerror = cleanupAndFinish;
+
+    await audio.play();
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -5440,15 +5560,16 @@ async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options =
 }
 
 function speakWithVoiceGuide(textToSpeak, options = {}) {
+  const xiKey = getEffectiveElevenLabsApiKey();
+  const useElevenLabs = Boolean(xiKey) && state.voiceSettings?.engine !== 'system';
   const voiceApiKey = getEffectiveAiApiKey('voice');
   const hasBrowserSpeech = 'speechSynthesis' in window;
 
-  if (!hasBrowserSpeech && !voiceApiKey) {
+  if (!hasBrowserSpeech && !voiceApiKey && !useElevenLabs) {
     showToast('⚠️ La synthèse vocale n\'est pas disponible sur cet appareil.');
     return;
   }
 
-  // Suspendre temporairement le déclenchement micro pendant que le personnage parle
   voiceGuideSession.isSpeaking = true;
   updateCharacterStageAnimationState();
 
@@ -5467,8 +5588,35 @@ function speakWithVoiceGuide(textToSpeak, options = {}) {
   }
 
   const persona = getActiveVoicePersona();
+
+  // 1. Priorité au Mode 3 : Voix Clonée Haute-Fidélité ElevenLabs Neural v2 si configurée
+  if (useElevenLabs) {
+    trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options).then((played) => {
+      if (!played) {
+        if (voiceApiKey && !voiceApiKey.startsWith('sk_')) {
+          trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options).then((cloudPlayed) => {
+            if (!cloudPlayed && hasBrowserSpeech) {
+              speakWithBrowserSynthesis(cleanText, persona, options);
+            } else if (!cloudPlayed) {
+              voiceGuideSession.isSpeaking = false;
+              updateCharacterStageAnimationState();
+            }
+          });
+        } else if (hasBrowserSpeech) {
+          speakWithBrowserSynthesis(cleanText, persona, options);
+        } else {
+          voiceGuideSession.isSpeaking = false;
+          updateCharacterStageAnimationState();
+        }
+      }
+    });
+    return;
+  }
+
+  // 2. Sinon Cloud TTS Google si clé Cloud active
   const preferCloudVoice =
     Boolean(voiceApiKey) &&
+    !voiceApiKey.startsWith('sk_') &&
     (state.voiceSettings?.voiceURI === 'cloud_neural_fr' ||
       !hasBrowserSpeech ||
       (hasBrowserSpeech && window.speechSynthesis.getVoices && window.speechSynthesis.getVoices().length === 0));
@@ -5485,6 +5633,7 @@ function speakWithVoiceGuide(textToSpeak, options = {}) {
     return;
   }
 
+  // 3. Synthèse vocale navigateur avec référence globale anti-GC
   speakWithBrowserSynthesis(cleanText, persona, options);
 }
 
@@ -5496,8 +5645,10 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
   }
 
   const utterance = new SpeechSynthesisUtterance(cleanText);
-  const voice = resolveActiveSpeechVoice(persona.gender);
+  // Conserver une référence globale pour empêcher le Garbage Collector V8 de supprimer l'événement onend !
+  window._activeVoiceUtterance = utterance;
 
+  const voice = resolveActiveSpeechVoice(persona.gender);
   if (voice) {
     utterance.voice = voice;
     utterance.lang = voice.lang || 'fr-FR';
@@ -5509,6 +5660,29 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
   utterance.rate = Math.max(0.7, Math.min(1.45, (persona.baseRate || 1.0) * userRateMultiplier));
   utterance.pitch = persona.basePitch || 1.0;
 
+  let finishedHandled = false;
+  const markSpeechFinished = () => {
+    if (finishedHandled) return;
+    finishedHandled = true;
+    clearTimeout(utterance._safetyEndTimer);
+    voiceGuideSession.isSpeaking = false;
+    voiceGuideSession.lastSpokenEndTime = Date.now();
+    updateVoiceStatusIndicators(false);
+    updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
+    if (typeof options.onEnd === 'function') {
+      options.onEnd();
+    }
+  };
+
+  // Filet de sécurité : si le navigateur ne déclenche pas onend après la durée estimée, débloquer le micro automatiquement
+  const estimatedMs = Math.max(3500, Math.min(28000, cleanText.length * 75));
+  utterance._safetyEndTimer = setTimeout(() => {
+    if (voiceGuideSession.isSpeaking && !window.speechSynthesis.speaking) {
+      markSpeechFinished();
+    }
+  }, estimatedMs);
+
   utterance.onstart = () => {
     voiceGuideSession.isSpeaking = true;
     updateVoiceStatusIndicators(true, options.statusLabel || `🔊 ${persona.name} parle...`);
@@ -5516,28 +5690,17 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
     renderVoiceGuideSettings();
   };
 
-  utterance.onend = () => {
-    voiceGuideSession.isSpeaking = false;
-    voiceGuideSession.lastSpokenEndTime = Date.now();
-    updateVoiceStatusIndicators(false);
-    updateCharacterStageAnimationState();
-    renderVoiceGuideSettings();
-    if (typeof options.onEnd === 'function') {
-      options.onEnd();
-    }
-  };
+  utterance.onend = markSpeechFinished;
+  utterance.onerror = markSpeechFinished;
 
-  utterance.onerror = () => {
-    voiceGuideSession.isSpeaking = false;
-    voiceGuideSession.lastSpokenEndTime = Date.now();
-    updateVoiceStatusIndicators(false);
-    updateCharacterStageAnimationState();
-    if (typeof options.onEnd === 'function') {
-      options.onEnd();
+  try {
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
     }
-  };
-
-  window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    markSpeechFinished();
+  }
 }
 
 function testSelectedVoiceGuide() {
@@ -5554,8 +5717,20 @@ function testSelectedVoiceGuide() {
   showToast(`🔊 ${persona.name} : démonstration vocale en cours...`);
 }
 
-// Démarrer l'écoute vocale continue pour les commandes "Suivant" et "Répéter"
-function startVoiceCommandListener() {
+// Normalisation phonétique sans accents pour reconnaître toutes les variantes de "suivant", "répéter", "pause", "reprendre"
+function normalizeVoiceCommandTranscript(raw) {
+  return String(raw || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['’.,!?;:«»"-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Démarrer et maintenir l'écoute vocale continue pour les commandes :
+// « Suivant », « Répéter », « Pause », « Reprendre », « Précédent », « Stop »
+function startVoiceCommandListener(forceRestart = false) {
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRec || !voiceGuideSession.active || voiceGuideSession.finished) {
     voiceGuideSession.isListening = false;
@@ -5563,10 +5738,20 @@ function startVoiceCommandListener() {
     return;
   }
 
+  // Si l'écoute tourne déjà et qu'on ne force pas le redémarrage, la conserver active
+  if (voiceGuideSession.recognition && voiceGuideSession.isListening && !forceRestart) {
+    updateCharacterStageAnimationState();
+    return;
+  }
+
+  clearTimeout(voiceGuideSession.restartRecTimer);
+
   if (voiceGuideSession.recognition) {
     try {
       voiceGuideSession.recognition.onend = null;
-      voiceGuideSession.recognition.stop();
+      voiceGuideSession.recognition.onerror = null;
+      voiceGuideSession.recognition.onresult = null;
+      voiceGuideSession.recognition.abort();
     } catch (e) {}
     voiceGuideSession.recognition = null;
   }
@@ -5576,7 +5761,7 @@ function startVoiceCommandListener() {
     rec.lang = 'fr-FR';
     rec.continuous = true;
     rec.interimResults = true;
-    rec.maxAlternatives = 3;
+    rec.maxAlternatives = 5;
 
     rec.onstart = () => {
       voiceGuideSession.isListening = true;
@@ -5584,47 +5769,113 @@ function startVoiceCommandListener() {
     };
 
     rec.onresult = (event) => {
-      // Ignorer si l'assistant est lui-même en train de parler (évite l'auto-déclenchement sur "dites Suivant")
-      if (voiceGuideSession.isSpeaking) return;
-      if (Date.now() - (voiceGuideSession.lastSpokenEndTime || 0) < 400) return;
+      if (!voiceGuideSession.active) return;
+
+      // Anti-rebond : éviter de déclencher 2 commandes en moins de 950 ms
+      const now = Date.now();
+      if (now - (voiceGuideSession.lastCommandTime || 0) < 950) return;
+
+      // Vérifier si la synthèse vocale est réellement en train de parler
+      const browserActuallySpeaking =
+        ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) ||
+        Boolean(activeCloudVoiceAudio && !activeCloudVoiceAudio.paused);
+
+      if (!browserActuallySpeaking && voiceGuideSession.isSpeaking) {
+        voiceGuideSession.isSpeaking = false;
+        updateCharacterStageAnimationState();
+      }
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const res = event.results[i];
-        const transcript = (res[0]?.transcript || '').toLowerCase().trim();
-        if (!transcript) continue;
+        let combinedRaw = '';
+        for (let a = 0; a < res.length; a++) {
+          combinedRaw += ' ' + (res[a]?.transcript || '');
+        }
+        const norm = normalizeVoiceCommandTranscript(combinedRaw);
+        if (!norm) continue;
 
-        // Détecter la commande "Suivant"
-        if (/\b(suivant|suivante|continuer|continue|prêt|pret|prête|prete|c'est bon|valider|valide|étape suivante|oui|ok|suite)\b/i.test(transcript)) {
+        // Afficher un retour visuel en direct de ce que le micro entend
+        const firstTranscript = (res[0]?.transcript || '').trim();
+        if (firstTranscript) {
+          voiceGuideSession.lastHeardTranscript = firstTranscript;
+          const liveHeardEl = document.getElementById('voice-live-transcript-preview');
+          if (liveHeardEl) {
+            liveHeardEl.textContent = `👂 Entendu : « ${firstTranscript} »`;
+            liveHeardEl.style.display = 'inline-flex';
+          }
+        }
+
+        // Anti-écho : si le haut-parleur prononce la phrase du chef ("Quand vous êtes prêt, dites suivant"),
+        // la phrase captée contient "dites suivant" ou fait plus de 5 mots pendant que le chef parle.
+        // En revanche, si l'utilisateur dit "Pause", "Stop", "Suivant" ou "Répéter" (commande courte), on l'exécute !
+        const wordCount = norm.split(' ').filter(Boolean).length;
+        const looksLikeAssistantEcho =
+          /\b(dites suivant|dis suivant|dites repeter|quand vous etes|quand tu es|nous allons cuisiner|ingredient \d+ sur)\b/.test(norm) ||
+          (browserActuallySpeaking && wordCount > 5);
+
+        if (looksLikeAssistantEcho) {
+          continue;
+        }
+
+        // 1. Commande vocale « PAUSE » (fonctionne même pendant que le chef parle !)
+        if (/\b(pause|mettre en pause|mets en pause|attends|attend|attendre|minute|patiente)\b/.test(norm)) {
+          voiceGuideSession.lastCommandTime = now;
+          triggerVoiceCommandFeedback('« Pause » reconnu ⏸️');
+          pauseVoiceGuide();
+          return;
+        }
+
+        // 2. Commande vocale « REPRENDRE » (relance la lecture / quitte le mode pause)
+        if (/\b(reprendre|reprends|reprend|reprise|repartir|relancer|relance|lecture)\b/.test(norm)) {
+          voiceGuideSession.lastCommandTime = now;
+          triggerVoiceCommandFeedback('« Reprendre » reconnu ▶️');
+          resumeVoiceGuide();
+          return;
+        }
+
+        // Si le chef parle encore (hors commande Pause/Stop), éviter les faux positifs sur les longs segments
+        if (browserActuallySpeaking && wordCount > 3) {
+          continue;
+        }
+
+        // 3. Commande vocale « SUIVANT » (valide l'ingrédient ou l'étape en cours et passe à la suite)
+        if (
+          /\b(suivant|suivante|suivants|continuer|continue|pret|prete|c est bon|valider|valide|etape suivante|ingredient suivant|oui|ok|okay|suite|passe|passer|vas y|go)\b/.test(
+            norm
+          )
+        ) {
+          voiceGuideSession.lastCommandTime = now;
+          voiceGuideSession.isPaused = false;
           triggerVoiceCommandFeedback('« Suivant » reconnu ✓');
-          try {
-            rec.stop();
-          } catch (e) {}
           nextVoiceGuideStep();
           return;
         }
 
-        // Détecter la commande "Répéter"
-        if (/\b(répéter|repeter|répète|repete|répétez|repetez|redire|redis|encore|réécouter|reecouter)\b/i.test(transcript)) {
+        // 4. Commande vocale « RÉPÉTER » (répète l'ingrédient ou l'étape en cours)
+        if (
+          /\b(repeter|repete|repetez|redire|redis|encore|reecouter|reecoute|relire|relis|comment|quoi|pardon)\b/.test(
+            norm
+          )
+        ) {
+          voiceGuideSession.lastCommandTime = now;
+          voiceGuideSession.isPaused = false;
           triggerVoiceCommandFeedback('« Répéter » reconnu 🔄');
-          try {
-            rec.stop();
-          } catch (e) {}
           repeatCurrentVoiceGuideStep();
           return;
         }
 
-        // Détecter la commande "Précédent"
-        if (res.isFinal && /\b(précédent|precedent|précédente|retour|arrière|avant)\b/i.test(transcript)) {
+        // 5. Commande vocale « PRÉCÉDENT »
+        if (/\b(precedent|precedente|retour|arriere|avant|etape precedente|ingredient precedent)\b/.test(norm)) {
+          voiceGuideSession.lastCommandTime = now;
+          voiceGuideSession.isPaused = false;
           triggerVoiceCommandFeedback('« Précédent » reconnu ⏮️');
-          try {
-            rec.stop();
-          } catch (e) {}
           prevVoiceGuideStep();
           return;
         }
 
-        // Détecter la commande "Stop / Arrêter"
-        if (res.isFinal && /\b(stop|arrêter|arreter|quitter|fermer)\b/i.test(transcript)) {
+        // 6. Commande vocale « STOP / ARRÊTER »
+        if (/\b(stop|arreter|arrete|quitter|fermer|terminer)\b/.test(norm)) {
+          voiceGuideSession.lastCommandTime = now;
           triggerVoiceCommandFeedback('« Stop » reconnu ⏹️');
           stopVoiceGuide();
           return;
@@ -5633,23 +5884,25 @@ function startVoiceCommandListener() {
     };
 
     rec.onerror = (e) => {
-      if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')) {
+      const errCode = e && e.error ? e.error : '';
+      if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
         voiceGuideSession.isListening = false;
         updateCharacterStageAnimationState();
+        showToast('⚠️ Autorisez l\'accès au microphone dans votre navigateur pour utiliser les commandes vocales.');
+        return;
       }
     };
 
     rec.onend = () => {
-      // Tant que le mode guide vocal est actif et attend la validation d'une étape, maintenir l'écoute active
-      if (voiceGuideSession.active && !voiceGuideSession.finished && !voiceGuideSession.isSpeaking) {
+      voiceGuideSession.isListening = false;
+      if (voiceGuideSession.active && !voiceGuideSession.finished) {
         clearTimeout(voiceGuideSession.restartRecTimer);
         voiceGuideSession.restartRecTimer = setTimeout(() => {
-          if (voiceGuideSession.active && !voiceGuideSession.finished && !voiceGuideSession.isSpeaking) {
-            startVoiceCommandListener();
+          if (voiceGuideSession.active && !voiceGuideSession.finished) {
+            startVoiceCommandListener(true);
           }
-        }, 350);
+        }, 250);
       } else {
-        voiceGuideSession.isListening = false;
         updateCharacterStageAnimationState();
       }
     };
@@ -5662,16 +5915,96 @@ function startVoiceCommandListener() {
   }
 }
 
+// Watchdog périodique : garantit que le microphone ne s'endort jamais tant que le guide vocal est ouvert
+function startVoiceSessionWatchdog() {
+  clearInterval(voiceGuideSession.recWatchdogTimer);
+  voiceGuideSession.recWatchdogTimer = setInterval(() => {
+    if (!voiceGuideSession.active || voiceGuideSession.finished) {
+      clearInterval(voiceGuideSession.recWatchdogTimer);
+      return;
+    }
+    if (
+      voiceGuideSession.isSpeaking &&
+      !activeCloudVoiceAudio &&
+      'speechSynthesis' in window &&
+      !window.speechSynthesis.speaking
+    ) {
+      voiceGuideSession.isSpeaking = false;
+      updateCharacterStageAnimationState();
+    }
+    if (!voiceGuideSession.isListening) {
+      startVoiceCommandListener(true);
+    }
+  }, 2200);
+}
+
 function stopVoiceCommandListener() {
   clearTimeout(voiceGuideSession.restartRecTimer);
+  clearInterval(voiceGuideSession.recWatchdogTimer);
   if (voiceGuideSession.recognition) {
     try {
       voiceGuideSession.recognition.onend = null;
-      voiceGuideSession.recognition.stop();
+      voiceGuideSession.recognition.onerror = null;
+      voiceGuideSession.recognition.onresult = null;
+      voiceGuideSession.recognition.abort();
     } catch (e) {}
     voiceGuideSession.recognition = null;
   }
   voiceGuideSession.isListening = false;
+}
+
+// Mettre en pause le guide vocal (commande vocale « Pause » ou bouton ⏸️ Pause)
+function pauseVoiceGuide() {
+  if (!voiceGuideSession.active) return;
+  voiceGuideSession.isPaused = true;
+  voiceGuideSession.isSpeaking = false;
+
+  if (activeCloudVoiceAudio && !activeCloudVoiceAudio.paused) {
+    try {
+      activeCloudVoiceAudio.pause();
+    } catch (e) {}
+  }
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+
+  updateVoiceStatusIndicators(false, '⏸️ Guide vocal en pause (dites « Reprendre »)');
+  renderActiveVoiceStageUI();
+  startVoiceCommandListener(false);
+  showToast('⏸️ Guide vocal en pause — Dites « Reprendre » ou « Suivant » pour continuer');
+}
+
+// Reprendre le guide vocal (commande vocale « Reprendre » ou bouton ▶️ Reprendre)
+function resumeVoiceGuide() {
+  if (!voiceGuideSession.active) {
+    startInteractiveVoiceGuide();
+    return;
+  }
+  voiceGuideSession.isPaused = false;
+
+  if (activeCloudVoiceAudio && activeCloudVoiceAudio.paused && activeCloudVoiceAudio.currentTime > 0) {
+    voiceGuideSession.isSpeaking = true;
+    renderActiveVoiceStageUI();
+    activeCloudVoiceAudio.play().catch(() => {
+      speakCurrentStepInGuide(false);
+    });
+    showToast('▶️ Reprise du guide vocal !');
+    return;
+  }
+
+  showToast('▶️ Reprise du guide vocal !');
+  speakCurrentStepInGuide(false);
+}
+
+function togglePauseResumeVoiceGuide() {
+  if (!voiceGuideSession.active) return;
+  if (voiceGuideSession.isPaused) {
+    resumeVoiceGuide();
+  } else {
+    pauseVoiceGuide();
+  }
 }
 
 function triggerVoiceCommandFeedback(text) {
@@ -5681,7 +6014,7 @@ function triggerVoiceCommandFeedback(text) {
     pill.style.display = 'inline-flex';
     setTimeout(() => {
       if (pill) pill.style.display = 'none';
-    }, 2200);
+    }, 2600);
   }
   const persona = getActiveVoicePersona();
   spawnCulinaryConfetti({
@@ -5714,9 +6047,16 @@ async function startInteractiveVoiceGuide() {
   if (!activeModalVoiceContext) return;
 
   voiceGuideSession.active = true;
+  voiceGuideSession.isPaused = false;
   voiceGuideSession.finished = false;
+  voiceGuideSession.lastHeardTranscript = '';
   voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
   voiceGuideSession.currentIndex = 0;
+
+  // IMPORTANT : Démarrer l'écoute microphone immédiatement dans le geste utilisateur du clic !
+  // Cela garantit que le navigateur accorde la permission micro sans bloquer après la fin de la synthèse vocale.
+  startVoiceCommandListener(true);
+  startVoiceSessionWatchdog();
 
   // Activer le maintien de l'écran du smartphone allumé
   await acquireKitchenWakeLock();
@@ -5741,8 +6081,10 @@ function renderActiveVoiceStageUI() {
   const total = seq.length;
   const pct = Math.round(((idx + 1) / total) * 100);
   const isLastOutro = item.type === 'outro';
+  const isIngredientStep = item.type === 'ingredient';
+  const isPaused = Boolean(voiceGuideSession.isPaused);
 
-  // Mettre en évidence dans la fiche cuisine la section correspondante (Ingrédients ou Étape N)
+  // Mettre en évidence dans la fiche cuisine la section correspondante (Ingrédient X ou Étape N)
   highlightModalRecipeSection(item);
 
   wrapper.innerHTML = `
@@ -5751,11 +6093,14 @@ function renderActiveVoiceStageUI() {
       class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''} ${isLastOutro ? 'is-celebrating' : ''}"
       style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};"
     >
-      <!-- Barre supérieure : Étape + Bouton Quitter -->
+      <!-- Barre supérieure : Étape + Retour Micro + Bouton Quitter -->
       <div class="voice-stage-topbar">
         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
           <span class="voice-stage-step-pill">${item.badge}</span>
           <span id="voice-heard-command-pill" class="voice-heard-pill" style="display: none;">🎙️ « Suivant » reconnu ✓</span>
+          <span id="voice-live-transcript-preview" class="voice-wakelock-pill" style="display: ${voiceGuideSession.lastHeardTranscript ? 'inline-flex' : 'none'}; background: #e0f2fe; color: #0369a1;">
+            👂 Entendu : « ${voiceGuideSession.lastHeardTranscript || ''} »
+          </span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           <button type="button" class="btn btn-outline btn-sm" onclick="stopVoiceGuide()" title="Quitter le mode guide vocal">
@@ -5784,13 +6129,15 @@ function renderActiveVoiceStageUI() {
           ${
             !isLastOutro
               ? `
-            <div id="voice-mic-prompt-box" class="voice-mic-prompt-box">
-              <span class="mic-pulse-dot"></span>
+            <div id="voice-mic-prompt-box" class="voice-mic-prompt-box" style="${isPaused ? 'background:#fef3c7; border-color:#f59e0b; color:#92400e;' : ''}">
+              <span class="mic-pulse-dot" style="${isPaused ? 'background:#f59e0b;' : ''}"></span>
               <span id="voice-mic-status-label">
                 ${
-                  voiceGuideSession.isSpeaking
-                    ? `🔊 <strong>${persona.name}</strong> vous guide...`
-                    : `🎙️ <strong>Quand vous êtes prêt, dites « Suivant »</strong> (ou dites <strong>« Répéter »</strong>)`
+                  isPaused
+                    ? `⏸️ <strong>Guide en pause :</strong> Dites <strong>« Reprendre »</strong> ou <strong>« Suivant »</strong> pour continuer`
+                    : voiceGuideSession.isSpeaking
+                    ? `🔊 <strong>${persona.name}</strong> vous guide... (vous pouvez dire <strong>« Pause »</strong> ou <strong>« Suivant »</strong>)`
+                    : `🎙️ <strong>Micro actif :</strong> Dites <strong>« Suivant »</strong>, <strong>« Répéter »</strong>, <strong>« Pause »</strong> ou <strong>« Reprendre »</strong>`
                 }
               </span>
             </div>
@@ -5817,10 +6164,19 @@ function renderActiveVoiceStageUI() {
 
         <button
           type="button"
+          class="btn btn-outline btn-sm"
+          onclick="togglePauseResumeVoiceGuide()"
+          style="${isPaused ? 'background:#fef3c7; border-color:#f59e0b; color:#92400e; font-weight:800;' : ''}"
+        >
+          ${isPaused ? '▶️ Reprendre' : '⏸️ Pause'}
+        </button>
+
+        <button
+          type="button"
           class="btn btn-outline btn-voice-repeat"
           onclick="repeatCurrentVoiceGuideStep()"
         >
-          🔄 Répéter l'étape
+          ${isIngredientStep ? "🔄 Répéter l'ingrédient" : "🔄 Répéter l'étape"}
         </button>
 
         ${
@@ -5831,7 +6187,7 @@ function renderActiveVoiceStageUI() {
             class="btn btn-primary btn-voice-next"
             onclick="nextVoiceGuideStep()"
           >
-            ✓ Suivant ▶
+            ${isIngredientStep ? '✓ Suivant (Ingrédient) ▶' : '✓ Suivant ▶'}
           </button>
         `
             : `
@@ -5859,12 +6215,14 @@ function updateCharacterStageAnimationState() {
 
   const micLabel = document.getElementById('voice-mic-status-label');
   if (micLabel) {
-    if (voiceGuideSession.isSpeaking) {
-      micLabel.innerHTML = `🔊 <strong>${persona.name}</strong> vous parle...`;
+    if (voiceGuideSession.isPaused) {
+      micLabel.innerHTML = `⏸️ <strong>Guide en pause :</strong> Dites <strong>« Reprendre »</strong> ou <strong>« Suivant »</strong> pour continuer`;
+    } else if (voiceGuideSession.isSpeaking) {
+      micLabel.innerHTML = `🔊 <strong>${persona.name}</strong> vous parle... (Dites <strong>« Pause »</strong> ou <strong>« Suivant »</strong> à tout moment)`;
     } else if (voiceGuideSession.isListening) {
-      micLabel.innerHTML = `🎙️ <strong>Micro actif :</strong> Quand vous êtes prêt, dites <strong>« Suivant »</strong> ou <strong>« Répéter »</strong>`;
+      micLabel.innerHTML = `🎙️ <strong>Micro actif :</strong> Quand vous êtes prêt, dites <strong>« Suivant »</strong>, <strong>« Répéter »</strong>, <strong>« Pause »</strong> ou <strong>« Reprendre »</strong>`;
     } else {
-      micLabel.innerHTML = `👆 Quand vous êtes prêt, appuyez sur <strong>« Suivant »</strong> ou <strong>« Répéter »</strong>`;
+      micLabel.innerHTML = `👆 Quand vous êtes prêt, appuyez sur <strong>« Suivant »</strong>, <strong>« Répéter »</strong> ou <strong>« Pause »</strong>`;
     }
   }
 }
@@ -5872,13 +6230,24 @@ function updateCharacterStageAnimationState() {
 function highlightModalRecipeSection(stepItem) {
   const ingListEl = document.getElementById('modal-ingredients-list');
   if (ingListEl) {
-    if (stepItem && stepItem.type === 'ingredients') {
+    if (stepItem && (stepItem.type === 'ingredients' || stepItem.type === 'ingredient')) {
       ingListEl.classList.add('voice-active-ingredients-highlight');
     } else {
       ingListEl.classList.remove('voice-active-ingredients-highlight');
     }
   }
 
+  // Mettre en surbrillance l'ingrédient précis en cours de préparation
+  document.querySelectorAll('[id^="recipe-voice-ing-"]').forEach((el, idx) => {
+    if (stepItem && stepItem.type === 'ingredient' && idx === stepItem.ingredientIdx) {
+      el.classList.add('voice-active-ing-item-highlight');
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      el.classList.remove('voice-active-ing-item-highlight');
+    }
+  });
+
+  // Mettre en surbrillance l'étape de préparation en cours
   document.querySelectorAll('[id^="recipe-voice-step-"]').forEach((el, idx) => {
     if (stepItem && stepItem.type === 'step' && idx === stepItem.recipeStepIdx) {
       el.classList.add('voice-active-step-highlight');
@@ -5892,11 +6261,14 @@ function highlightModalRecipeSection(stepItem) {
 function speakCurrentStepInGuide(isRepeat = false) {
   if (!voiceGuideSession.active || !voiceGuideSession.sequence.length) return;
 
-  stopVoiceCommandListener();
+  voiceGuideSession.isPaused = false;
   const item = voiceGuideSession.sequence[voiceGuideSession.currentIndex];
   if (!item) return;
 
   renderActiveVoiceStageUI();
+
+  // Maintenir l'écoute vocale active en continu
+  startVoiceCommandListener(false);
 
   const textToRead = isRepeat ? item.repeatSpokenText : item.spokenText;
   const isFinalOutro = item.type === 'outro';
@@ -5915,7 +6287,8 @@ function speakCurrentStepInGuide(isRepeat = false) {
     statusLabel: `${item.badge}`,
     onEnd: () => {
       if (voiceGuideSession.active && !voiceGuideSession.finished) {
-        startVoiceCommandListener();
+        startVoiceCommandListener(false);
+        updateCharacterStageAnimationState();
       }
     }
   });
@@ -5926,6 +6299,7 @@ function nextVoiceGuideStep() {
     startInteractiveVoiceGuide();
     return;
   }
+  voiceGuideSession.isPaused = false;
   if (voiceGuideSession.currentIndex < voiceGuideSession.sequence.length - 1) {
     voiceGuideSession.currentIndex++;
     speakCurrentStepInGuide(false);
@@ -5936,6 +6310,7 @@ function nextVoiceGuideStep() {
 
 function prevVoiceGuideStep() {
   if (!voiceGuideSession.active) return;
+  voiceGuideSession.isPaused = false;
   if (voiceGuideSession.currentIndex > 0) {
     voiceGuideSession.finished = false;
     voiceGuideSession.currentIndex--;
@@ -5948,6 +6323,7 @@ function repeatCurrentVoiceGuideStep() {
     startInteractiveVoiceGuide();
     return;
   }
+  voiceGuideSession.isPaused = false;
   speakCurrentStepInGuide(true);
 }
 
@@ -5955,6 +6331,7 @@ function stopVoiceGuide() {
   voiceGuideSession.active = false;
   voiceGuideSession.isSpeaking = false;
   voiceGuideSession.isListening = false;
+  voiceGuideSession.isPaused = false;
   voiceGuideSession.finished = false;
 
   stopVoiceCommandListener();
@@ -5976,12 +6353,35 @@ function stopVoiceGuide() {
   }
 }
 
+function speakRecipeIngredientByIndex(ingIndex) {
+  if (!activeModalVoiceContext) return;
+  if (!voiceGuideSession.active) {
+    voiceGuideSession.active = true;
+    voiceGuideSession.isPaused = false;
+    voiceGuideSession.finished = false;
+    voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
+    startVoiceCommandListener(true);
+    startVoiceSessionWatchdog();
+    acquireKitchenWakeLock();
+  }
+  const targetSeqIdx = voiceGuideSession.sequence.findIndex(
+    (s) => s.type === 'ingredient' && s.ingredientIdx === ingIndex
+  );
+  if (targetSeqIdx !== -1) {
+    voiceGuideSession.currentIndex = targetSeqIdx;
+    speakCurrentStepInGuide(false);
+  }
+}
+
 function speakRecipeStepByIndex(stepIndex) {
   if (!activeModalVoiceContext) return;
   if (!voiceGuideSession.active) {
     voiceGuideSession.active = true;
+    voiceGuideSession.isPaused = false;
     voiceGuideSession.finished = false;
     voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
+    startVoiceCommandListener(true);
+    startVoiceSessionWatchdog();
     acquireKitchenWakeLock();
   }
   const targetSeqIdx = voiceGuideSession.sequence.findIndex(
@@ -7368,10 +7768,10 @@ function renderPantryMenusGrid() {
           </div>
 
           <div class="meal-card-actions" style="margin-top: 12px;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="openPantryRecipeModal('${recipe.id}', ${servings})">
+            <button type="button" class="btn btn-outline btn-fiche-cuisine" onclick="openPantryRecipeModal('${recipe.id}', ${servings})">
               📖 Fiche cuisine
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openAssignPantryToWeekModal('${recipe.id}', ${servings})">
+            <button type="button" class="btn btn-primary btn-sm" style="grid-column: span 2;" onclick="openAssignPantryToWeekModal('${recipe.id}', ${servings})">
               📅 Ajouter au menu de la semaine
             </button>
           </div>
