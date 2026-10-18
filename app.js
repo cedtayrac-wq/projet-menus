@@ -4210,13 +4210,9 @@ const VOICE_PERSONAS = {
   }
 };
 
-let runtimeClonedVoicesInactive = false;
-
 function areClonedVoicesActive() {
-  if (runtimeClonedVoicesInactive) return false;
   const cfg = window.APP_CONFIG || {};
   if (cfg.clonedVoicesEnabled === false || cfg.aiVoiceEnabled === false) return false;
-  if (state.voiceSettings?.clonesActive === false) return false;
   return true;
 }
 
@@ -4225,24 +4221,6 @@ function getAvailableVoicePersonas() {
     return [VOICE_PERSONAS.ia_femme, VOICE_PERSONAS.ia_homme];
   }
   return Object.values(VOICE_PERSONAS);
-}
-
-function deactivateClonedVoicesFallback() {
-  if (runtimeClonedVoicesInactive) return;
-  runtimeClonedVoicesInactive = true;
-  const currentId = state.voiceSettings?.persona || 'lignac';
-  const currentPersona = VOICE_PERSONAS[currentId] || VOICE_PERSONAS.lignac;
-  const fallbackId = currentPersona.gender === 'female' ? 'ia_femme' : 'ia_homme';
-  if (state.voiceSettings) {
-    state.voiceSettings.persona = fallbackId;
-  }
-  renderVoiceGuideSettings();
-  const modalEl = document.getElementById('recipe-modal');
-  if (modalEl && modalEl.classList.contains('open') && activeModalVoiceContext && !voiceGuideSession.active) {
-    const wrapper = document.getElementById('modal-voice-guide-wrapper');
-    if (wrapper) wrapper.innerHTML = buildModalVoiceToolbarHTML();
-  }
-  showToast('ℹ️ Voix clones indisponibles : bascule sur Voix Femme (IA) et Voix Homme (IA).');
 }
 
 function getActiveVoicePersona() {
@@ -4756,19 +4734,19 @@ function enrichStepBodyWithPersonaTics(personaId, spokenStepBody, stepIdx, total
   }
 }
 
-// Consignes vocales complètes données UNE SEULE FOIS au tout début du guide vocal
+// Consignes vocales données UNE SEULE FOIS au tout début du guide vocal
 function buildInitialVoiceCommandsInstruction(personaId) {
   switch (personaId) {
     case 'maite':
-      return 'Pour avancer à votre rythme tout au long de la recette, dites simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+      return 'Dites Suivant, Répéter ou Pause pour avancer.';
     case 'lignac':
-      return 'Pour naviguer à la voix pendant toute la recette, dis simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+      return 'Dis Suivant, Répéter ou Pause pour avancer.';
     case 'etchebest':
-      return 'Pour piloter la recette à la voix, dis simplement : Suivant, Répéter, Précédent, Pause ou Reprendre, et que ça saute !';
+      return 'Dis Suivant, Répéter ou Pause, et que ça saute !';
     case 'coffe':
-      return 'Pour avancer à la voix dans notre recette, dites franchement : Suivant, Répéter, Précédent, Pause ou Reprendre !';
+      return 'Dites Suivant, Répéter ou Pause pour avancer !';
     default:
-      return 'Pour naviguer à la voix tout au long de la recette, dites simplement : Suivant, Répéter, Précédent, Pause ou Reprendre.';
+      return 'Dites Suivant, Répéter ou Pause pour avancer.';
   }
 }
 
@@ -6021,7 +5999,7 @@ function getOrCreateSharedVoiceAudio() {
 function unlockSharedVoiceAudioElement() {
   try {
     const audio = getOrCreateSharedVoiceAudio();
-    if (sharedVoiceGuideAudioUnlocked || (voiceGuideSession.isSpeaking && activeCloudVoiceAudio === audio)) {
+    if (sharedVoiceGuideAudioUnlocked || activeCloudVoiceAudio === audio || voiceGuideSession.isSpeaking) {
       return;
     }
     const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
@@ -6030,7 +6008,9 @@ function unlockSharedVoiceAudioElement() {
     const p = audio.play();
     if (p && typeof p.then === 'function') {
       p.then(() => {
-        audio.pause();
+        if (activeCloudVoiceAudio !== audio && !voiceGuideSession.isSpeaking) {
+          try { audio.pause(); } catch (e) {}
+        }
         audio.muted = false;
         sharedVoiceGuideAudioUnlocked = true;
       }).catch(() => {
@@ -6257,7 +6237,7 @@ async function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v210::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v212::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -6275,27 +6255,52 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
     const endpoints = ['/api/tts'];
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       endpoints.push('http://localhost:8080/api/tts');
+      endpoints.push('http://127.0.0.1:8080/api/tts');
     }
 
     for (const url of endpoints) {
+      // 1. Essayer en POST avec Content-Type text/plain (requête CORS simple sans blocage preflight inutile)
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const timeoutId = setTimeout(() => controller.abort(), 26000);
         const resp = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
           body: JSON.stringify(payload),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
 
-        if (!resp.ok) continue;
-        const ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
-        if (!ctype.includes('audio')) continue;
+        if (resp.ok) {
+          const ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
+          if (ctype.includes('audio')) {
+            const blob = await resp.blob();
+            if (blob && blob.size >= 200) {
+              return blob;
+            }
+          }
+        }
+      } catch (e) {}
 
-        const blob = await resp.blob();
-        if (blob && blob.size >= 200) {
-          return blob;
+      // 2. Repli en GET /api/tts?... si le POST a été filtré
+      try {
+        const qs = `text=${encodeURIComponent(cleanText)}&persona=${encodeURIComponent(persona.id)}&rate=${encodeURIComponent(userRate)}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 26000);
+        const respGet = await fetch(`${url}?${qs}`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (respGet.ok) {
+          const ctype = (respGet.headers.get('Content-Type') || '').toLowerCase();
+          if (ctype.includes('audio')) {
+            const blob = await respGet.blob();
+            if (blob && blob.size >= 200) {
+              return blob;
+            }
+          }
         }
       } catch (e) {}
     }
@@ -6310,7 +6315,7 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
     return null;
   })();
 
-  if (clientTtsBlobCache.size > 60) {
+  if (clientTtsBlobCache.size > 80) {
     const firstKey = clientTtsBlobCache.keys().next().value;
     if (firstKey) clientTtsBlobCache.delete(firstKey);
   }
@@ -6332,35 +6337,40 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   return { ok: played, serverHadBlob: true };
 }
 
-// Pré-charger en arrière-plan les 2 prochaines étapes de la fiche cuisine sur /api/tts (cache Fish Audio S2.1 Pro instantané)
+// Pré-charger en arrière-plan les 3 prochaines étapes de la fiche cuisine sur /api/tts (cache Fish Audio S2.1 Pro instantané)
 function warmUpNextVoiceGuideSteps() {
   if (!voiceGuideSession.active || !Array.isArray(voiceGuideSession.sequence)) return;
   const persona = getActiveVoicePersona();
   const curIdx = voiceGuideSession.currentIndex || 0;
-  const nextIndices = [curIdx + 1, curIdx + 2];
+  const nextIndices = [curIdx + 1, curIdx + 2, curIdx + 3];
 
-  nextIndices.forEach((idx) => {
-    const item = voiceGuideSession.sequence[idx];
-    if (!item || !item.spokenText) return;
-    fetchClonedTtsAudioBlob(item.spokenText, persona).catch(() => {});
-  });
+  (async () => {
+    for (const idx of nextIndices) {
+      if (!voiceGuideSession.active) break;
+      const item = voiceGuideSession.sequence[idx];
+      if (!item || !item.spokenText) continue;
+      try {
+        await fetchClonedTtsAudioBlob(item.spokenText, persona);
+      } catch (e) {}
+    }
+  })();
 }
 
-// Pré-chauffer dès l'ouverture de la Fiche Cuisine l'introduction et la 1ère étape de la recette
+// Pré-chauffer dès l'ouverture de la Fiche Cuisine l'introduction et les 2 premières étapes de la recette
 function warmUpRecipeVoiceGuideOnOpen() {
   if (!activeModalVoiceContext || !areClonedVoicesActive()) return;
   try {
     const persona = getActiveVoicePersona();
     const seq = buildStepByStepVoiceSequence(activeModalVoiceContext);
-    if (seq[0] && seq[0].spokenText) {
-      fetchClonedTtsAudioBlob(seq[0].spokenText, persona)
-        .then(() => {
-          if (seq[1] && seq[1].spokenText) {
-            return fetchClonedTtsAudioBlob(seq[1].spokenText, persona);
-          }
-        })
-        .catch(() => {});
-    }
+    (async () => {
+      for (const idx of [0, 1, 2]) {
+        if (seq[idx] && seq[idx].spokenText) {
+          try {
+            await fetchClonedTtsAudioBlob(seq[idx].spokenText, persona);
+          } catch (e) {}
+        }
+      }
+    })();
   } catch (e) {}
 }
 
@@ -6368,10 +6378,10 @@ function warmUpRecipeVoiceGuideOnOpen() {
 async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) {
   if (options.reqId && options.reqId !== currentVoiceRequestSeq) return true;
   const sampleQuoteClean = (persona.sampleQuote || '').replace(/[«»]/g, '').trim();
-  const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
+  const isSample = options.isSamplePreview || options.isIntroStep || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=211_${Date.now()}`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=220`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
@@ -6521,7 +6531,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     const localResult = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
     if (localResult.ok || reqId !== currentVoiceRequestSeq) return;
 
-    // 3. Repli sur l'échantillon Fish Audio S2.1 Pro embarqué si c'est la phrase d'accueil
+    // 3. Repli sur l'échantillon Fish Audio S2.1 Pro embarqué si c'est l'étape d'accueil hors-ligne
     const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
     if (playedBundledSample || reqId !== currentVoiceRequestSeq) return;
 
@@ -6537,11 +6547,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
       if (playedCloud || reqId !== currentVoiceRequestSeq) return;
     }
 
-    // Si aucun serveur/API de voix clonées n'a pu fournir d'audio (clones inactifs), proposer uniquement Voix Femme (IA) et Voix Homme (IA)
-    if (!localResult.serverHadBlob && !options.isSamplePreview) {
-      deactivateClonedVoicesFallback();
-      persona = getActiveVoicePersona();
-    }
+    // IMPORTANT : Ne jamais désactiver ni faire disparaître les personnalités en cours d'utilisation !
   } else {
     // En Mode Voix Système Standard / Repli IA :
     const localResult = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
@@ -6550,7 +6556,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
 
   if (reqId !== currentVoiceRequestSeq) return;
 
-  // 6. Repli sur la synthèse vocale du navigateur (avec transposition baryton forcée si voix masculine sur moteur féminin)
+  // 6. Repli sur la synthèse vocale du navigateur (en conservant strictement la personnalité choisie !)
   if (hasBrowserSpeech) {
     speakWithBrowserSynthesis(cleanText, persona, reqOptions);
   } else {
@@ -7446,8 +7452,9 @@ function speakCurrentStepInGuide(isRepeat = false) {
 
   speakWithVoiceGuide(textToRead, {
     statusLabel: `${item.badge}`,
+    isIntroStep: item.type === 'intro' && !isRepeat,
     onPlayStart: () => {
-      // Pré-générer en arrière-plan les 2 étapes suivantes dès que l'étape courante démarre
+      // Pré-générer en arrière-plan les étapes suivantes dès que l'étape courante démarre
       warmUpNextVoiceGuideSteps();
     },
     onEnd: () => {
