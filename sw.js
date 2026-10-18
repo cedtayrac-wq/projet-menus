@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-semaine-v175';
+const CACHE_NAME = 'menu-semaine-v202';
 const ASSETS = [
   './',
   './index.html',
@@ -52,7 +52,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
