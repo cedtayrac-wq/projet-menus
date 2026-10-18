@@ -194,7 +194,21 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         syncSlotStyleFlags(slot, slot.mealStyle);
       }
+
+      // S'assurer que les plats non validés proposés ont un maximum d'ingrédients de saison (>= 85%)
+      if (!slot.validated && recipe) {
+        const seas = getRecipeSeasonality(recipe, slot);
+        if (seas.pct < 85) {
+          const usedIds = new Set(state.slots.map((s) => s.recipeId));
+          const pool = getPoolForSlot(slot);
+          const upgraded = pickRandomAvoiding(pool, usedIds, getSlotMonthNum(slot));
+          if (upgraded && upgraded.id) {
+            slot.recipeId = upgraded.id;
+          }
+        }
+      }
     });
+    saveStateToStorage();
   }
 
   renderAll();
@@ -493,42 +507,46 @@ function buildNutritionAndSeasonHTML(recipe, slot, isCompact = false) {
   const nutri = getRecipeNutriScore(recipe);
   const meta = getMonthSeasonMeta(seas.month);
 
-  const grades = ['A', 'B', 'C', 'D', 'E'];
-  const scaleHTML = grades
-    .map(
-      (g) =>
-        `<span class="nutri-letter nutri-${g.toLowerCase()} ${g === nutri.grade ? 'nutri-active' : ''}">${g}</span>`
-    )
-    .join('');
-
   const seasonClass =
     seas.pct >= 85 ? 'season-pill-high' : seas.pct >= 70 ? 'season-pill-mid' : 'season-pill-low';
 
   if (isCompact) {
     return `
       <div class="nutrition-season-row compact">
-        <span class="season-badge ${seasonClass}" title="Proportion d'ingrédients de saison en ${meta.monthName} (${meta.season})">
-          ${meta.icon} <strong>${seas.pct}%</strong> ingr. de saison
+        <span class="season-badge ${seasonClass}" title="Proportion d'ingrédients de saison en ${meta.monthName} (${meta.season}) : varie de 50% à 100% selon les plats">
+          ${meta.icon} <strong>${seas.pct}% d'ingrédients de saison</strong> <small>(${seas.inSeasonCount}/${seas.totalCount})</small>
         </span>
-        <span class="nutri-badge-inline" title="Niveau d'équilibre alimentaire : Nutri-Score ${nutri.grade} (${nutri.label})">
-          <span class="nutri-mini-scale">${scaleHTML}</span>
-          <span class="nutri-text" style="color:${nutri.color};">${nutri.shortLabel}</span>
+        <span class="nutri-badge-inline" title="Équilibre alimentaire : ${nutri.label}">
+          <span class="nutri-title-label">Équilibre</span>
+          <span class="nutri-grade-caption" style="color:${nutri.color}; background:${nutri.bg || '#f1f5f9'}; padding:2px 8px; border-radius:999px;">${nutri.shortLabel}</span>
         </span>
       </div>
     `;
   }
 
+  const slotMonth = seas.month;
+  const ingPillsHTML = (recipe.ingredients || [])
+    .map((ing) => {
+      const check =
+        typeof window.isIngredientInSeason === 'function'
+          ? window.isIngredientInSeason(ing.name, slotMonth)
+          : { inSeason: true };
+      const inSeason = check && typeof check === 'object' ? check.inSeason : Boolean(check);
+      return `<span class="ing-season-chip ${inSeason ? 'is-in-season' : 'is-out-season'}" title="${inSeason ? `Ingrédient de saison en ${meta.monthName}` : `Hors pleine saison en ${meta.monthName}`}">${inSeason ? '🌿' : '•'} ${ing.name}</span>`;
+    })
+    .join('');
+
   return `
     <div class="nutrition-season-row">
-      <div class="season-badge ${seasonClass}" title="${seas.inSeasonCount}/${seas.totalCount} ingrédients de saison en ${meta.monthName} (${meta.season})">
-        <span>${meta.icon} <strong>${seas.pct}% d'ingrédients de saison</strong></span>
-        <small>(${seas.inSeasonCount}/${seas.totalCount} • ${meta.monthName})</small>
+      <div class="season-badge ${seasonClass}" title="${seas.inSeasonCount}/${seas.totalCount} ingrédients de saison en ${meta.monthName} (${meta.season}) — varie entre 50% et 100% selon les plats">
+        <span>${meta.icon} <strong>Ingrédients : ${seas.pct}% de saison</strong></span>
+        <small>(${seas.inSeasonCount}/${seas.totalCount} en ${meta.monthName})</small>
       </div>
-      <div class="nutri-badge-box" title="Équilibre alimentaire du plat : Nutri-Score ${nutri.grade} — ${nutri.label}">
+      <div class="nutri-badge-box" title="Équilibre alimentaire du plat : ${nutri.label}">
         <span class="nutri-title-label">Équilibre</span>
-        <div class="nutri-scale" aria-label="Nutri-Score ${nutri.grade}">${scaleHTML}</div>
-        <span class="nutri-grade-caption" style="color:${nutri.color};">${nutri.label}</span>
+        <span class="nutri-grade-caption" style="color:${nutri.color}; background:${nutri.bg || '#f1f5f9'}; padding:3px 9px; border-radius:999px;">${nutri.label}</span>
       </div>
+      ${ingPillsHTML ? `<div class="ing-season-chips-wrap">${ingPillsHTML}</div>` : ''}
     </div>
   `;
 }
@@ -679,8 +697,17 @@ function getDishEmoji(recipe, slot) {
 }
 
 function getRecipeWinePairing(recipe, slot) {
-  if (recipe && recipe.winePairing && recipe.winePairing.name) {
-    return recipe.winePairing;
+  if (recipe && recipe.winePairing && (recipe.winePairing.appellation || recipe.winePairing.name)) {
+    const wp = recipe.winePairing;
+    return {
+      name: wp.name || wp.appellation,
+      color: wp.color || 'Blanc sec',
+      region: wp.region || 'Bourgogne',
+      appellation: wp.appellation || wp.name,
+      grape: wp.grape || 'Chardonnay',
+      temp: wp.temp || '10-12°C',
+      note: wp.note || ''
+    };
   }
   const style = getSlotStyle(slot);
   if (style !== 'gourmet' && (!recipe || recipe.type !== 'gourmet')) {
@@ -688,17 +715,23 @@ function getRecipeWinePairing(recipe, slot) {
   }
   // Accord par défaut si une recette personnalisée est passée en mode Gourmet sans accord renseigné
   const t = ((recipe && recipe.title) || '').toLowerCase();
-  if (t.includes('poisson') || t.includes('saumon') || t.includes('cabillaud') || t.includes('bar') || t.includes('saint-jacques') || t.includes('gambas') || t.includes('crevette')) {
+  if (t.includes('poisson') || t.includes('saumon') || t.includes('cabillaud') || t.includes('bar') || t.includes('saint-jacques') || t.includes('gambas') || t.includes('crevette') || t.includes('thon')) {
     return {
-      name: 'Chablis 1er Cru ou Sancerre Blanc (AOC)',
-      color: 'Vin blanc sec & minéral',
+      name: 'AOC Chablis Premier Cru (Bourgogne)',
+      color: 'Blanc sec & minéral',
+      region: 'Bourgogne',
+      appellation: 'AOC Chablis Premier Cru',
+      grape: '100 % Chardonnay',
       temp: '10-12°C',
       note: 'Fraîcheur ciselée et notes d\'agrumes idéales pour sublimer la finesse des produits de la mer.'
     };
   }
   return {
-    name: 'Pinot Noir de Bourgogne ou Saint-Émilion Grand Cru (AOC)',
-    color: 'Vin rouge élégant & soyeux',
+    name: 'AOC Saint-Émilion Grand Cru (Bordelais)',
+    color: 'Rouge élégant & soyeux',
+    region: 'Bordelais (Libournais)',
+    appellation: 'AOC Saint-Émilion Grand Cru',
+    grape: 'Merlot & Cabernet Franc',
     temp: '15-16°C',
     note: 'Tanins veloutés et arômes subtils qui accompagnent à merveille ce plat gourmet.'
   };
@@ -752,8 +785,10 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
   const wine = getRecipeWinePairing(recipe, slot);
   if (!wine) return '';
 
-  const inList = isWineInShoppingList(wine.name);
-  const safeWineName = (wine.name || '').replace(/'/g, "\\'");
+  const shoppingLabel = `${wine.appellation || wine.name} — ${wine.color} (${wine.region}, ${wine.grape})`;
+  const inList = isWineInShoppingList(shoppingLabel) || isWineInShoppingList(wine.name);
+  const activeLabel = isWineInShoppingList(wine.name) && !isWineInShoppingList(shoppingLabel) ? wine.name : shoppingLabel;
+  const safeWineName = (activeLabel || '').replace(/'/g, "\\'");
   const safeDayLabel = `${slot.day} (${slot.mealLabel})`.replace(/'/g, "\\'");
 
   return `
@@ -761,7 +796,6 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
       <div class="wine-pairing-header">
         <div class="wine-pairing-badge-group">
           <span class="wine-pairing-tag">🍷 Suggestion de vin • Accord Gourmet</span>
-          ${wine.color ? `<span class="wine-color-pill">${wine.color}</span>` : ''}
           ${wine.temp ? `<span class="wine-temp-pill">🌡️ Service ${wine.temp}</span>` : ''}
         </div>
         <button
@@ -773,7 +807,24 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
           ${inList ? '✓ Bouteille au panier' : '🛒 + Ajouter aux courses'}
         </button>
       </div>
-      <div class="wine-pairing-name">${wine.name}</div>
+      <div class="wine-pairing-specs-grid">
+        <div class="wine-spec-item">
+          <span class="wine-spec-label">🎨 Couleur</span>
+          <span class="wine-spec-value">${wine.color || '—'}</span>
+        </div>
+        <div class="wine-spec-item">
+          <span class="wine-spec-label">🗺️ Région</span>
+          <span class="wine-spec-value">${wine.region || '—'}</span>
+        </div>
+        <div class="wine-spec-item">
+          <span class="wine-spec-label">🏅 Appellation</span>
+          <span class="wine-spec-value">${wine.appellation || wine.name || '—'}</span>
+        </div>
+        <div class="wine-spec-item">
+          <span class="wine-spec-label">🍇 Cépage</span>
+          <span class="wine-spec-value">${wine.grape || '—'}</span>
+        </div>
+      </div>
       ${wine.note ? `<p class="wine-pairing-note">« ${wine.note} »</p>` : ''}
     </div>
   `;
@@ -889,7 +940,7 @@ function replaceMealInSlot(slotId, evt) {
   }
   const seas = getRecipeSeasonality(nextRecipe, slot);
   const nutri = getRecipeNutriScore(nextRecipe);
-  showToast(`🎲 Nouvelle idée (${seas.pct}% de saison • Nutri-Score ${nutri.grade}) pour ${slot.day} !`);
+  showToast(`🎲 Nouvelle idée (${seas.pct}% d'ingrédients de saison • Équilibre : ${nutri.shortLabel}) pour ${slot.day} !`);
 }
 
 function replaceDessertInSlot(slotId) {
@@ -1868,19 +1919,32 @@ function openRecipeModal(slotId) {
   const modalBody = document.getElementById('recipe-modal-body');
   if (!modalBody) return;
 
+  const slotMonth = getSlotMonthNum(slot);
+  const seasonMeta = getMonthSeasonMeta(slotMonth);
+  const seasInfo = getRecipeSeasonality(recipe, slot);
+
   const ingredientsHTML = recipe.ingredients
-    .map(
-      (ing) => `
-      <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-color); font-size: 0.9rem;">
-        <span>${ing.name}</span>
+    .map((ing) => {
+      const check =
+        typeof window.isIngredientInSeason === 'function'
+          ? window.isIngredientInSeason(ing.name, slotMonth)
+          : { inSeason: true };
+      const inSeas = check && typeof check === 'object' ? check.inSeason : Boolean(check);
+      const seasTag = inSeas
+        ? `<span style="font-size: 0.72rem; padding: 1px 6px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 700; margin-left: 6px;">🌿 De saison</span>`
+        : `<span style="font-size: 0.72rem; padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #92400e; font-weight: 600; margin-left: 6px;">Hors pleine saison (${seasonMeta.monthName})</span>`;
+      return `
+      <li style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border-color); font-size: 0.9rem;">
+        <span>${ing.name} ${seasTag}</span>
         <strong>${formatScaledQty(ing.qty, ratio)} ${ing.unit}</strong>
       </li>
-    `
-    )
+    `;
+    })
     .join('');
 
   const stepsHTML = recipe.steps.map((step) => `<li>${step}</li>`).join('');
   const wineModalHTML = buildWinePairingBoxHTML(recipe, slot, true);
+  const nutritionAndSeasonModalHTML = buildNutritionAndSeasonHTML(recipe, slot, false);
 
   let dessertSectionHTML = '';
   if (dessert) {
@@ -1928,17 +1992,22 @@ function openRecipeModal(slotId) {
     <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 8px;">${recipe.title}</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">${recipe.description || ''}</p>
 
-    <div class="meal-meta" style="margin: 12px 0;">
+    <div class="meal-meta" style="margin: 12px 0 8px 0;">
       <span class="meta-pill">👥 Ajusté pour <strong>${slot.servings} ${slot.servings > 1 ? 'parts' : 'part'}</strong></span>
       <span class="meta-pill healthy-pill">💶 Montant évalué : <strong>${formatEuro(costInfo.totalCost)}</strong> (${formatEuro(costInfo.perPersonCost)}/part)</span>
       <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Cuisson ${recipe.cookTime}</span>
       <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
     </div>
 
+    ${nutritionAndSeasonModalHTML}
+
     ${wineModalHTML}
 
-    <h3 style="font-size: 1rem; font-weight: 800; margin-top: 16px; margin-bottom: 8px;">
-      🛒 Ingrédients du plat (${slot.servings} ${slot.servings > 1 ? 'parts' : 'part'} — ${formatEuro(costInfo.dishCost)})
+    <h3 style="font-size: 1rem; font-weight: 800; margin-top: 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <span>🛒 Ingrédients du plat (${slot.servings} ${slot.servings > 1 ? 'parts' : 'part'} — ${formatEuro(costInfo.dishCost)})</span>
+      <span class="season-badge ${seasInfo.pct >= 85 ? 'season-pill-high' : seasInfo.pct >= 70 ? 'season-pill-mid' : 'season-pill-low'}">
+        ${seasonMeta.icon} ${seasInfo.pct}% d'ingrédients de saison (${seasInfo.inSeasonCount}/${seasInfo.totalCount})
+      </span>
     </h3>
     <ul style="list-style: none;">
       ${ingredientsHTML}
@@ -2007,12 +2076,12 @@ function openCatalogModal(slotId, initialCategory) {
   const totalDishes = wdCount + wbCount + wpCount + gmCount;
 
   modalBody.innerHTML = `
-    <span class="slot-label">📚 Grand Livre des Menus • ${formatSlotDayHeader(slot)} (${slot.mealLabel})</span>
+    <span class="slot-label">📚 Grand Livre des Menus 365 Jours • ${formatSlotDayHeader(slot)} (${slot.mealLabel})</span>
     <h2 style="font-size: 1.25rem; font-weight: 800; margin-top: 8px;">
       Choisir dans le catalogue (${totalDishes} plats &amp; ${desCount} desserts)
     </h2>
     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
-      Filtrez parmi les 3 types de repas (<strong>Équilibré</strong>, <strong>Plaisir</strong>, <strong>Gourmet</strong>) ou recherchez un ingrédient ou un vin
+      Tous les plats affichent leur <strong>% d'ingrédients de saison (50% à 100%)</strong> et leur niveau d'<strong>Équilibre</strong> • Priorité aux plats avec un maximum d'ingrédients de saison
     </p>
 
     <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
@@ -2020,7 +2089,7 @@ function openCatalogModal(slotId, initialCategory) {
         type="search"
         id="catalog-search-input"
         class="input-field"
-        placeholder="🔍 Rechercher un plat, un ingrédient, un vin..."
+        placeholder="🔍 Rechercher un plat, un ingrédient, une appellation, un cépage..."
         oninput="updateCatalogSearch(this.value)"
       />
 
@@ -2104,12 +2173,14 @@ function renderCatalogModalResults() {
     container.innerHTML = desserts
       .map((d) => {
         const isCurrent = slot && slot.dessertId === d.id;
+        const dSeas = getRecipeSeasonality(d, slot);
+        const dMeta = getMonthSeasonMeta(dSeas.month);
         return `
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'var(--primary-soft)' : '#fff'}; border-radius: 10px;">
             <div>
               <div style="font-weight: 800; font-size: 0.92rem;">🍰 ${d.title}</div>
               <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
-                ⏱️ Prépa ${d.prepTime} ${d.cookTime && d.cookTime !== '0 min' ? `• Cuisson ${d.cookTime}` : ''} • 💶 ${formatEuro(d.costFor2 || 2.3)} (2 parts)
+                ⏱️ Prépa ${d.prepTime} ${d.cookTime && d.cookTime !== '0 min' ? `• Cuisson ${d.cookTime}` : ''} • 💶 ${formatEuro(d.costFor2 || 2.3)} (2 parts) • ${dMeta.icon} <strong>${dSeas.pct}% d'ingrédients de saison</strong>
               </div>
             </div>
             <button class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'} btn-sm" onclick="selectDessertFromCatalog('${d.id}')">
@@ -2150,8 +2221,11 @@ function renderCatalogModalResults() {
     const inDesc = (r.description || '').toLowerCase().includes(q);
     const inTags = (r.tags || []).some((t) => t.toLowerCase().includes(q));
     const inIng = (r.ingredients || []).some((i) => i.name.toLowerCase().includes(q));
-    const inWine = r.winePairing && r.winePairing.name && r.winePairing.name.toLowerCase().includes(q);
-    return inTitle || inDesc || inTags || inIng || inWine;
+    const wp = r.winePairing || {};
+    const inWine = `${wp.name || ''} ${wp.appellation || ''} ${wp.region || ''} ${wp.color || ''} ${wp.grape || ''}`.toLowerCase().includes(q);
+    const nutri = getRecipeNutriScore(r);
+    const inNutri = `équilibre ${nutri.label.toLowerCase()} ${nutri.shortLabel.toLowerCase()}`.includes(q);
+    return inTitle || inDesc || inTags || inIng || inWine || inNutri;
   });
 
   if (filtered.length === 0) {
@@ -2159,14 +2233,26 @@ function renderCatalogModalResults() {
     return;
   }
 
-  container.innerHTML = filtered
+  // Trier en mettant en avant les recettes avec le plus haut % d'ingrédients de saison
+  const sorted = [...filtered].sort((a, b) => {
+    const sa = getRecipeSeasonality(a, slot).pct;
+    const sb = getRecipeSeasonality(b, slot).pct;
+    return sb - sa;
+  });
+
+  // Limiter l'affichage DOM direct à 150 éléments max si aucune recherche pour garder un défilement ultra-fluide
+  const displayList = q ? sorted : sorted.slice(0, 150);
+
+  container.innerHTML = displayList
     .map((r) => {
       const isCurrent = slot && slot.recipeId === r.id;
       const emoji = getDishEmoji(r, slot);
       const ingPreview = (r.ingredients || []).slice(0, 4).map((i) => i.name).join(', ');
-      const wineLine = r.winePairing && r.winePairing.name
-        ? `<div style="font-size: 0.75rem; color: #881337; font-weight: 700; margin-top: 3px;">🍷 Accord vin : ${r.winePairing.name}</div>`
+      const wp = r.winePairing;
+      const wineLine = wp && (wp.appellation || wp.name)
+        ? `<div style="font-size: 0.75rem; color: #881337; font-weight: 700; margin-top: 3px;">🍷 Vin : <strong>${wp.appellation || wp.name}</strong> • Couleur : ${wp.color || '—'} • Région : ${wp.region || '—'} • Cépage : ${wp.grape || '—'}</div>`
         : '';
+      const compactBadges = buildNutritionAndSeasonHTML(r, slot, true);
       return `
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'var(--primary-soft)' : '#fff'}; border-radius: 10px;">
           <div style="flex: 1;">
@@ -2174,6 +2260,7 @@ function renderCatalogModalResults() {
             <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
               ⏱️ Prépa ${r.prepTime} • Feu ${r.cookTime} • 👨‍🍳 ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2p)
             </div>
+            ${compactBadges}
             ${wineLine}
             <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">
               🛒 ${ingPreview}...
@@ -2552,10 +2639,14 @@ function generateGoogleKeepNoteText(grouped, sortedAisles) {
     validatedSlots.forEach((s) => {
       const r = findRecipeById(s.recipeId);
       const d = s.dessertId ? ` + ${findDessertById(s.dessertId).title}` : '';
+      const seas = getRecipeSeasonality(r, s);
       const wine = getRecipeWinePairing(r, s);
-      const wineSuffix = wine && wine.name ? ` [🍷 Vin conseillé : ${wine.name}]` : '';
+      const wineSuffix =
+        wine && (wine.appellation || wine.name)
+          ? ` [🍷 Vin : ${wine.appellation || wine.name} | Couleur : ${wine.color || '—'} | Région : ${wine.region || '—'} | Cépage : ${wine.grape || '—'}]`
+          : '';
       const cost = formatEuro(evaluateSlotCost(s).totalCost);
-      lines.push(`• ${formatSlotDayHeader(s)} (${s.mealLabel} - ${s.servings}p - ${cost}) : ${r.title}${d}${wineSuffix}`);
+      lines.push(`• ${formatSlotDayHeader(s)} (${s.mealLabel} - ${s.servings}p - ${cost} - 🌿 ${seas.pct}% ingr. de saison) : ${r.title}${d}${wineSuffix}`);
     });
   }
 
@@ -2761,7 +2852,7 @@ function renderFavoritesAndHistory() {
             <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:8px;">
               <div>
                 <strong style="font-size:0.92rem;">${r.title}</strong>
-                <div style="font-size:0.76rem; color:var(--text-muted);">⏱️ ${r.prepTime} • ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2 parts)${r.winePairing && r.winePairing.name ? ` • 🍷 ${r.winePairing.name}` : ''}</div>
+                <div style="font-size:0.76rem; color:var(--text-muted);">⏱️ ${r.prepTime} • ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2 parts)${r.winePairing && (r.winePairing.appellation || r.winePairing.name) ? ` • 🍷 ${r.winePairing.appellation || r.winePairing.name} (${r.winePairing.color || ''}, ${r.winePairing.region || ''}, ${r.winePairing.grape || ''})` : ''}</div>
               </div>
               <button class="btn btn-outline btn-sm" onclick="toggleFavorite('${r.id}')">Retirer</button>
             </div>
@@ -2863,10 +2954,18 @@ function addManualRecipe() {
   };
 
   if (isGourmet || wineInput) {
+    const wParts = wineInput.split('|').map((x) => x.trim());
+    const appellation = wParts[0] || 'AOC Chablis Premier Cru';
+    const color = wParts[1] || (/rouge|bordeaux|syrah|merlot|pinot/i.test(wineInput) ? 'Rouge élégant' : 'Blanc sec & minéral');
+    const region = wParts[2] || 'Bourgogne';
+    const grape = wParts[3] || (/rouge/i.test(color) ? '100 % Pinot Noir' : '100 % Chardonnay');
     newRecipe.winePairing = {
-      name: wineInput || 'Chablis 1er Cru ou Pinot Noir de Bourgogne (AOC)',
-      color: 'Accord du Sommelier',
-      temp: '12-15°C',
+      name: `${appellation} (${region})`,
+      appellation,
+      color,
+      region,
+      grape,
+      temp: /rouge/i.test(color) ? '15-16°C' : '10-12°C',
       note: 'Vin sélectionné pour accompagner délicatement les arômes de votre recette.'
     };
   }
@@ -2903,12 +3002,12 @@ async function generateRecipeWithAI() {
 
   const categoryDesc =
     mealType === 'gourmet'
-      ? 'Menu Gourmet avec des ingrédients nobles et délicats (Saint-Jacques, magret, filet de bœuf, truffe, bar sauvage, morilles...), recette simple à réaliser (Facile, 15-20 min) accompagnée d\'une suggestion de vin précise'
+      ? 'Menu Gourmet avec des ingrédients nobles et délicats (Saint-Jacques, magret, filet de bœuf, truffe, bar sauvage, morilles...), recette simple à réaliser (Facile, 15-20 min) accompagnée d\'une suggestion de vin précise (couleur, région, appellation, cépage)'
       : mealType === 'weekend-pleasure'
       ? 'Menu Plaisir gourmand pour se faire plaisir même si moins équilibré, simple et rapide à réaliser (10-15 min)'
       : 'Menu Équilibré sain, simple et rapide à réaliser (10-15 min)';
 
-  const promptText = `Génère une recette en français au format JSON strict pour 2 adultes.
+  const promptText = `Génère une recette en français au format JSON strict pour 2 adultes, réalisée avec un maximum d'ingrédients de saison.
 Catégorie : ${categoryDesc}.
 Indication supplémentaire : ${customPrompt || 'Aucune'}.
 Format JSON attendu uniquement (sans markdown) :
@@ -2921,9 +3020,12 @@ Format JSON attendu uniquement (sans markdown) :
   "costFor2": ${mealType === 'gourmet' ? 13.5 : mealType === 'weekend-pleasure' ? 8.0 : 4.8},
   "description": "Courte description appétissante",
   "winePairing": {
-    "name": "Nom de l'appellation AOC conseillée",
-    "color": "Vin blanc sec ou Vin rouge élégant",
-    "temp": "11-12°C",
+    "name": "AOC Chablis Premier Cru (Bourgogne)",
+    "color": "Blanc sec & minéral",
+    "region": "Bourgogne",
+    "appellation": "AOC Chablis Premier Cru",
+    "grape": "100 % Chardonnay",
+    "temp": "10-12°C",
     "note": "Explication courte de l'accord mets et vin"
   },
   "ingredients": [
