@@ -696,10 +696,372 @@ function getDishEmoji(recipe, slot) {
   return style === 'pleasure' ? '🍽️' : '🥗';
 }
 
-function getRecipeWinePairing(recipe, slot) {
+// Catalogue d'accords mets & vins du Sommelier classé par famille de plats gourmets
+const WINE_PAIRING_POOLS = {
+  shellfish: [
+    {
+      name: 'AOC Chablis Premier Cru (Bourgogne)',
+      color: 'Blanc sec & minéral',
+      region: 'Bourgogne',
+      appellation: 'AOC Chablis Premier Cru',
+      grape: '100 % Chardonnay',
+      temp: '10-12°C',
+      note: 'Fraîcheur ciselée et notes d\'agrumes idéales pour sublimer la finesse des Saint-Jacques et crustacés.'
+    },
+    {
+      name: 'AOC Sancerre Blanc (Vallée de la Loire)',
+      color: 'Blanc sec & vif',
+      region: 'Vallée de la Loire',
+      appellation: 'AOC Sancerre Blanc',
+      grape: '100 % Sauvignon Blanc',
+      temp: '10-11°C',
+      note: 'Tension minérale et arômes de pamplemousse blanc en accord parfait avec l\'iode des produits de la mer.'
+    },
+    {
+      name: 'AOC Meursault (Bourgogne)',
+      color: 'Blanc ample & beurré',
+      region: 'Bourgogne (Côte de Beaune)',
+      appellation: 'AOC Meursault',
+      grape: '100 % Chardonnay',
+      temp: '11-13°C',
+      note: 'Rondeur noisette et bouche veloutée magnifiant les Saint-Jacques ou crustacés nacrés au beurre.'
+    },
+    {
+      name: 'AOC Pouilly-Fumé (Vallée de la Loire)',
+      color: 'Blanc sec & pierre à fusil',
+      region: 'Vallée de la Loire',
+      appellation: 'AOC Pouilly-Fumé',
+      grape: '100 % Sauvignon Blanc',
+      temp: '10-12°C',
+      note: 'Notes fumées et finale saline qui prolongent la délicatesse des crustacés et noix de Saint-Jacques.'
+    },
+    {
+      name: 'AOC Condrieu (Vallée du Rhône)',
+      color: 'Blanc aromatique & soyeux',
+      region: 'Vallée du Rhône septentrionale',
+      appellation: 'AOC Condrieu',
+      grape: '100 % Viognier',
+      temp: '11-12°C',
+      note: 'Parfums de pêche blanche et de violette tout en finesse sur des gambas ou langoustines rôties.'
+    },
+    {
+      name: 'AOC Pessac-Léognan Blanc (Bordelais)',
+      color: 'Blanc sec gastronomique',
+      region: 'Bordelais (Graves)',
+      appellation: 'AOC Pessac-Léognan Blanc',
+      grape: 'Sauvignon Blanc & Sémillon',
+      temp: '11-12°C',
+      note: 'Équilibre remarquable entre vivacité d\'agrumes et onctuosité sur un plat marin noble.'
+    }
+  ],
+  fish: [
+    {
+      name: 'AOC Pouilly-Fuissé (Bourgogne)',
+      color: 'Blanc sec & rond',
+      region: 'Bourgogne (Mâconnais)',
+      appellation: 'AOC Pouilly-Fuissé',
+      grape: '100 % Chardonnay',
+      temp: '11-12°C',
+      note: 'Texture ample et fraîcheur minérale qui enveloppent délicatement la chair nacrée du poisson.'
+    },
+    {
+      name: 'AOC Sancerre Blanc (Vallée de la Loire)',
+      color: 'Blanc sec & ciselé',
+      region: 'Vallée de la Loire',
+      appellation: 'AOC Sancerre Blanc',
+      grape: '100 % Sauvignon Blanc',
+      temp: '10-12°C',
+      note: 'Vivacité d\'agrumes et fraîcheur florale réveillant la finesse d\'un filet de poisson noble.'
+    },
+    {
+      name: 'AOC Riesling Grand Cru (Alsace)',
+      color: 'Blanc sec & racé',
+      region: 'Alsace',
+      appellation: 'AOC Alsace Riesling Grand Cru',
+      grape: '100 % Riesling',
+      temp: '9-11°C',
+      note: 'Droiture cristalline et notes de cédrat idéales pour accompagner les poissons fins.'
+    },
+    {
+      name: 'AOC Chignin-Bergeron (Savoie)',
+      color: 'Blanc fruité & généreux',
+      region: 'Savoie',
+      appellation: 'AOC Chignin-Bergeron',
+      grape: '100 % Roussanne',
+      temp: '10-12°C',
+      note: 'Arômes d\'abricot frais et d\'amande douce offrant un accord très gourmand sur le poisson.'
+    },
+    {
+      name: 'AOC Cassis Blanc (Provence)',
+      color: 'Blanc marin & floral',
+      region: 'Provence',
+      appellation: 'AOC Cassis Blanc',
+      grape: 'Marsanne & Clairette',
+      temp: '10-11°C',
+      note: 'Bouquet de fleurs blanches et pointe iodée en harmonie naturelle avec les poissons grillés ou rôtis.'
+    },
+    {
+      name: 'AOC Saint-Véran (Bourgogne)',
+      color: 'Blanc sec & élégant',
+      region: 'Bourgogne',
+      appellation: 'AOC Saint-Véran',
+      grape: '100 % Chardonnay',
+      temp: '10-12°C',
+      note: 'Finesse beurrée et fraîcheur vive sur un dos de cabillaud, saumon ou bar rôti.'
+    }
+  ],
+  poultry_veal: [
+    {
+      name: 'AOC Beaune Premier Cru (Bourgogne)',
+      color: 'Rouge fin & velouté',
+      region: 'Bourgogne (Côte de Beaune)',
+      appellation: 'AOC Beaune Premier Cru',
+      grape: '100 % Pinot Noir',
+      temp: '15-16°C',
+      note: 'Tanins soyeux et fruits rouges délicats qui respectent la tendreté des volailles et du veau.'
+    },
+    {
+      name: 'AOC Savigny-lès-Beaune Blanc (Bourgogne)',
+      color: 'Blanc gastronomique & rond',
+      region: 'Bourgogne',
+      appellation: 'AOC Savigny-lès-Beaune Blanc',
+      grape: '100 % Chardonnay',
+      temp: '11-13°C',
+      note: 'Ampleur beurrée et notes de noisette grillée sublimes sur un suprême de volaille ou quasi de veau.'
+    },
+    {
+      name: 'AOC Crozes-Hermitage Blanc (Vallée du Rhône)',
+      color: 'Blanc rond & floral',
+      region: 'Vallée du Rhône',
+      appellation: 'AOC Crozes-Hermitage Blanc',
+      grape: 'Marsanne & Roussanne',
+      temp: '11-12°C',
+      note: 'Belle matière soyeuse aux notes de fleurs blanches et de fruits à noyau.'
+    },
+    {
+      name: 'AOC Mercurey Premier Cru (Bourgogne)',
+      color: 'Rouge soyeux & épicé',
+      region: 'Bourgogne (Côte Chalonnaise)',
+      appellation: 'AOC Mercurey Premier Cru',
+      grape: '100 % Pinot Noir',
+      temp: '15-16°C',
+      note: 'Bouche croquante de cerise noire et finale veloutée parfaite sur les viandes blanches rôties.'
+    },
+    {
+      name: 'AOC Arbois Chardonnay (Jura)',
+      color: 'Blanc de caractère & minéral',
+      region: 'Jura',
+      appellation: 'AOC Arbois',
+      grape: 'Chardonnay & Savagnin',
+      temp: '11-13°C',
+      note: 'Accord d\'exception avec les sauces crémées, les champignons et la volaille.'
+    },
+    {
+      name: 'AOC Chinon Rouge Vieilles Vignes (Loire)',
+      color: 'Rouge souple & fruité',
+      region: 'Vallée de la Loire (Touraine)',
+      appellation: 'AOC Chinon',
+      grape: '100 % Cabernet Franc',
+      temp: '15-16°C',
+      note: 'Notes de petits fruits noirs et de violette d\'une grande finesse sur les viandes tendres.'
+    }
+  ],
+  duck_game: [
+    {
+      name: 'AOC Saint-Émilion Grand Cru (Bordelais)',
+      color: 'Rouge élégant & soyeux',
+      region: 'Bordelais (Libournais)',
+      appellation: 'AOC Saint-Émilion Grand Cru',
+      grape: 'Merlot & Cabernet Franc',
+      temp: '16-17°C',
+      note: 'Tanins veloutés et arômes de fruits noirs mûrs qui subliment le magret de canard ou l\'agneau.'
+    },
+    {
+      name: 'AOC Châteauneuf-du-Pape (Vallée du Rhône)',
+      color: 'Rouge généreux & épicé',
+      region: 'Vallée du Rhône méridionale',
+      appellation: 'AOC Châteauneuf-du-Pape',
+      grape: 'Grenache, Syrah & Mourvèdre',
+      temp: '16-17°C',
+      note: 'Notes de garrigue, de cerise noire et d\'épices douces en harmonie avec une viande rôtie.'
+    },
+    {
+      name: 'AOC Gevrey-Chambertin (Bourgogne)',
+      color: 'Rouge profond & racé',
+      region: 'Bourgogne (Côte de Nuits)',
+      appellation: 'AOC Gevrey-Chambertin',
+      grape: '100 % Pinot Noir',
+      temp: '15-16°C',
+      note: 'Grande noblesse aromatique (fruits noirs, sous-bois) idéale sur le canard et les viandes de caractère.'
+    },
+    {
+      name: 'AOC Côte-Rôtie (Vallée du Rhône)',
+      color: 'Rouge racé & floral',
+      region: 'Vallée du Rhône septentrionale',
+      appellation: 'AOC Côte-Rôtie',
+      grape: 'Syrah & pointe de Viognier',
+      temp: '16-17°C',
+      note: 'Alliance unique de poivre fin, de violette et de tanins satinés.'
+    },
+    {
+      name: 'AOC Madiran (Sud-Ouest)',
+      color: 'Rouge charpenté & velouté',
+      region: 'Sud-Ouest',
+      appellation: 'AOC Madiran',
+      grape: 'Tannat & Cabernet Franc',
+      temp: '16-17°C',
+      note: 'Accord régional incontournable et généreux avec le canard et les plats mijotés.'
+    },
+    {
+      name: 'AOC Cahors (Sud-Ouest)',
+      color: 'Rouge intense & soyeux',
+      region: 'Sud-Ouest (Quercy)',
+      appellation: 'AOC Cahors',
+      grape: '100 % Malbec (Côt)',
+      temp: '16-17°C',
+      note: 'Arômes de mûre, de cacao et de truffe accompagnant merveilleusement le canard ou l\'agneau.'
+    }
+  ],
+  red_meat: [
+    {
+      name: 'AOC Margaux (Bordelais)',
+      color: 'Rouge noble & structuré',
+      region: 'Bordelais (Médoc)',
+      appellation: 'AOC Margaux',
+      grape: 'Cabernet Sauvignon & Merlot',
+      temp: '16-17°C',
+      note: 'Finesse légendaire et tanins d\'une grande élégance pour sublimer le bœuf.'
+    },
+    {
+      name: 'AOC Saint-Joseph (Vallée du Rhône)',
+      color: 'Rouge poivré & élégant',
+      region: 'Vallée du Rhône septentrionale',
+      appellation: 'AOC Saint-Joseph',
+      grape: '100 % Syrah',
+      temp: '15-16°C',
+      note: 'Notes de cassis et de poivre blanc qui relèvent avec brio les pièces de bœuf saisies.'
+    },
+    {
+      name: 'AOC Pommard (Bourgogne)',
+      color: 'Rouge intense & racé',
+      region: 'Bourgogne (Côte de Beaune)',
+      appellation: 'AOC Pommard',
+      grape: '100 % Pinot Noir',
+      temp: '15-16°C',
+      note: 'Bouche ample et profonde aux notes de griotte et de cuir fin.'
+    },
+    {
+      name: 'AOC Pessac-Léognan Rouge (Bordelais)',
+      color: 'Rouge complexe & velouté',
+      region: 'Bordelais (Graves)',
+      appellation: 'AOC Pessac-Léognan Rouge',
+      grape: 'Cabernet Sauvignon & Merlot',
+      temp: '16-17°C',
+      note: 'Subtiles notes fumées et tanins fondus en accord parfait avec le filet de bœuf.'
+    },
+    {
+      name: 'AOC Pauillac (Bordelais)',
+      color: 'Rouge puissant & harmonieux',
+      region: 'Bordelais (Médoc)',
+      appellation: 'AOC Pauillac',
+      grape: 'Cabernet Sauvignon & Merlot',
+      temp: '16-17°C',
+      note: 'Structure majestueuse aux arômes de cèdre et de cassis sur une belle viande rouge.'
+    },
+    {
+      name: 'AOC Crozes-Hermitage Rouge (Vallée du Rhône)',
+      color: 'Rouge gourmand & épicé',
+      region: 'Vallée du Rhône',
+      appellation: 'AOC Crozes-Hermitage Rouge',
+      grape: '100 % Syrah',
+      temp: '15-16°C',
+      note: 'Fruité éclatant et touche poivrée très harmonieuse sur le bœuf.'
+    }
+  ],
+  risotto_truffle_veg: [
+    {
+      name: 'AOC Puligny-Montrachet (Bourgogne)',
+      color: 'Blanc ciselé & floral',
+      region: 'Bourgogne (Côte de Beaune)',
+      appellation: 'AOC Puligny-Montrachet',
+      grape: '100 % Chardonnay',
+      temp: '11-13°C',
+      note: 'Grande finesse minérale et onctuosité qui épousent le crémeux d\'un risotto ou de ravioles.'
+    },
+    {
+      name: 'AOC Chambolle-Musigny (Bourgogne)',
+      color: 'Rouge dentelle & sous-bois',
+      region: 'Bourgogne (Côte de Nuits)',
+      appellation: 'AOC Chambolle-Musigny',
+      grape: '100 % Pinot Noir',
+      temp: '15-16°C',
+      note: 'Tanins de soie et notes de truffe et de framboise sublimes avec les cèpes et champignons.'
+    },
+    {
+      name: 'AOC Saint-Péray (Vallée du Rhône)',
+      color: 'Blanc onctueux & minéral',
+      region: 'Vallée du Rhône',
+      appellation: 'AOC Saint-Péray',
+      grape: 'Marsanne & Roussanne',
+      temp: '10-12°C',
+      note: 'Fraîcheur vive et rondeur florale idéales sur les plats crémeux et fromagers.'
+    },
+    {
+      name: 'AOC Pinot Gris Grand Cru (Alsace)',
+      color: 'Blanc ample & notes de sous-bois',
+      region: 'Alsace',
+      appellation: 'AOC Alsace Pinot Gris',
+      grape: '100 % Pinot Gris',
+      temp: '10-12°C',
+      note: 'Notes fumées et de sous-bois en accord remarquable avec les champignons, risottos et truffe.'
+    },
+    {
+      name: 'AOC Vouvray Sec (Vallée de la Loire)',
+      color: 'Blanc élégant & minéral',
+      region: 'Vallée de la Loire (Touraine)',
+      appellation: 'AOC Vouvray Sec',
+      grape: '100 % Chenin Blanc',
+      temp: '10-11°C',
+      note: 'Fraîcheur ciselée qui équilibre à merveille la richesse d\'un plat au parmesan ou à la truffe.'
+    },
+    {
+      name: 'AOC Volnay (Bourgogne)',
+      color: 'Rouge fin & soyeux',
+      region: 'Bourgogne (Côte de Beaune)',
+      appellation: 'AOC Volnay',
+      grape: '100 % Pinot Noir',
+      temp: '15-16°C',
+      note: 'Bouquet de violette et bouche aérienne sur un risotto aux champignons ou à la truffe.'
+    }
+  ]
+};
+
+function getWineCategoryForRecipe(recipe) {
+  const t = ((recipe && recipe.title) || '').toLowerCase();
+  if (t.includes('saint-jacques') || t.includes('homard') || t.includes('langoustine') || t.includes('gambas') || t.includes('crevette') || t.includes('crabe')) {
+    return 'shellfish';
+  }
+  if (t.includes('poisson') || t.includes('saumon') || t.includes('cabillaud') || t.includes('bar') || t.includes('dorade') || t.includes('truite') || t.includes('thon') || t.includes('lotte') || t.includes('sole') || t.includes('turbot') || t.includes('sandre')) {
+    return 'fish';
+  }
+  if (t.includes('canard') || t.includes('magret') || t.includes('confit') || t.includes('caille') || t.includes('pigeon') || t.includes('agneau') || t.includes('souris')) {
+    return 'duck_game';
+  }
+  if (t.includes('tournedos') || t.includes('bœuf') || t.includes('boeuf') || t.includes('entrecôte') || t.includes('filet de bœuf') || t.includes('rossini') || t.includes('bavette')) {
+    return 'red_meat';
+  }
+  if (t.includes('volaille') || t.includes('poulet') || t.includes('pintade') || t.includes('dinde') || t.includes('veau') || t.includes('quasi') || t.includes('grenadin') || t.includes('mignon') || t.includes('porc')) {
+    return 'poultry_veal';
+  }
+  return 'risotto_truffle_veg';
+}
+
+function getWinePoolForRecipe(recipe) {
+  const cat = getWineCategoryForRecipe(recipe);
+  const basePool = [...(WINE_PAIRING_POOLS[cat] || WINE_PAIRING_POOLS.risotto_truffle_veg)];
   if (recipe && recipe.winePairing && (recipe.winePairing.appellation || recipe.winePairing.name)) {
     const wp = recipe.winePairing;
-    return {
+    const normalizedDefault = {
       name: wp.name || wp.appellation,
       color: wp.color || 'Blanc sec',
       region: wp.region || 'Bourgogne',
@@ -708,33 +1070,65 @@ function getRecipeWinePairing(recipe, slot) {
       temp: wp.temp || '10-12°C',
       note: wp.note || ''
     };
+    const alreadyExists = basePool.some(
+      (w) => (w.appellation || w.name).toLowerCase() === (normalizedDefault.appellation || normalizedDefault.name).toLowerCase()
+    );
+    if (!alreadyExists) {
+      basePool.unshift(normalizedDefault);
+    }
   }
+  return basePool;
+}
+
+function getRecipeWinePairing(recipe, slot) {
   const style = getSlotStyle(slot);
   if (style !== 'gourmet' && (!recipe || recipe.type !== 'gourmet')) {
     return null;
   }
-  // Accord par défaut si une recette personnalisée est passée en mode Gourmet sans accord renseigné
-  const t = ((recipe && recipe.title) || '').toLowerCase();
-  if (t.includes('poisson') || t.includes('saumon') || t.includes('cabillaud') || t.includes('bar') || t.includes('saint-jacques') || t.includes('gambas') || t.includes('crevette') || t.includes('thon')) {
-    return {
-      name: 'AOC Chablis Premier Cru (Bourgogne)',
-      color: 'Blanc sec & minéral',
-      region: 'Bourgogne',
-      appellation: 'AOC Chablis Premier Cru',
-      grape: '100 % Chardonnay',
-      temp: '10-12°C',
-      note: 'Fraîcheur ciselée et notes d\'agrumes idéales pour sublimer la finesse des produits de la mer.'
-    };
+
+  // Si l'utilisateur a cliqué sur "Autre idée" pour le vin de ce créneau, afficher le vin choisi
+  if (slot && slot.customWinePairing && (slot.customWinePairing.appellation || slot.customWinePairing.name)) {
+    return slot.customWinePairing;
   }
-  return {
-    name: 'AOC Saint-Émilion Grand Cru (Bordelais)',
-    color: 'Rouge élégant & soyeux',
-    region: 'Bordelais (Libournais)',
-    appellation: 'AOC Saint-Émilion Grand Cru',
-    grape: 'Merlot & Cabernet Franc',
-    temp: '15-16°C',
-    note: 'Tanins veloutés et arômes subtils qui accompagnent à merveille ce plat gourmet.'
-  };
+
+  const pool = getWinePoolForRecipe(recipe);
+  return pool[0];
+}
+
+function replaceWineInSlot(slotId, isModal = false, evt) {
+  if (evt) evt.stopPropagation();
+  const slot = state.slots.find((s) => s.slotId === slotId);
+  if (!slot) return;
+
+  const recipe = findRecipeById(slot.recipeId);
+  const currentWine = getRecipeWinePairing(recipe, slot);
+  const pool = getWinePoolForRecipe(recipe);
+  if (!pool || pool.length === 0) return;
+
+  const currentApp = currentWine ? (currentWine.appellation || currentWine.name || '').toLowerCase() : '';
+  const curIdx = pool.findIndex((w) => (w.appellation || w.name || '').toLowerCase() === currentApp);
+  const nextIdx = curIdx >= 0 ? (curIdx + 1) % pool.length : Math.floor(Math.random() * pool.length);
+  const nextWine = pool[nextIdx];
+
+  slot.customWinePairing = nextWine;
+  saveStateToStorage();
+  renderAll();
+
+  if (isModal) {
+    openRecipeModal(slotId);
+  }
+
+  if (evt && evt.clientX) {
+    spawnCulinaryConfetti({
+      x: evt.clientX,
+      y: evt.clientY,
+      count: 7,
+      spread: 80,
+      emojis: GOURMET_PARTICLES
+    });
+  }
+
+  showToast(`🍷 Autre idée Sommelier : ${nextWine.appellation} (${nextWine.region}) !`);
 }
 
 function isWineInShoppingList(wineName) {
@@ -798,14 +1192,25 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
           <span class="wine-pairing-tag">🍷 Suggestion de vin • Accord Gourmet</span>
           ${wine.temp ? `<span class="wine-temp-pill">🌡️ Service ${wine.temp}</span>` : ''}
         </div>
-        <button
-          type="button"
-          class="btn btn-sm ${inList ? 'btn-wine-added' : 'btn-wine-add'}"
-          onclick="toggleWineInShoppingList('${safeWineName}', '${safeDayLabel}', event)"
-          title="${inList ? 'Retirer cette bouteille de la liste de courses' : 'Ajouter cette bouteille au rayon Cave de la liste de courses'}"
-        >
-          ${inList ? '✓ Bouteille au panier' : '🛒 + Ajouter aux courses'}
-        </button>
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            style="padding: 3px 9px; font-size: 0.74rem; border-color: var(--gourmet-border); color: var(--gourmet); background: #ffffff; font-weight: 800;"
+            onclick="replaceWineInSlot('${slot.slotId}', ${isModal ? 'true' : 'false'}, event)"
+            title="Proposer une autre idée de vin en accord avec ce plat gourmet"
+          >
+            🎲 Autre idée
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm ${inList ? 'btn-wine-added' : 'btn-wine-add'}"
+            onclick="toggleWineInShoppingList('${safeWineName}', '${safeDayLabel}', event)"
+            title="${inList ? 'Retirer cette bouteille de la liste de courses' : 'Ajouter cette bouteille au rayon Cave de la liste de courses'}"
+          >
+            ${inList ? '✓ Bouteille au panier' : '🛒 + Ajouter aux courses'}
+          </button>
+        </div>
       </div>
       <div class="wine-pairing-specs-grid">
         <div class="wine-spec-item">
@@ -923,6 +1328,7 @@ function replaceMealInSlot(slotId, evt) {
 
   const nextRecipe = pickRandomAvoiding(pool, usedIds, getSlotMonthNum(slot));
   slot.recipeId = nextRecipe.id;
+  slot.customWinePairing = null;
   slot.validated = false;
   slot.active = true;
   saveStateToStorage();
@@ -980,6 +1386,7 @@ function setSlotMealStyle(slotId, newStyle, evt) {
   const slotMonth = getSlotMonthNum(slot);
   const nextRecipe = pickRandomAvoiding(pool, usedIds, slotMonth);
   slot.recipeId = nextRecipe.id;
+  slot.customWinePairing = null;
 
   if (validStyle === 'pleasure' || validStyle === 'gourmet' || slot.isWeekend) {
     const usedDesserts = new Set(
@@ -1480,6 +1887,18 @@ function createMealCardHTML(slot) {
           <div class="meal-style-caption">${styleSubtitle}</div>
         </div>
 
+        <!-- Sélection du nombre de parts juste en dessous des boutons du type de repas et autre idée (boutons - et + avec nombre de convives au milieu, sans curseur) -->
+        <div class="servings-control" style="margin-top: 8px; flex-direction: row; align-items: center; justify-content: space-between; padding: 7px 12px;">
+          <span style="font-size: 0.82rem; font-weight: 800; color: var(--text-main);">🍽️ À table (${slot.mealLabel.toLowerCase()}) :</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', -1)" aria-label="Moins un convive">−</button>
+            <span id="servings-badge-${slot.slotId}" class="servings-badge" style="min-width: 110px; text-align: center; padding: 4px 10px;">
+              ${slot.servings} ${slot.servings > 1 ? 'convives' : 'convive'}${slot.servings === 2 ? ' (2 adultes)' : ''}
+            </span>
+            <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus un convive">+</button>
+          </div>
+        </div>
+
         <div class="meal-title-row">
           <div class="meal-dish-avatar" onclick="openRecipeModal('${slot.slotId}')" style="cursor:pointer;" title="Voir la fiche recette">
             ${dishEmoji}
@@ -1532,30 +1951,6 @@ function createMealCardHTML(slot) {
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
-        <!-- Curseur du nombre de parts du repas -->
-        <div class="servings-control">
-          <div class="servings-label-row">
-            <label for="slider-${slot.slotId}">🍽️ À table (${slot.mealLabel.toLowerCase()}) :</label>
-            <span id="servings-badge-${slot.slotId}" class="servings-badge">
-              ${slot.servings} ${slot.servings > 1 ? 'convives' : 'convive'}${slot.servings === 2 ? ' (2 adultes)' : ''}
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
-            <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', -1)" aria-label="Moins une part">−</button>
-            <input
-              id="slider-${slot.slotId}"
-              type="range"
-              class="servings-slider"
-              min="1"
-              max="10"
-              step="1"
-              value="${slot.servings}"
-              oninput="updateSlotServings('${slot.slotId}', this.value)"
-            />
-            <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus une part">+</button>
-          </div>
-        </div>
-
         <!-- Boutons Recette / Catalogue / Valider -->
         <div class="meal-card-actions">
           <button class="btn btn-outline btn-sm" onclick="openRecipeModal('${slot.slotId}')">
@@ -1828,24 +2223,6 @@ function createDayGroupHTML(dayOffset) {
           <span class="meta-pill">
             ${activeCount} / ${daySlots.length} repas à cuisiner
           </span>
-        </div>
-
-        <!-- Curseur Parts globales sur chaque journée -->
-        <div class="day-global-servings">
-          <span style="font-size: 0.82rem; font-weight: 800;">👥 Table du ${dayName} :</span>
-          <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepDayGlobalServings(${dayOffset}, -1)">−</button>
-          <input
-            type="range"
-            class="servings-slider"
-            style="width: 100px;"
-            min="1"
-            max="10"
-            step="1"
-            value="${dayServings}"
-            oninput="updateDayGlobalServings(${dayOffset}, this.value)"
-          />
-          <button class="btn btn-outline btn-sm btn-step-servings" onclick="stepDayGlobalServings(${dayOffset}, 1)">+</button>
-          <span class="servings-badge">${dayServings} ${dayServings > 1 ? 'parts' : 'part'}</span>
         </div>
       </div>
 
