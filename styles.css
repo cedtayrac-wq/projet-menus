@@ -1567,9 +1567,27 @@ body {
 /* Actions pied de carte */
 .meal-card-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.45fr 1fr;
   gap: 8px;
   padding-top: 2px;
+  align-items: stretch;
+}
+
+.meal-card-actions .btn-fiche-cuisine {
+  padding: 12px 16px !important;
+  font-size: 0.98rem !important;
+  font-weight: 800 !important;
+  border: 2px solid var(--primary) !important;
+  background: #ecfdf5 !important;
+  color: var(--primary-hover) !important;
+  border-radius: 12px !important;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.14);
+}
+
+.meal-card-actions .btn-fiche-cuisine:hover {
+  background: var(--primary) !important;
+  color: #ffffff !important;
 }
 
 .meal-card-actions .btn-validate {
@@ -3557,13 +3575,22 @@ body {
   font-weight: 800 !important;
 }
 
-/* Mise en évidence de l'étape ou des ingrédients en cours dans la Fiche Cuisine */
+/* Mise en évidence de l'étape ou de l'ingrédient en cours dans la Fiche Cuisine */
 .voice-active-ingredients-highlight {
-  background: #f0fdf4;
-  border: 2px solid #34d399;
+  background: #f8fafc;
+  border: 1.5px solid #a7f3d0;
   border-radius: 10px;
   padding: 8px 12px !important;
   transition: all 0.25s ease;
+}
+
+.voice-active-ing-item-highlight {
+  background: #ecfdf5 !important;
+  border-left: 4px solid var(--primary) !important;
+  border-radius: 8px;
+  padding: 8px 10px !important;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
 }
 
 .voice-active-step-highlight {
@@ -3571,6 +3598,34 @@ body {
   border-left: 4px solid var(--primary);
   font-weight: 800;
   box-shadow: var(--shadow-sm);
+}
+
+/* Studio de Clonage Vocal IA (Mode 3 ElevenLabs) dans Paramètres */
+.voice-clone-studio-box {
+  background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 55%, #f0fdf4 100%);
+  border: 2px solid #c4b5fd;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.voice-clone-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 780px) {
+  .voice-clone-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.voice-clone-subcard {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid #ddd6fe;
+  border-radius: 12px;
+  padding: 12px 14px;
 }
 
 @keyframes characterTalkBounce {
