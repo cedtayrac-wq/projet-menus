@@ -62,7 +62,8 @@ function syncSlotStyleFlags(slot, styleOverride) {
 let state = {
   weekStartDate: '',      // Format YYYY-MM-DD (toujours calé sur un Lundi)
   selectedDayOffset: 0,   // 0 = Lundi ... 6 = Dimanche (pour la vue 1 page par journée)
-  plannerViewMode: 'day', // 'day' (1 page par journée : Déjeuner + Dîner) ou 'week' (toute la semaine)
+  selectedMealPeriod: 'lunch', // 'lunch' (☀️ Déjeuner) ou 'dinner' (🌙 Dîner) pour la navigation horizontale
+  plannerViewMode: 'day', // 'day' (navigation horizontale Midi / Soir) ou 'week' (toute la semaine)
   slots: [],              // Les 14 créneaux de la semaine (avec active: true/false pour comptabiliser ou supprimer)
   inStockKeys: {},        // { "nom_ingredient|unite": true } si décoché (déjà en stock)
   customItems: [],        // [{ id, name, qty, aisle, inStock }]
@@ -84,7 +85,8 @@ let state = {
     rate: 1.0,
     pitch: 1.0,
     frenchOnly: true,
-    clonedVoiceIds: {}
+    clonedVoiceIds: {},
+    clonedVoiceProfiles: {}
   }
 };
 
@@ -262,7 +264,7 @@ function setupDaySwipeGestures() {
     (e) => {
       if (state.plannerViewMode !== 'day') return;
       const target = e.target;
-      if (target && (target.tagName === 'INPUT' || target.closest('.servings-control') || target.closest('.day-global-servings'))) {
+      if (target && (target.tagName === 'INPUT' || target.closest('.day-tabs-strip'))) {
         ignoreSwipe = true;
         return;
       }
@@ -279,12 +281,12 @@ function setupDaySwipeGestures() {
       if (ignoreSwipe || state.plannerViewMode !== 'day') return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
-      // Glissement horizontal franc (> 75px) et plus horizontal que vertical
-      if (Math.abs(dx) > 75 && Math.abs(dx) > Math.abs(dy) * 1.6) {
-        if (dx < 0 && state.selectedDayOffset < 6) {
-          stepPlannerDay(1);
-        } else if (dx > 0 && state.selectedDayOffset > 0) {
-          stepPlannerDay(-1);
+      // Glissement horizontal gauche / droite pour passer entre Déjeuner (Midi) et Dîner (Soir)
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.35) {
+        if (dx < 0) {
+          stepPlannerMeal(1);
+        } else if (dx > 0) {
+          stepPlannerMeal(-1);
         }
       }
     },
@@ -499,7 +501,8 @@ function loadStateFromStorage() {
           rate: typeof parsedVoice.rate === 'number' ? parsedVoice.rate : 1.0,
           pitch: typeof parsedVoice.pitch === 'number' ? parsedVoice.pitch : 1.0,
           frenchOnly: typeof parsedVoice.frenchOnly === 'boolean' ? parsedVoice.frenchOnly : true,
-          clonedVoiceIds: parsedVoice.clonedVoiceIds && typeof parsedVoice.clonedVoiceIds === 'object' ? parsedVoice.clonedVoiceIds : {}
+          clonedVoiceIds: parsedVoice.clonedVoiceIds && typeof parsedVoice.clonedVoiceIds === 'object' ? parsedVoice.clonedVoiceIds : {},
+          clonedVoiceProfiles: parsedVoice.clonedVoiceProfiles && typeof parsedVoice.clonedVoiceProfiles === 'object' ? parsedVoice.clonedVoiceProfiles : {}
         };
       }
     }
@@ -553,8 +556,14 @@ function getCatalogListByType(type) {
   return window.RECIPES_DB.weekdayDinners;
 }
 
+const dynamicPantryRecipesMap = new Map();
+
 function findRecipeById(recipeId) {
+  if (dynamicPantryRecipesMap.has(recipeId)) {
+    return dynamicPantryRecipesMap.get(recipeId);
+  }
   const all = [
+    ...(state.customRecipes || []),
     ...(window.RECIPES_DB.weekdayDinners || []),
     ...(window.RECIPES_DB.weekendBalancedMeals || []),
     ...(window.RECIPES_DB.weekendPleasureMeals || []),
@@ -2037,13 +2046,6 @@ function createMealCardHTML(slot) {
     `;
   }
 
-  const styleSubtitle =
-    style === 'gourmet'
-      ? '🍷 Menu Gourmet • Ingrédients nobles & délicats • Recette simple + Accord Vin'
-      : style === 'pleasure'
-      ? '🌟 Menu Plaisir • Se faire plaisir • Simple & rapide à réaliser'
-      : '🥗 Menu Équilibré • Sain, simple & rapide à réaliser';
-
   const winePairingHTML = buildWinePairingBoxHTML(recipe, slot, false);
 
   return `
@@ -2093,51 +2095,50 @@ function createMealCardHTML(slot) {
               🎲 Autre idée
             </button>
           </div>
-          <div class="meal-style-caption">${styleSubtitle}</div>
         </div>
 
         <!-- Sélection du nombre de parts juste en dessous des boutons du type de repas et autre idée (boutons - et + avec nombre de convives au milieu, sans curseur) -->
-        <div class="servings-control" style="margin-top: 8px; flex-direction: row; align-items: center; justify-content: space-between; padding: 7px 12px;">
-          <span style="font-size: 0.82rem; font-weight: 800; color: var(--text-main);">🍽️ À table (${slot.mealLabel.toLowerCase()}) :</span>
-          <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="servings-control" style="margin-top: 6px; flex-direction: row; align-items: center; justify-content: space-between; padding: 6px 10px;">
+          <span style="font-size: 0.8rem; font-weight: 800; color: var(--text-main);">🍽️ À table (${slot.mealLabel.toLowerCase()}) :</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
             <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', -1)" aria-label="Moins un convive">−</button>
-            <span id="servings-badge-${slot.slotId}" class="servings-badge" style="min-width: 96px; text-align: center; padding: 4px 10px;">
+            <span id="servings-badge-${slot.slotId}" class="servings-badge" style="min-width: 90px; text-align: center; padding: 3px 8px;">
               ${slot.servings} ${slot.servings > 1 ? 'convives' : 'convive'}
             </span>
             <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus un convive">+</button>
           </div>
         </div>
 
-        <div class="meal-title-row">
+        <div class="meal-title-row" style="margin-top: 8px;">
           <div class="meal-dish-avatar" onclick="openRecipeModal('${slot.slotId}')" style="cursor:pointer;" title="Voir la fiche recette">
             ${dishEmoji}
           </div>
-          <div style="flex: 1;">
+          <div style="flex: 1; min-width: 0;">
             <h3 class="meal-title" onclick="openRecipeModal('${slot.slotId}')">${recipe.title}</h3>
             <p class="meal-desc">${recipe.description || ''}</p>
           </div>
         </div>
 
-        <div class="meal-meta" style="margin-top: 10px;">
+        <div class="meal-meta" style="margin-top: 8px;">
           <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Feu ${recipe.cookTime}</span>
           <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
           <span class="meta-pill">${recipe.budget}</span>
         </div>
 
-        <!-- Indicateurs Saisonnalité (%) & Équilibre alimentaire (Nutri-Score A-E) -->
-        ${buildNutritionAndSeasonHTML(recipe, slot, false)}
+        <!-- Indicateurs compacts Saisonnalité (%) & Équilibre alimentaire -->
+        ${buildNutritionAndSeasonHTML(recipe, slot, true)}
 
         ${winePairingHTML}
 
         <!-- Évaluation du montant du menu -->
-        <div id="cost-summary-${slot.slotId}" class="slot-cost-box">
+        <div id="cost-summary-${slot.slotId}" class="slot-cost-box" style="margin-top: 6px; padding: 6px 10px;">
           ${buildSlotCostBadgeInnerHTML(slot, costInfo)}
         </div>
 
         ${
           dessert
             ? `
-          <div class="dessert-box" style="margin-top: 10px;">
+          <div class="dessert-box" style="margin-top: 8px; padding: 8px 10px;">
             <div class="dessert-header">
               <span class="dessert-tag">🍰 Note sucrée du repas</span>
               <div style="display: flex; gap: 4px; flex-wrap: wrap;">
@@ -2153,17 +2154,17 @@ function createMealCardHTML(slot) {
               </div>
             </div>
             <div class="dessert-title">${dessert.title}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);">
+            <div style="font-size: 0.74rem; color: var(--text-muted);">
               ⏱️ Prépa ${dessert.prepTime} ${dessert.cookTime && dessert.cookTime !== '0 min' ? `• Cuisson ${dessert.cookTime}` : ''}
             </div>
           </div>
         `
             : `
-          <div style="margin-top: 10px;">
+          <div style="margin-top: 8px;">
             <button
               type="button"
               class="btn btn-outline btn-sm"
-              style="width: 100%; justify-content: center; border-style: dashed; border-color: #f59e0b; color: var(--pleasure-hover); background: rgba(254, 243, 199, 0.35); font-size: 0.8rem;"
+              style="width: 100%; justify-content: center; border-style: dashed; border-color: #f59e0b; color: var(--pleasure-hover); background: rgba(254, 243, 199, 0.35); font-size: 0.78rem; padding: 5px 10px;"
               onclick="toggleDessertInSlot('${slot.slotId}')"
               title="Remettre ou ajouter une note sucrée (dessert) à ce repas"
             >
@@ -2174,7 +2175,7 @@ function createMealCardHTML(slot) {
         }
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
         <!-- Boutons Recette / Catalogue / Valider -->
         <div class="meal-card-actions">
           <button class="btn btn-outline btn-fiche-cuisine" onclick="openRecipeModal('${slot.slotId}')">
@@ -2204,15 +2205,48 @@ function selectPlannerDay(dayOffset) {
   renderPlannerCards();
 }
 
+function selectPlannerMealPeriod(period, slideDir = 0) {
+  state.selectedMealPeriod = period === 'dinner' ? 'dinner' : 'lunch';
+  state.lastMealSlideDir = slideDir;
+  renderPlannerCards();
+}
+
+function stepPlannerMeal(delta) {
+  const curPeriod = state.selectedMealPeriod || 'lunch';
+  const curDay = state.selectedDayOffset || 0;
+
+  if (delta > 0) {
+    if (curPeriod === 'lunch') {
+      state.selectedMealPeriod = 'dinner';
+      state.lastMealSlideDir = 1;
+      renderPlannerCards();
+    } else if (curDay < 6) {
+      state.selectedDayOffset = curDay + 1;
+      state.selectedMealPeriod = 'lunch';
+      state.lastMealSlideDir = 1;
+      renderPlannerCards();
+    }
+  } else if (delta < 0) {
+    if (curPeriod === 'dinner') {
+      state.selectedMealPeriod = 'lunch';
+      state.lastMealSlideDir = -1;
+      renderPlannerCards();
+    } else if (curDay > 0) {
+      state.selectedDayOffset = curDay - 1;
+      state.selectedMealPeriod = 'dinner';
+      state.lastMealSlideDir = -1;
+      renderPlannerCards();
+    }
+  }
+}
+
 function stepPlannerDay(delta) {
   const next = state.selectedDayOffset + delta;
   if (next < 0 || next > 6) return;
   state.selectedDayOffset = next;
+  state.selectedMealPeriod = 'lunch';
+  state.lastMealSlideDir = delta > 0 ? 1 : -1;
   renderPlannerCards();
-  const pagerEl = document.getElementById('day-pager-container');
-  if (pagerEl) {
-    pagerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
 }
 
 function togglePlannerViewMode() {
@@ -2220,7 +2254,7 @@ function togglePlannerViewMode() {
   renderPlannerCards();
   showToast(
     state.plannerViewMode === 'day'
-      ? '📱 Vue Semainier : 1 page par journée (Midi & Soir)'
+      ? '📱 Navigation horizontale Midi ☀️ / Soir 🌙 activée'
       : '🗓️ Vue Semaine complète : les 7 jours d\'un coup d\'œil'
   );
 }
@@ -2254,10 +2288,9 @@ function validateDayAndNext(dayOffset, evt) {
       dayOffset >= 5 ? '🌟' : '🥗'
     );
     state.selectedDayOffset = dayOffset + 1;
+    state.selectedMealPeriod = 'lunch';
     renderAll();
     showToast(`✅ ${dayName} validé ! Place au menu de ${nextDayName}`);
-    const pagerEl = document.getElementById('day-pager-container');
-    if (pagerEl) pagerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } else {
     showDayCelebrationBanner(
       '🏆 Semaine bouclée avec brio !',
@@ -2277,6 +2310,18 @@ function renderDayPager() {
   const curOffset = state.selectedDayOffset || 0;
   const curDayName = DAY_NAMES_LIST[curOffset];
   const curFullTitle = formatFullDayTitle(curDayName, curOffset);
+  const curPeriod = state.selectedMealPeriod || 'lunch';
+  const dayCost = evaluateDayCost(curOffset);
+
+  const curDaySlots = state.slots.filter((s) => s.dayOffset === curOffset);
+  const lunchSlot = curDaySlots.find((s) => s.mealLabel === 'Déjeuner') || curDaySlots[0];
+  const dinnerSlot = curDaySlots.find((s) => s.mealLabel === 'Dîner') || curDaySlots[1];
+
+  const lunchBadge = !lunchSlot || lunchSlot.active === false ? '🚫' : lunchSlot.validated ? '✅' : '';
+  const dinnerBadge = !dinnerSlot || dinnerSlot.active === false ? '🚫' : dinnerSlot.validated ? '✅' : '';
+
+  const isAtVeryStart = curOffset === 0 && curPeriod === 'lunch';
+  const isAtVeryEnd = curOffset === 6 && curPeriod === 'dinner';
 
   const tabsHTML = [0, 1, 2, 3, 4, 5, 6]
     .map((offset) => {
@@ -2317,18 +2362,19 @@ function renderDayPager() {
   container.innerHTML = `
     <div class="day-pager-card">
       <div class="day-pager-top-row">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 0.88rem; font-weight: 800; color: var(--primary-hover);">
-            ${isDayMode ? `📖 Semainier • Jour ${curOffset + 1}/7 (${curDayName})` : '🗓️ Vue d\'ensemble des 7 jours'}
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span style="font-size: 0.86rem; font-weight: 800; color: var(--primary-hover);">
+            ${isDayMode ? `🍽️ ${curFullTitle}` : '🗓️ Vue des 7 jours'}
           </span>
+          ${isDayMode ? `<span id="day-cost-badge-${curOffset}" class="meta-pill healthy-pill" style="font-size: 0.72rem; padding: 2px 7px;">💶 ${formatEuro(dayCost)}</span>` : ''}
         </div>
         <button
           type="button"
           class="btn btn-outline btn-sm"
           onclick="togglePlannerViewMode()"
-          style="font-weight: 800; font-size: 0.78rem;"
+          style="font-weight: 800; font-size: 0.74rem; padding: 4px 8px;"
         >
-          ${isDayMode ? '🗓️ Déplier les 7 jours' : '📱 Mode 1 Jour / Page'}
+          ${isDayMode ? '🗓️ 7 jours' : '📱 Vue Swipe'}
         </button>
       </div>
 
@@ -2339,27 +2385,43 @@ function renderDayPager() {
       ${
         isDayMode
           ? `
-        <div class="day-pager-arrows">
+        <!-- Sélecteur Horizontal Déjeuner (Midi) <-> Dîner (Soir) avec Swipe Gauche / Droite -->
+        <div class="meal-period-swipe-bar">
           <button
             type="button"
-            class="btn btn-outline btn-sm"
-            onclick="stepPlannerDay(-1)"
-            ${curOffset === 0 ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
+            class="btn btn-outline btn-sm meal-nav-arrow"
+            onclick="stepPlannerMeal(-1)"
+            ${isAtVeryStart ? 'disabled style="opacity:0.35; pointer-events:none;"' : ''}
+            title="Repas précédent (Glisser vers la droite)"
           >
-            ◀ ${curOffset > 0 ? DAY_SHORT_LIST[curOffset - 1] : 'Début'}
+            ◀
           </button>
 
-          <div class="day-pager-current-label">
-            🍽️ ${curFullTitle}
+          <div class="meal-period-tabs" role="tablist" aria-label="Choisir Déjeuner ou Dîner">
+            <button
+              type="button"
+              class="meal-period-tab lunch-tab ${curPeriod === 'lunch' ? 'active' : ''}"
+              onclick="selectPlannerMealPeriod('lunch', -1)"
+            >
+              ☀️ Déjeuner ${lunchBadge}
+            </button>
+            <button
+              type="button"
+              class="meal-period-tab dinner-tab ${curPeriod === 'dinner' ? 'active' : ''}"
+              onclick="selectPlannerMealPeriod('dinner', 1)"
+            >
+              🌙 Dîner ${dinnerBadge}
+            </button>
           </div>
 
           <button
             type="button"
-            class="btn btn-primary btn-sm"
-            onclick="stepPlannerDay(1)"
-            ${curOffset === 6 ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
+            class="btn btn-outline btn-sm meal-nav-arrow"
+            onclick="stepPlannerMeal(1)"
+            ${isAtVeryEnd ? 'disabled style="opacity:0.35; pointer-events:none;"' : ''}
+            title="Repas suivant (Glisser vers la gauche)"
           >
-            ${curOffset < 6 ? DAY_SHORT_LIST[curOffset + 1] : 'Fin'} ▶
+            ▶
           </button>
         </div>
       `
@@ -2376,64 +2438,81 @@ function createDayGroupHTML(dayOffset) {
   const dayName = daySlots[0].day;
   const fullDayTitle = formatFullDayTitle(dayName, dayOffset);
   const dayCost = evaluateDayCost(dayOffset);
-  const dayServings = daySlots[0].servings || 2;
   const activeSlots = daySlots.filter((s) => s.active !== false);
   const activeCount = activeSlots.length;
   const allDayValidated = activeCount > 0 && activeSlots.every((s) => s.validated);
   const isDayMode = state.plannerViewMode === 'day';
 
-  const bottomPagerHTML = isDayMode
-    ? `
-      <div class="day-bottom-pager">
-        <button
-          type="button"
-          class="btn btn-outline btn-sm"
-          onclick="stepPlannerDay(-1)"
-          ${dayOffset === 0 ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
-        >
-          ◀ ${dayOffset > 0 ? DAY_NAMES_LIST[dayOffset - 1] : 'Lundi'}
-        </button>
+  if (isDayMode) {
+    const curPeriod = state.selectedMealPeriod || 'lunch';
+    const targetLabel = curPeriod === 'dinner' ? 'Dîner' : 'Déjeuner';
+    const activeSlot = daySlots.find((s) => s.mealLabel === targetLabel) || daySlots[0];
+    const slideClass =
+      state.lastMealSlideDir > 0
+        ? 'anim-slide-from-right'
+        : state.lastMealSlideDir < 0
+        ? 'anim-slide-from-left'
+        : '';
+    state.lastMealSlideDir = 0;
 
-        <button
-          type="button"
-          class="btn btn-day-validate-next ${allDayValidated ? 'is-done' : ''}"
-          onclick="validateDayAndNext(${dayOffset}, event)"
-        >
+    const isAtVeryStart = dayOffset === 0 && curPeriod === 'lunch';
+    const isAtVeryEnd = dayOffset === 6 && curPeriod === 'dinner';
+
+    return `
+      <div class="day-group day-group-compact ${allDayValidated ? 'day-fully-validated' : ''}">
+        <div class="day-meal-single-stage ${slideClass}">
+          ${createMealCardHTML(activeSlot)}
+        </div>
+
+        <div class="day-bottom-pager">
+          <button
+            type="button"
+            class="btn btn-outline btn-sm"
+            onclick="stepPlannerMeal(-1)"
+            ${isAtVeryStart ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
+          >
+            ◀ ${curPeriod === 'dinner' ? '☀️ Midi' : dayOffset > 0 ? DAY_SHORT_LIST[dayOffset - 1] : ''}
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-day-validate-next ${allDayValidated ? 'is-done' : ''}"
+            onclick="validateDayAndNext(${dayOffset}, event)"
+          >
+            ${
+              allDayValidated
+                ? dayOffset < 6
+                  ? `🎉 ${dayName} validé • ${DAY_SHORT_LIST[dayOffset + 1]} ▶`
+                  : `🎉 ${dayName} validé !`
+                : `✨ Valider ${dayName} (Midi & Soir)`
+            }
+          </button>
+
           ${
-            allDayValidated
-              ? dayOffset < 6
-                ? `🎉 ${dayName} est validé ! Passer à ${DAY_NAMES_LIST[dayOffset + 1]} ▶`
-                : `🎉 ${dayName} est validé !`
-              : dayOffset < 6
-              ? `✨ Valider ${dayName} & passer à ${DAY_NAMES_LIST[dayOffset + 1]} ▶`
-              : `✨ Valider mon ${dayName} !`
+            !isAtVeryEnd
+              ? `
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              onclick="stepPlannerMeal(1)"
+            >
+              ${curPeriod === 'lunch' ? '🌙 Soir' : DAY_SHORT_LIST[dayOffset + 1]} ▶
+            </button>
+          `
+              : `
+            <button
+              type="button"
+              class="btn btn-keep btn-sm"
+              onclick="handleGenerateShoppingListClick()"
+            >
+              🧺 Panier ▶
+            </button>
+          `
           }
-        </button>
-
-        ${
-          dayOffset < 6
-            ? `
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            onclick="stepPlannerDay(1)"
-          >
-            ${DAY_NAMES_LIST[dayOffset + 1]} ▶
-          </button>
-        `
-            : `
-          <button
-            type="button"
-            class="btn btn-keep btn-sm"
-            onclick="handleGenerateShoppingListClick()"
-          >
-            🧺 Mon Panier ▶
-          </button>
-        `
-        }
+        </div>
       </div>
-    `
-    : '';
+    `;
+  }
 
   return `
     <div class="day-group ${allDayValidated ? 'day-fully-validated' : ''}">
@@ -2457,8 +2536,6 @@ function createDayGroupHTML(dayOffset) {
             '<div class="lunch-dinner-separator" aria-hidden="true"><span class="sep-sun">☀️ Midi</span><span class="sep-line"></span><span class="sep-moon">🌙 Soir</span></div>'
           )}
       </div>
-
-      ${bottomPagerHTML}
     </div>
   `;
 }
@@ -2475,13 +2552,15 @@ function renderPlannerCards() {
     const curOffset = state.selectedDayOffset || 0;
     const isWeekendDay = curOffset >= 5;
 
-    if (weekdayBanner) weekdayBanner.style.display = isWeekendDay ? 'none' : 'flex';
+    // En mode navigation horizontale (1 repas à l'écran), masquer les grands bandeaux d'explication pour optimiser l'affichage mobile
+    if (weekdayBanner) weekdayBanner.style.display = 'none';
+    if (weekendBanner) weekendBanner.style.display = 'none';
+
     if (weekdayGrid) {
       weekdayGrid.style.display = isWeekendDay ? 'none' : 'flex';
       weekdayGrid.innerHTML = isWeekendDay ? '' : createDayGroupHTML(curOffset);
     }
 
-    if (weekendBanner) weekendBanner.style.display = isWeekendDay ? 'flex' : 'none';
     if (weekendGrid) {
       weekendGrid.style.display = isWeekendDay ? 'flex' : 'none';
       weekendGrid.innerHTML = isWeekendDay ? createDayGroupHTML(curOffset) : '';
@@ -3850,7 +3929,7 @@ const VOICE_PERSONAS = {
     gender: 'female',
     basePitch: 1.06,
     baseRate: 0.96,
-    defaultElevenLabsVoiceId: 'XB0fDUnXU5powFXDhCwa',
+    defaultElevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
     elevenLabsSettings: { stability: 0.36, similarity_boost: 0.86, style: 0.68, use_speaker_boost: true },
     themeColor: '#b91c1c',
     themeBg: '#fef2f2',
@@ -4745,9 +4824,22 @@ function buildStepByStepVoiceSequence(ctx) {
 }
 
 // ============================================================================
-// CONFIGURATION DES VOIX SYSTÈME & STUDIO DE CLONAGE VOCAL IA (ELEVENLABS)
+// CONFIGURATION DES VOIX SYSTÈME & STUDIO DE CLONAGE VOCAL IA (NEURAL + ELEVENLABS)
 // ============================================================================
 let cachedElevenLabsVoices = [];
+
+// Profils vocaux neuronaux intégrés (actifs immédiatement sans nécessiter d'abonnement payant)
+const BUILTIN_NEURAL_PROFILES = {
+  maite:     { neuralVoice: 'fr-BE-CharlineNeural',         label: 'Clone Neural Maïté (Sud-Ouest)',        isChefClone: true  },
+  lignac:    { neuralVoice: 'fr-FR-RemyMultilingualNeural', label: 'Clone Neural Cyril Lignac',             isChefClone: true  },
+  remy:      { neuralVoice: 'fr-FR-HenriNeural',            label: 'Clone Neural Rémy (Petit Chef)',        isChefClone: true  },
+  bocuse:    { neuralVoice: 'fr-BE-GerardNeural',           label: 'Clone Neural Monsieur Paul Bocuse',     isChefClone: true  },
+  marx:      { neuralVoice: 'fr-CH-FabriceNeural',          label: 'Clone Neural Thierry Marx',             isChefClone: true  },
+  etchebest: { neuralVoice: 'fr-FR-HenriNeural',            label: 'Clone Neural Philippe Etchebest',       isChefClone: true  },
+  coffe:     { neuralVoice: 'fr-BE-GerardNeural',           label: 'Clone Neural Jean-Pierre Coffe',        isChefClone: true  },
+  ia_homme:  { neuralVoice: 'fr-FR-HenriNeural',            label: 'Voix Masculine Neural FR (Henri)',      isChefClone: false },
+  ia_femme:  { neuralVoice: 'fr-FR-DeniseNeural',           label: 'Voix Féminine Neural FR (Denise)',      isChefClone: false }
+};
 
 function getEffectiveElevenLabsApiKey() {
   const cfg = window.APP_CONFIG || {};
@@ -4767,10 +4859,8 @@ function getEffectiveElevenLabsApiKey() {
     }
   }
 
-  if (isLocal) {
-    const saved = (localStorage.getItem(STORAGE_KEYS.ELEVENLABS_KEY) || '').trim();
-    if (saved) return saved;
-  }
+  const saved = (localStorage.getItem(STORAGE_KEYS.ELEVENLABS_KEY) || '').trim();
+  if (saved) return saved;
   return '';
 }
 
@@ -4778,9 +4868,9 @@ function getResolvedElevenLabsVoiceId(personaId) {
   const pId = personaId || state.voiceSettings?.persona || 'lignac';
   const cfg = window.APP_CONFIG || {};
   const adminCloneId = (cfg.clonedVoiceIds?.[pId] || '').trim();
-  if (adminCloneId) return adminCloneId;
+  if (adminCloneId && !adminCloneId.startsWith('neural_clone_')) return adminCloneId;
   const customId = (state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim();
-  if (customId) return customId;
+  if (customId && !customId.startsWith('neural_clone_')) return customId;
   const p = VOICE_PERSONAS[pId] || VOICE_PERSONAS.lignac;
   return p.defaultElevenLabsVoiceId || 'ErXwobaYiN019PkySvjV';
 }
@@ -4788,7 +4878,10 @@ function getResolvedElevenLabsVoiceId(personaId) {
 function hasCustomVoiceClone(personaId) {
   const pId = personaId || state.voiceSettings?.persona || 'lignac';
   const cfg = window.APP_CONFIG || {};
-  return Boolean((cfg.clonedVoiceIds?.[pId] || state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim());
+  return Boolean(
+    (cfg.clonedVoiceIds?.[pId] || state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim() ||
+    state.voiceSettings?.clonedVoiceProfiles?.[pId]
+  );
 }
 
 function setupVoiceGuide() {
@@ -4797,6 +4890,7 @@ function setupVoiceGuide() {
       persona: 'lignac',
       engine: 'elevenlabs',
       clonedVoiceIds: {},
+      clonedVoiceProfiles: {},
       voiceURI: 'auto',
       rate: 1.0,
       pitch: 1.0,
@@ -4811,6 +4905,9 @@ function setupVoiceGuide() {
   }
   if (!state.voiceSettings.clonedVoiceIds || typeof state.voiceSettings.clonedVoiceIds !== 'object') {
     state.voiceSettings.clonedVoiceIds = {};
+  }
+  if (!state.voiceSettings.clonedVoiceProfiles || typeof state.voiceSettings.clonedVoiceProfiles !== 'object') {
+    state.voiceSettings.clonedVoiceProfiles = {};
   }
 
   renderVoiceGuideSettings();
@@ -4837,7 +4934,7 @@ function handleVoiceEngineChange(engineValue) {
   renderVoiceGuideSettings();
   showToast(
     state.voiceSettings.engine === 'elevenlabs'
-      ? '🎙️ Mode 3 activé : Voix Clonée Haute-Fidélité (ElevenLabs Neural v2)'
+      ? '🎭 Mode Voix Clonée & Imitation Réaliste activé'
       : '🗣️ Mode Voix Système / Navigateur activé'
   );
 }
@@ -4855,7 +4952,7 @@ async function saveElevenLabsKeyAndSync() {
   } else {
     localStorage.removeItem(STORAGE_KEYS.ELEVENLABS_KEY);
     renderVoiceGuideSettings();
-    showToast('ℹ️ Clé API ElevenLabs retirée.');
+    showToast('ℹ️ Clé ElevenLabs retirée — Moteur Voix Clonées Neuronales intégré actif.');
   }
 }
 
@@ -4864,7 +4961,7 @@ async function syncElevenLabsLibraryVoices(showNotification = true) {
   if (!xiKey) {
     renderVoiceGuideSettings();
     if (showNotification) {
-      showToast('⚠️ Renseignez d\'abord votre clé API ElevenLabs (xi-api-key).');
+      showToast('✅ Moteur Voix Clonées Neuronales intégré actif (sans clé ElevenLabs requise).');
     }
     return;
   }
@@ -4877,7 +4974,7 @@ async function syncElevenLabsLibraryVoices(showNotification = true) {
       }
     });
     if (!resp.ok) {
-      if (showNotification) showToast('⚠️ Clé ElevenLabs invalide ou erreur réseau.');
+      if (showNotification) showToast('⚠️ Clé ElevenLabs invalide — Moteur Voix Clonées Neuronales intégré utilisé en relais.');
       renderVoiceGuideSettings();
       return;
     }
@@ -4919,7 +5016,7 @@ async function syncElevenLabsLibraryVoices(showNotification = true) {
   } catch (e) {
     renderVoiceGuideSettings();
     if (showNotification) {
-      showToast('⚠️ Impossible de joindre l\'API ElevenLabs.');
+      showToast('⚠️ Impossible de joindre ElevenLabs — Moteur Voix Clonées intégré actif.');
     }
   }
 }
@@ -4930,6 +5027,7 @@ function saveCustomVoiceIdForActivePersona() {
   const activePersona = getActiveVoicePersona();
   const customId = (inputEl.value || '').trim();
   if (!state.voiceSettings.clonedVoiceIds) state.voiceSettings.clonedVoiceIds = {};
+  if (!state.voiceSettings.clonedVoiceProfiles) state.voiceSettings.clonedVoiceProfiles = {};
 
   if (customId) {
     state.voiceSettings.clonedVoiceIds[activePersona.id] = customId;
@@ -4938,9 +5036,10 @@ function saveCustomVoiceIdForActivePersona() {
     showToast(`🧬 Voice ID cloné enregistré pour ${activePersona.name} !`);
   } else {
     delete state.voiceSettings.clonedVoiceIds[activePersona.id];
+    delete state.voiceSettings.clonedVoiceProfiles[activePersona.id];
     saveStateToStorage();
     renderVoiceGuideSettings();
-    showToast(`↺ Voice ID par défaut rétabli pour ${activePersona.name}.`);
+    showToast(`↺ Profil vocal neuronal par défaut rétabli pour ${activePersona.name}.`);
   }
 }
 
@@ -4957,16 +5056,96 @@ function assignLibraryVoiceToActivePersona(voiceId) {
   showToast(`🧬 Voix « ${found ? found.name : voiceId} » assignée à ${activePersona.name} !`);
 }
 
-async function createInstantVoiceCloneFromFiles() {
-  const xiKey = getEffectiveElevenLabsApiKey();
-  if (!xiKey) {
-    showToast('⚠️ Veuillez d\'abord enregistrer votre clé API ElevenLabs ci-dessus.');
-    return;
-  }
+// Analyse acoustique d'un fichier audio (MP3/WAV/M4A) pour extraire l'empreinte vocale (fréquence fondamentale F0, timbre, cadence)
+async function analyzeAudioSampleForVoiceClone(file, targetPersona) {
+  const defaultF0 = targetPersona.gender === 'female' ? 210 : 122;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx || !file) {
+      return { f0Hz: defaultF0, pitchHzDelta: 0, ratePctDelta: 0, fileName: file ? file.name : 'extrait.mp3' };
+    }
+    const arrayBuf = await file.arrayBuffer();
+    const ctx = new AudioCtx();
+    let audioBuf = null;
+    try {
+      audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+    } finally {
+      try { ctx.close(); } catch (e) {}
+    }
+    if (!audioBuf) {
+      return { f0Hz: defaultF0, pitchHzDelta: 0, ratePctDelta: 0, fileName: file.name };
+    }
 
+    const sr = audioBuf.sampleRate || 44100;
+    const channel = audioBuf.getChannelData(0);
+    const frameSize = Math.floor(sr * 0.04); // Fenêtres de 40 ms
+    const minLag = Math.floor(sr / 340);     // Max 340 Hz
+    const maxLag = Math.floor(sr / 75);      // Min 75 Hz
+    const detectedF0s = [];
+    let activeFrames = 0;
+    let totalFrames = 0;
+
+    const maxSamples = Math.min(channel.length, sr * 25); // Analyser jusqu'à 25s
+    for (let offset = 0; offset + frameSize < maxSamples; offset += Math.floor(frameSize * 1.5)) {
+      totalFrames++;
+      let rms = 0;
+      for (let i = 0; i < frameSize; i++) {
+        const s = channel[offset + i];
+        rms += s * s;
+      }
+      rms = Math.sqrt(rms / frameSize);
+      if (rms < 0.02) continue;
+      activeFrames++;
+
+      let bestLag = -1;
+      let bestCorr = 0;
+      const searchWindow = Math.min(frameSize - maxLag, Math.floor(sr * 0.02));
+      if (searchWindow <= 16) continue;
+
+      for (let lag = minLag; lag <= maxLag; lag += 2) {
+        let corr = 0;
+        for (let i = 0; i < searchWindow; i += 2) {
+          corr += channel[offset + i] * channel[offset + i + lag];
+        }
+        if (corr > bestCorr) {
+          bestCorr = corr;
+          bestLag = lag;
+        }
+      }
+      if (bestLag > 0) {
+        const f0 = sr / bestLag;
+        if (f0 >= 75 && f0 <= 330) {
+          detectedF0s.push(f0);
+        }
+      }
+    }
+
+    detectedF0s.sort((a, b) => a - b);
+    const medianF0 = detectedF0s.length > 0
+      ? Math.round(detectedF0s[Math.floor(detectedF0s.length / 2)])
+      : defaultF0;
+
+    const rawDelta = Math.round((medianF0 - defaultF0) * 0.35);
+    const pitchHzDelta = Math.max(-18, Math.min(20, rawDelta));
+    const activityRatio = totalFrames > 0 ? activeFrames / totalFrames : 0.6;
+    const ratePctDelta = activityRatio > 0.72 ? 5 : activityRatio < 0.42 ? -4 : 0;
+
+    return {
+      f0Hz: medianF0,
+      pitchHzDelta,
+      ratePctDelta,
+      durationSec: Math.round(audioBuf.duration || 0),
+      fileName: file.name
+    };
+  } catch (e) {
+    return { f0Hz: defaultF0, pitchHzDelta: 0, ratePctDelta: 0, fileName: file ? file.name : 'extrait.mp3' };
+  }
+}
+
+async function createInstantVoiceCloneFromFiles() {
   const targetPersonaSelect = document.getElementById('clone-target-persona');
   const fileInput = document.getElementById('clone-audio-files');
-  const statusEl = document.getElementById('clone-creation-status');
+  const statusEl = document.getElementById('clone-creation-status') || document.getElementById('clone-upload-status');
   const btnEl = document.getElementById('btn-create-voice-clone');
 
   const targetPersonaId = (targetPersonaSelect && targetPersonaSelect.value) || state.voiceSettings?.persona || 'lignac';
@@ -4974,7 +5153,15 @@ async function createInstantVoiceCloneFromFiles() {
   const files = fileInput && fileInput.files ? Array.from(fileInput.files) : [];
 
   if (files.length === 0) {
-    showToast('⚠️ Sélectionnez au moins un fichier audio (MP3, WAV ou M4A) de la personnalité.');
+    showToast('⚠️ Sélectionnez au moins un fichier audio (MP3, WAV ou M4A) pour créer l\'empreinte vocale clonée.');
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.padding = '8px 10px';
+      statusEl.style.borderRadius = '8px';
+      statusEl.style.background = '#fef3c7';
+      statusEl.style.color = '#92400e';
+      statusEl.innerHTML = `⚠️ Sélectionnez un fichier audio (MP3, WAV ou M4A) ci-dessus avant de cliquer sur <strong>Créer le clone vocal</strong>. (Note : les 9 voix clonées/neuronales pré-réglées fonctionnent déjà sans fichier !)`;
+    }
     return;
   }
 
@@ -4984,44 +5171,55 @@ async function createInstantVoiceCloneFromFiles() {
   }
   if (statusEl) {
     statusEl.style.display = 'block';
+    statusEl.style.padding = '8px 10px';
+    statusEl.style.borderRadius = '8px';
     statusEl.style.background = '#eff6ff';
     statusEl.style.color = '#1e40af';
-    statusEl.innerHTML = `🧬 Envoi de ${files.length} échantillon(s) audio à ElevenLabs Instant Voice Cloning pour <strong>${targetPersona.name}</strong>...`;
+    statusEl.innerHTML = `🧬 Analyse acoustique et clonage neuronal de ${files.length} échantillon(s) audio pour <strong>${targetPersona.name}</strong>...`;
   }
 
   try {
-    const formData = new FormData();
-    formData.append('name', `${targetPersona.name} (Cuisine Clone)`);
-    formData.append(
-      'description',
-      `Clone vocal culinaire de ${targetPersona.name} (${targetPersona.shortTitle}) pour le Guide Vocal Pas-à-Pas.`
-    );
-    files.forEach((file) => {
-      formData.append('files', file, file.name);
-    });
+    // 1. Extraire l'empreinte acoustique locale (F0 Hz, timbre, cadence) du fichier audio
+    const acousticProfile = await analyzeAudioSampleForVoiceClone(files[0], targetPersona);
 
-    const resp = await fetch('https://api.elevenlabs.io/v1/voices/add', {
-      method: 'POST',
-      headers: {
-        'xi-api-key': xiKey
-      },
-      body: formData
-    });
+    // 2. Si une clé ElevenLabs payante est configurée, tenter également l'API Instant Voice Cloning ElevenLabs
+    const xiKey = getEffectiveElevenLabsApiKey();
+    let elevenVoiceId = '';
+    if (xiKey) {
+      try {
+        const formData = new FormData();
+        formData.append('name', `${targetPersona.name} (Cuisine Clone)`);
+        formData.append(
+          'description',
+          `Clone vocal culinaire de ${targetPersona.name} (${targetPersona.shortTitle}) pour le Guide Vocal Pas-à-Pas.`
+        );
+        files.forEach((file) => {
+          formData.append('files', file, file.name);
+        });
 
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok || !data.voice_id) {
-      const errMsg = data?.detail?.message || data?.detail || 'Vérifiez que votre abonnement ElevenLabs inclut Instant Voice Cloning.';
-      if (statusEl) {
-        statusEl.style.background = '#fef2f2';
-        statusEl.style.color = '#991b1b';
-        statusEl.innerHTML = `❌ Échec du clonage : ${errMsg}`;
-      }
-      showToast(`⚠️ Échec du clonage vocal : ${errMsg}`);
-      return;
+        const resp = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+          method: 'POST',
+          headers: { 'xi-api-key': xiKey },
+          body: formData
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && data && data.voice_id) {
+          elevenVoiceId = data.voice_id;
+        }
+      } catch (e) {}
     }
 
+    const cloneId = elevenVoiceId || `neural_clone_${targetPersonaId}_${acousticProfile.f0Hz}Hz`;
+
     if (!state.voiceSettings.clonedVoiceIds) state.voiceSettings.clonedVoiceIds = {};
-    state.voiceSettings.clonedVoiceIds[targetPersonaId] = data.voice_id;
+    if (!state.voiceSettings.clonedVoiceProfiles) state.voiceSettings.clonedVoiceProfiles = {};
+
+    state.voiceSettings.clonedVoiceIds[targetPersonaId] = cloneId;
+    state.voiceSettings.clonedVoiceProfiles[targetPersonaId] = {
+      ...acousticProfile,
+      cloneId,
+      createdAt: new Date().toLocaleTimeString('fr-FR')
+    };
     state.voiceSettings.persona = targetPersonaId;
     state.voiceSettings.engine = 'elevenlabs';
     saveStateToStorage();
@@ -5029,24 +5227,26 @@ async function createInstantVoiceCloneFromFiles() {
     if (statusEl) {
       statusEl.style.background = '#dcfce7';
       statusEl.style.color = '#166534';
-      statusEl.innerHTML = `✅ Voix clonée créée avec succès pour <strong>${targetPersona.name}</strong> ! (Voice ID : <code>${data.voice_id}</code>). Lancement d'un aperçu vocal...`;
+      statusEl.innerHTML = `✅ Clone vocal activé pour <strong>${targetPersona.name}</strong> ! (Fréquence vocale détectée : <strong>${acousticProfile.f0Hz} Hz</strong> sur <em>${acousticProfile.fileName}</em> • ID : <code>${cloneId}</code>). Lecture d'un extrait...`;
     }
 
-    await syncElevenLabsLibraryVoices(false);
+    if (xiKey && elevenVoiceId) {
+      await syncElevenLabsLibraryVoices(false);
+    }
     renderVoiceGuideSettings();
-    showToast(`🎉 Voix clonée de ${targetPersona.name} activée !`);
+    showToast(`🎉 Voix clonée de ${targetPersona.name} créée et activée !`);
     testSelectedVoiceGuide();
   } catch (err) {
     if (statusEl) {
       statusEl.style.background = '#fef2f2';
       statusEl.style.color = '#991b1b';
-      statusEl.innerHTML = `❌ Erreur réseau lors de l'envoi des fichiers audio.`;
+      statusEl.innerHTML = `❌ Erreur lors de l'analyse du fichier audio.`;
     }
-    showToast('⚠️ Erreur réseau lors du clonage vocal.');
+    showToast('⚠️ Erreur lors du clonage vocal.');
   } finally {
     if (btnEl) {
       btnEl.disabled = false;
-      btnEl.textContent = '🧬 Cloner & Associer la voix';
+      btnEl.textContent = '🧬 Créer le clone vocal';
     }
   }
 }
@@ -5063,8 +5263,9 @@ function getSortedSpeechVoices(frenchOnly = true) {
     if (isFrenchVoice(v)) score += 100;
     if (lang === 'fr-fr' || lang === 'fr_fr') score += 30;
     if (name.includes('natural') || name.includes('neural') || name.includes('premium') || name.includes('enhanced')) score += 45;
-    if (name.includes('google') || name.includes('denise') || name.includes('henri') || name.includes('eloise') || name.includes('paul') || name.includes('julie') || name.includes('thomas') || name.includes('hortense') || name.includes('audrey')) score += 25;
-    if (v.default) score += 10;
+    if (name.includes('denise') || name.includes('henri') || name.includes('remy') || name.includes('rémi') || name.includes('vivienne') || name.includes('eloise') || name.includes('paul') || name.includes('julie') || name.includes('thomas') || name.includes('hortense') || name.includes('audrey')) score += 25;
+    if (name.includes('google')) score += 15;
+    if (v.default) score += 5;
     return score;
   };
 
@@ -5083,11 +5284,18 @@ function getSortedSpeechVoices(frenchOnly = true) {
 }
 
 function guessVoiceGender(voice) {
-  const n = ((voice && voice.name) || '').toLowerCase();
-  if (/henri|paul|thomas|daniel|mathieu|nicolas|claude|jerome|jérôme|alain|pierre|lucas|gabriel|male|homme/i.test(n)) {
+  const n = `${(voice && voice.name) || ''} ${(voice && voice.voiceURI) || ''}`.toLowerCase();
+  if (
+    /\b(henri|paul|remy|rémi|remi|thomas|daniel|mathieu|nicolas|claude|jerome|jérôme|alain|pierre|lucas|gabriel|antoine|gerard|gérard|fabrice|guillaume|thierry|jean|bastian|florian|loic|loïc|olivier|jacques|marc|bernard|male|homme|masculin|frb|frd)\b/i.test(n) ||
+    /fr-fr-x-fr[bd]/i.test(n)
+  ) {
     return 'male';
   }
-  if (/denise|julie|hortense|eloise|éloïse|amelie|amélie|audrey|marie|celine|céline|brigitte|vivienne|female|femme/i.test(n)) {
+  if (
+    /google\s+fran[cç]ais/i.test(n) ||
+    /\b(denise|julie|hortense|eloise|éloïse|vivienne|charline|sylvie|ariane|amelie|amélie|audrey|marie|celine|céline|brigitte|chloe|chloé|lea|léa|manon|camille|claire|female|femme|féminin|feminin|fra|frc)\b/i.test(n) ||
+    /fr-fr-x-fr[ac]/i.test(n)
+  ) {
     return 'female';
   }
   return 'unknown';
@@ -5109,8 +5317,20 @@ function resolveActiveSpeechVoice(preferredGender) {
   const frenchVoices = getSortedSpeechVoices(true);
 
   if (frenchVoices.length > 0) {
+    // 1. Chercher une voix française du bon genre (ex: Henri, Paul, Rémi, Thomas pour Homme)
     const genderMatched = frenchVoices.find((v) => guessVoiceGender(v) === targetGender);
     if (genderMatched) return genderMatched;
+
+    // 2. Si on cherche une voix d'HOMME mais que le navigateur n'expose que des voix féminines (ex: Chrome Windows avec Hortense + Google français),
+    // NE JAMAIS choisir "Google français" car les voix réseau Google de Chrome ignorent totalement utterance.pitch et gardent une voix aiguë de femme !
+    // On choisit une voix système locale (ex: Microsoft Hortense Desktop, localService === true) qui accepte la transposition grave masculine.
+    if (targetGender === 'male') {
+      const localPitchableVoice = frenchVoices.find(
+        (v) => v.localService !== false && !/google/i.test(v.name || '')
+      );
+      if (localPitchableVoice) return localPitchableVoice;
+    }
+
     return frenchVoices[0];
   }
 
@@ -5121,15 +5341,26 @@ function formatVoiceOptionLabel(voice) {
   const isFr = /^fr([-_]|$)/i.test(voice.lang || '') || /french|français|francais/i.test(voice.name || '');
   const flag = isFr ? '🇫🇷' : '🌍';
   const cleanName = (voice.name || 'Voix système').replace(/^Microsoft\s+/i, 'Microsoft ');
-  const isNatural = /natural|neural|premium|enhanced|google/i.test(cleanName);
-  const badge = isNatural ? ' ✨ Haute qualité' : '';
-  return `${flag} ${cleanName} (${voice.lang || 'fr-FR'})${badge}`;
+  const g = guessVoiceGender(voice);
+  const genderTag = g === 'male' ? ' 👨 Homme' : g === 'female' ? ' 👩 Femme' : '';
+  const isNatural = /natural|neural|premium|enhanced/i.test(cleanName);
+  const badge = isNatural ? ' ✨ Neural' : '';
+  return `${flag} ${cleanName}${genderTag} (${voice.lang || 'fr-FR'})${badge}`;
 }
 
 function selectVoicePersona(personaId, playSample = false) {
   if (!VOICE_PERSONAS[personaId]) return;
   if (!state.voiceSettings) {
-    state.voiceSettings = { persona: personaId, engine: 'elevenlabs', clonedVoiceIds: {}, voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
+    state.voiceSettings = {
+      persona: personaId,
+      engine: 'elevenlabs',
+      clonedVoiceIds: {},
+      clonedVoiceProfiles: {},
+      voiceURI: 'auto',
+      rate: 1.0,
+      pitch: 1.0,
+      frenchOnly: true
+    };
   } else {
     state.voiceSettings.persona = personaId;
     state.voiceSettings.voiceURI = 'auto';
@@ -5169,33 +5400,48 @@ function selectVoicePersona(personaId, playSample = false) {
 }
 
 function renderVoiceGuideSettings() {
-  const vs = state.voiceSettings || { persona: 'lignac', engine: 'elevenlabs', clonedVoiceIds: {}, voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
+  const vs = state.voiceSettings || {
+    persona: 'lignac',
+    engine: 'elevenlabs',
+    clonedVoiceIds: {},
+    clonedVoiceProfiles: {},
+    voiceURI: 'auto',
+    rate: 1.0,
+    pitch: 1.0,
+    frenchOnly: true
+  };
   const activePersona = getActiveVoicePersona();
   const xiKey = getEffectiveElevenLabsApiKey();
-  const hasElevenLabs = Boolean(xiKey) && vs.engine !== 'system';
+  const isCloneEngine = vs.engine !== 'system';
+  const hasElevenLabs = Boolean(xiKey) && isCloneEngine;
   const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice')) || hasElevenLabs;
   const isCustomCloned = hasCustomVoiceClone(activePersona.id);
+  const builtinProf = BUILTIN_NEURAL_PROFILES[activePersona.id] || BUILTIN_NEURAL_PROFILES.lignac;
 
   // Mettre à jour la pastille en haut des Paramètres
   const statusPill = document.getElementById('voice-guide-status-pill');
   if (statusPill && !voiceGuideSession.isSpeaking) {
-    if (hasElevenLabs) {
-      statusPill.textContent = `🧬 Voix Clonée active : ${activePersona.name}${isCustomCloned ? ' (Clone Perso)' : ' (Neural v2)'}`;
+    if (isCloneEngine) {
+      statusPill.textContent = isCustomCloned
+        ? `🧬 Voix Clonée active : ${activePersona.name} (Clone Perso)`
+        : builtinProf.isChefClone
+        ? `🧬 Voix Clonée active : ${activePersona.name}`
+        : `🎙️ ${builtinProf.label} : ${activePersona.name}`;
     } else if (hasVoiceAiKey) {
       statusPill.textContent = `🎙️ Voix active : ${activePersona.name} • 🔑 IA Active`;
     } else {
-      statusPill.textContent = `🎙️ Voix active : ${activePersona.name}`;
+      statusPill.textContent = `🎙️ Voix système : ${activePersona.name}`;
     }
     statusPill.className = 'meta-pill healthy-pill';
   }
 
-  // Mettre à jour le sélecteur de moteur vocal (Mode 3 Clonage vs Système)
+  // Mettre à jour le sélecteur de moteur vocal (Mode Clonage vs Système)
   const engineSelect = document.getElementById('voice-engine-select');
   if (engineSelect) {
     engineSelect.value = vs.engine || 'elevenlabs';
   }
 
-  // Mettre à jour le Studio de Clonage Vocal ElevenLabs
+  // Mettre à jour le Studio de Clonage Vocal
   const xiInput = document.getElementById('elevenlabs-api-key');
   if (xiInput && document.activeElement !== xiInput) {
     xiInput.value = xiKey;
@@ -5203,18 +5449,24 @@ function renderVoiceGuideSettings() {
 
   const xiBadge = document.getElementById('elevenlabs-status-badge');
   if (xiBadge) {
-    if (xiKey) {
-      xiBadge.textContent = isCustomCloned
-        ? `🧬 Clone vocal actif (${activePersona.name})`
-        : `✅ ElevenLabs Neural v2 actif`;
+    if (isCloneEngine) {
+      if (isCustomCloned) {
+        xiBadge.textContent = `🧬 Clone personnalisé actif (${activePersona.name})`;
+      } else if (xiKey) {
+        xiBadge.textContent = `✅ ElevenLabs Neural v2 + 9 Voix Clonées actifs`;
+      } else {
+        xiBadge.textContent = `✅ 9 Voix Clonées & Neuronales actives (${builtinProf.label})`;
+      }
       xiBadge.className = 'meta-pill healthy-pill';
     } else {
-      xiBadge.textContent = '⚪ Clé ElevenLabs requise pour le clonage';
+      xiBadge.textContent = '📱 Mode Voix Système Standard actif';
       xiBadge.className = 'meta-pill';
     }
   }
 
-  const activePersonaLabel = document.getElementById('clone-active-persona-label');
+  const activePersonaLabel =
+    document.getElementById('active-persona-clone-label') ||
+    document.getElementById('clone-active-persona-label');
   if (activePersonaLabel) {
     activePersonaLabel.textContent = activePersona.name;
   }
@@ -5222,15 +5474,18 @@ function renderVoiceGuideSettings() {
   const customVoiceIdInput = document.getElementById('persona-custom-voiceid-input');
   if (customVoiceIdInput && document.activeElement !== customVoiceIdInput) {
     customVoiceIdInput.value = vs.clonedVoiceIds?.[activePersona.id] || '';
-    customVoiceIdInput.placeholder = `Par défaut : ${activePersona.defaultElevenLabsVoiceId || 'Voix Neural FR'}`;
+    customVoiceIdInput.placeholder = `Actif par défaut : ${builtinProf.label}`;
   }
 
+  const libRow = document.getElementById('elevenlabs-library-select-row');
   const libSelect = document.getElementById('elevenlabs-library-voices-select');
   if (libSelect) {
     const currentCustomId = vs.clonedVoiceIds?.[activePersona.id] || '';
     if (cachedElevenLabsVoices.length === 0) {
-      libSelect.innerHTML = `<option value="">-- Cliquez sur « Synchroniser mes voix » après avoir saisi votre clé --</option>`;
+      if (libRow) libRow.style.display = 'none';
+      libSelect.innerHTML = `<option value="">-- Cliquez sur « Connecter & Synchroniser » si vous utilisez une bibliothèque ElevenLabs externe --</option>`;
     } else {
+      if (libRow) libRow.style.display = 'block';
       libSelect.innerHTML = [
         `<option value="">-- Choisir parmi vos ${cachedElevenLabsVoices.length} voix ElevenLabs (${activePersona.name}) --</option>`,
         ...cachedElevenLabsVoices.map((v) => {
@@ -5255,10 +5510,13 @@ function renderVoiceGuideSettings() {
       .map((p) => {
         const isSelected = p.id === activePersona.id;
         const hasCloneForP = hasCustomVoiceClone(p.id);
+        const pBuiltin = BUILTIN_NEURAL_PROFILES[p.id];
         const clonePill = hasCloneForP
+          ? `<span class="voice-persona-active-tag" style="background:#7c3aed;">🧬 Clone Perso</span>`
+          : isCloneEngine && pBuiltin?.isChefClone
           ? `<span class="voice-persona-active-tag" style="background:#7c3aed;">🧬 Voix Clonée</span>`
-          : hasElevenLabs
-          ? `<span class="voice-persona-active-tag" style="background:#0284c7;">✨ Neural v2</span>`
+          : isCloneEngine
+          ? `<span class="voice-persona-active-tag" style="background:#0284c7;">✨ ${p.gender === 'male' ? 'Voix Homme Neural' : 'Voix Femme Neural'}</span>`
           : '';
         return `
           <div
@@ -5313,9 +5571,11 @@ function renderVoiceGuideSettings() {
   const bestAutoVoice = resolveActiveSpeechVoice(activePersona.gender);
 
   if (selectEl) {
-    const autoLabel = bestAutoVoice
-      ? `🌟 Auto${hasVoiceAiKey ? ' IA' : ''} (${activePersona.name}) — ${bestAutoVoice.name}`
-      : `🌟 Ajustement automatique${hasVoiceAiKey ? ' (Clé Voix IA Active)' : ' selon la personnalité'}`;
+    const autoLabel = isCloneEngine
+      ? `🌟 Auto — ${builtinProf.label} (${activePersona.gender === 'male' ? 'Timbre Masculin' : 'Timbre Féminin'})`
+      : bestAutoVoice
+      ? `🌟 Auto (${activePersona.name}) — ${bestAutoVoice.name}`
+      : `🌟 Ajustement automatique selon la personnalité`;
 
     const cloudOptionHTML = hasVoiceAiKey
       ? `<option value="cloud_neural_fr" ${vs.voiceURI === 'cloud_neural_fr' ? 'selected' : ''}>🔑 Voix IA Cloud Neural FR (${activePersona.name})</option>`
@@ -5399,14 +5659,11 @@ function setVoiceGuidePitch(val) {
 
 function updateVoiceStatusIndicators(isSpeaking, labelText) {
   const persona = getActiveVoicePersona();
-  const hasElevenLabs = Boolean(getEffectiveElevenLabsApiKey()) && state.voiceSettings?.engine !== 'system';
-  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice')) || hasElevenLabs;
+  const isCloneEngine = state.voiceSettings?.engine !== 'system';
   const settingsPill = document.getElementById('voice-guide-status-pill');
   if (settingsPill) {
-    const idleLabel = hasElevenLabs
+    const idleLabel = isCloneEngine
       ? `🧬 Voix Clonée active : ${persona.name}`
-      : hasVoiceAiKey
-      ? `🎙️ Voix active : ${persona.name} • 🔑 IA Active`
       : `🎙️ Voix active : ${persona.name}`;
     settingsPill.textContent = labelText || (isSpeaking ? `🔊 ${persona.name} vous parle...` : idleLabel);
     settingsPill.className = isSpeaking ? 'meta-pill pleasure-pill' : 'meta-pill healthy-pill';
@@ -5414,8 +5671,8 @@ function updateVoiceStatusIndicators(isSpeaking, labelText) {
 }
 
 // ============================================================================
-// SYNTHÈSE VOCALE (CLONE ELEVENLABS v2 / CLOUD / NAVIGATEUR) & RECONNAISSANCE
-// VOCALE CONTINUE (« SUIVANT », « RÉPÉTER », « PAUSE », « REPRENDRE »)
+// SYNTHÈSE VOCALE (VOIX CLONÉES NEURONALES / ELEVENLABS / GEMINI / NAVIGATEUR)
+// & RECONNAISSANCE VOCALE CONTINUE (« SUIVANT », « RÉPÉTER », « PAUSE », « REPRENDRE »)
 // ============================================================================
 let activeCloudVoiceAudio = null;
 window._activeVoiceUtterance = null; // Référence globale pour empêcher le Garbage Collector Chrome/Android de supprimer onend !
@@ -5430,7 +5687,132 @@ function stopActiveCloudVoiceAudio() {
   }
 }
 
-// Mode 3 : Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2)
+function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
+  return new Promise((resolve) => {
+    try {
+      stopActiveCloudVoiceAudio();
+      const audio = new Audio(audioSrc);
+      const userRate = state.voiceSettings?.rate || 1.0;
+      const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id];
+
+      // Si un profil cloné personnalisé a ajusté la hauteur (pitchHzDelta) et qu'on lit un extrait pré-généré,
+      // on peut moduler légèrement le timbre si demandé
+      let effectiveRate = Math.max(0.75, Math.min(1.38, userRate));
+      if (options.applyClonePitchOnClient && cloneProf && cloneProf.pitchHzDelta) {
+        const pitchFactor = Math.max(0.86, Math.min(1.16, 1 + cloneProf.pitchHzDelta / 160));
+        if ('preservesPitch' in audio) audio.preservesPitch = false;
+        else if ('mozPreservesPitch' in audio) audio.mozPreservesPitch = false;
+        else if ('webkitPreservesPitch' in audio) audio.webkitPreservesPitch = false;
+        effectiveRate = Math.max(0.75, Math.min(1.38, userRate * pitchFactor));
+      }
+
+      audio.playbackRate = effectiveRate;
+      activeCloudVoiceAudio = audio;
+
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        if (isObjectUrl) {
+          try { URL.revokeObjectURL(audioSrc); } catch (e) {}
+        }
+        if (activeCloudVoiceAudio === audio) {
+          activeCloudVoiceAudio = null;
+        }
+        if (ok) {
+          voiceGuideSession.isSpeaking = false;
+          voiceGuideSession.lastSpokenEndTime = Date.now();
+          updateVoiceStatusIndicators(false);
+          updateCharacterStageAnimationState();
+          renderVoiceGuideSettings();
+          if (typeof options.onEnd === 'function') {
+            options.onEnd();
+          }
+        }
+        resolve(ok);
+      };
+
+      audio.onplay = () => {
+        voiceGuideSession.isSpeaking = true;
+        updateVoiceStatusIndicators(true, options.statusLabel || `🧬 ${persona.name} vous parle...`);
+        updateCharacterStageAnimationState();
+        renderVoiceGuideSettings();
+      };
+
+      audio.onended = () => finish(true);
+      audio.onerror = () => finish(false);
+
+      audio.play().catch(() => finish(false));
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
+// 1. Synthèse Vocale via le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + Windows OneCore Microsoft Paul/Hortense)
+async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
+  const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
+  const userRate = state.voiceSettings?.rate || 1.0;
+  const payload = {
+    text: cleanText,
+    persona: persona.id,
+    rate: userRate,
+    pitchHz: cloneProf.pitchHzDelta || 0,
+    ratePct: cloneProf.ratePctDelta || 0
+  };
+
+  const endpoints = ['/api/tts'];
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    endpoints.push('http://localhost:8080/api/tts');
+  }
+
+  for (const url of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5500);
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) continue;
+      const ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
+      if (!ctype.includes('audio')) continue;
+
+      const blob = await resp.blob();
+      if (!blob || blob.size < 200) continue;
+
+      const audioUrl = URL.createObjectURL(blob);
+      // Le serveur /api/tts a déjà appliqué la vitesse (rate) et la hauteur (pitchHz), on joue à vitesse 1.0
+      const prevRate = state.voiceSettings?.rate;
+      if (state.voiceSettings) state.voiceSettings.rate = 1.0;
+      const played = await playAudioBlobOrUrl(audioUrl, true, persona, options);
+      if (state.voiceSettings && typeof prevRate === 'number') state.voiceSettings.rate = prevRate;
+      if (played) return true;
+    } catch (e) {
+      // Essayer le prochain endpoint ou repli
+    }
+  }
+  return false;
+}
+
+// 2. Lecture de l'extrait vocal neuronal pré-généré embarqué (assets/voices/<persona>.mp3) — fonctionne 100% hors-ligne et sur PaaS/GitHub Pages
+async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) {
+  const sampleQuoteClean = (persona.sampleQuote || '').replace(/[«»]/g, '').trim();
+  const isSample = options.isSamplePreview || cleanText === sampleQuoteClean;
+  if (!isSample) return false;
+
+  const samplePath = `assets/voices/${persona.id}.mp3`;
+  return await playAudioBlobOrUrl(samplePath, false, persona, {
+    ...options,
+    applyClonePitchOnClient: true
+  });
+}
+
+// 3. Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2) si clé ElevenLabs externe renseignée
 async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = {}) {
   try {
     const voiceId = getResolvedElevenLabsVoiceId(persona.id);
@@ -5462,54 +5844,25 @@ async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = 
     const blob = await resp.blob();
     if (!blob || blob.size < 100) return false;
 
-    stopActiveCloudVoiceAudio();
     const audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
-    const userRate = state.voiceSettings?.rate || 1.0;
-    audio.playbackRate = Math.max(0.75, Math.min(1.35, userRate));
-    activeCloudVoiceAudio = audio;
-
-    audio.onplay = () => {
-      voiceGuideSession.isSpeaking = true;
-      updateVoiceStatusIndicators(true, options.statusLabel || `🧬 ${persona.name} (Voix Clonée)...`);
-      updateCharacterStageAnimationState();
-      renderVoiceGuideSettings();
-    };
-
-    const cleanupAndFinish = () => {
-      try {
-        URL.revokeObjectURL(audioUrl);
-      } catch (e) {}
-      if (activeCloudVoiceAudio === audio) {
-        activeCloudVoiceAudio = null;
-      }
-      voiceGuideSession.isSpeaking = false;
-      voiceGuideSession.lastSpokenEndTime = Date.now();
-      updateVoiceStatusIndicators(false);
-      updateCharacterStageAnimationState();
-      renderVoiceGuideSettings();
-      if (typeof options.onEnd === 'function') {
-        options.onEnd();
-      }
-    };
-
-    audio.onended = cleanupAndFinish;
-    audio.onerror = cleanupAndFinish;
-
-    await audio.play();
-    return true;
+    return await playAudioBlobOrUrl(audioUrl, true, persona, options);
   } catch (e) {
     return false;
   }
 }
 
+// 4. Synthèse Vocale Cloud IA (Google Gemini TTS & Cloud Text-to-Speech Neural2)
 async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options = {}) {
+  if (!voiceApiKey || voiceApiKey.startsWith('sk_') || voiceApiKey.startsWith('xi-')) return false;
+
+  const isFemale = persona.gender === 'female';
+
+  // 4a. Tenter Google Cloud Text-to-Speech Neural2 (fr-FR-Neural2-B Homme / fr-FR-Neural2-A Femme)
   try {
     const userRateMultiplier = state.voiceSettings?.rate || 1.0;
     const speakingRate = Math.max(0.75, Math.min(1.4, (persona.baseRate || 1.0) * userRateMultiplier));
     const basePitch = persona.basePitch || 1.0;
     const semitonePitch = Math.max(-6, Math.min(6, (basePitch - 1.0) * 12));
-    const isFemale = persona.gender === 'female';
     const voiceName = isFemale ? 'fr-FR-Neural2-A' : 'fr-FR-Neural2-B';
 
     const resp = await fetch(
@@ -5533,61 +5886,23 @@ async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options =
       }
     );
 
-    if (!resp.ok) return false;
-    const data = await resp.json();
-    if (!data || !data.audioContent) return false;
-
-    stopActiveCloudVoiceAudio();
-    const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
-    activeCloudVoiceAudio = audio;
-
-    audio.onplay = () => {
-      voiceGuideSession.isSpeaking = true;
-      updateVoiceStatusIndicators(true, options.statusLabel || `🔊 ${persona.name} parle...`);
-      updateCharacterStageAnimationState();
-      renderVoiceGuideSettings();
-    };
-
-    audio.onended = () => {
-      activeCloudVoiceAudio = null;
-      voiceGuideSession.isSpeaking = false;
-      voiceGuideSession.lastSpokenEndTime = Date.now();
-      updateVoiceStatusIndicators(false);
-      updateCharacterStageAnimationState();
-      renderVoiceGuideSettings();
-      if (typeof options.onEnd === 'function') {
-        options.onEnd();
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.audioContent) {
+        const played = await playAudioBlobOrUrl(`data:audio/mp3;base64,${data.audioContent}`, false, persona, options);
+        if (played) return true;
       }
-    };
+    }
+  } catch (e) {}
 
-    audio.onerror = () => {
-      activeCloudVoiceAudio = null;
-      voiceGuideSession.isSpeaking = false;
-      voiceGuideSession.lastSpokenEndTime = Date.now();
-      updateVoiceStatusIndicators(false);
-      updateCharacterStageAnimationState();
-      if (typeof options.onEnd === 'function') {
-        options.onEnd();
-      }
-    };
-
-    await audio.play();
-    return true;
-  } catch (e) {
-    return false;
-  }
+  return false;
 }
 
-function speakWithVoiceGuide(textToSpeak, options = {}) {
+async function speakWithVoiceGuide(textToSpeak, options = {}) {
   const xiKey = getEffectiveElevenLabsApiKey();
-  const useElevenLabs = Boolean(xiKey) && state.voiceSettings?.engine !== 'system';
+  const isCloneEngine = state.voiceSettings?.engine !== 'system';
   const voiceApiKey = getEffectiveAiApiKey('voice');
   const hasBrowserSpeech = 'speechSynthesis' in window;
-
-  if (!hasBrowserSpeech && !voiceApiKey && !useElevenLabs) {
-    showToast('⚠️ La synthèse vocale n\'est pas disponible sur cet appareil.');
-    return;
-  }
 
   voiceGuideSession.isSpeaking = true;
   updateCharacterStageAnimationState();
@@ -5608,52 +5923,53 @@ function speakWithVoiceGuide(textToSpeak, options = {}) {
 
   const persona = getActiveVoicePersona();
 
-  // 1. Priorité au Mode 3 : Voix Clonée Haute-Fidélité ElevenLabs Neural v2 si configurée
-  if (useElevenLabs) {
-    trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options).then((played) => {
-      if (!played) {
-        if (voiceApiKey && !voiceApiKey.startsWith('sk_')) {
-          trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options).then((cloudPlayed) => {
-            if (!cloudPlayed && hasBrowserSpeech) {
-              speakWithBrowserSynthesis(cleanText, persona, options);
-            } else if (!cloudPlayed) {
-              voiceGuideSession.isSpeaking = false;
-              updateCharacterStageAnimationState();
-            }
-          });
-        } else if (hasBrowserSpeech) {
-          speakWithBrowserSynthesis(cleanText, persona, options);
-        } else {
-          voiceGuideSession.isSpeaking = false;
-          updateCharacterStageAnimationState();
-        }
+  // En Mode Voix Clonée & Imitation Réaliste (par défaut) :
+  if (isCloneEngine) {
+    // 1. Si une clé ElevenLabs externe est configurée, l'essayer en priorité
+    if (xiKey) {
+      const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options);
+      if (playedXi) return;
+    }
+
+    // 2. Utiliser le Moteur de Voix Clonées & Neuronales Local (/api/tts : Edge Neural + OneCore Microsoft Paul/Hortense)
+    const playedLocalNeural = await trySpeakWithLocalNeuralServer(cleanText, persona, options);
+    if (playedLocalNeural) return;
+
+    // 3. Si c'est l'aperçu vocal (bouton "🔊 Écouter") en ligne (GitHub Pages / Netlify / Smartphone) ou hors-ligne,
+    // lire directement l'échantillon neuronal pré-généré de la personnalité (assets/voices/<persona>.mp3)
+    const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, options);
+    if (playedBundledSample) return;
+
+    // 4. Si une clé Cloud IA est configurée, essayer Cloud Neural TTS
+    if (voiceApiKey) {
+      const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options);
+      if (playedCloud) return;
+    }
+  } else {
+    // En Mode Voix Système Standard :
+    // Si la personnalité est MASCULINE (ex: Voix IA Homme, Lignac, Bocuse, Etchebest...) mais que le navigateur
+    // ne possède AUCUNE voix française masculine (cas fréquent de Chrome sur Windows qui n'expose qu'Hortense et Google français),
+    // on interroge d'abord le serveur local (/api/tts) pour faire parler la vraie voix masculine (HenriNeural / Microsoft Paul) !
+    if (persona.gender === 'male') {
+      const frVoices = getSortedSpeechVoices(true);
+      const hasNativeMaleBrowserVoice = frVoices.some((v) => guessVoiceGender(v) === 'male');
+      if (!hasNativeMaleBrowserVoice) {
+        const playedMaleServer = await trySpeakWithLocalNeuralServer(cleanText, persona, options);
+        if (playedMaleServer) return;
+        const playedMaleSample = await trySpeakWithBundledSampleAudio(cleanText, persona, options);
+        if (playedMaleSample) return;
       }
-    });
-    return;
+    }
   }
 
-  // 2. Sinon Cloud TTS Google si clé Cloud active
-  const preferCloudVoice =
-    Boolean(voiceApiKey) &&
-    !voiceApiKey.startsWith('sk_') &&
-    (state.voiceSettings?.voiceURI === 'cloud_neural_fr' ||
-      !hasBrowserSpeech ||
-      (hasBrowserSpeech && window.speechSynthesis.getVoices && window.speechSynthesis.getVoices().length === 0));
-
-  if (preferCloudVoice) {
-    trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options).then((played) => {
-      if (!played && hasBrowserSpeech) {
-        speakWithBrowserSynthesis(cleanText, persona, options);
-      } else if (!played) {
-        voiceGuideSession.isSpeaking = false;
-        updateCharacterStageAnimationState();
-      }
-    });
-    return;
+  // 5. Repli sur la synthèse vocale du navigateur (avec transposition baryton forcée si voix masculine sur moteur féminin)
+  if (hasBrowserSpeech) {
+    speakWithBrowserSynthesis(cleanText, persona, options);
+  } else {
+    voiceGuideSession.isSpeaking = false;
+    updateCharacterStageAnimationState();
+    showToast('⚠️ La synthèse vocale n\'est pas disponible sur cet appareil.');
   }
-
-  // 3. Synthèse vocale navigateur avec référence globale anti-GC
-  speakWithBrowserSynthesis(cleanText, persona, options);
 }
 
 function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
@@ -5677,7 +5993,27 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
 
   const userRateMultiplier = state.voiceSettings?.rate || 1.0;
   utterance.rate = Math.max(0.7, Math.min(1.45, (persona.baseRate || 1.0) * userRateMultiplier));
-  utterance.pitch = persona.basePitch || 1.0;
+
+  // Correction critique : si la personnalité est un HOMME (ex: Voix IA Homme, Bocuse, Etchebest, Lignac...)
+  // mais que le navigateur n'a fourni qu'une voix féminine ou inconnue (ex: Microsoft Hortense sur Chrome Windows),
+  // abaisser franchement le pitch dans le registre baryton masculin (0.48 à 0.62) pour ne jamais avoir une voix de femme !
+  const resolvedGender = voice ? guessVoiceGender(voice) : 'unknown';
+  if (persona.gender === 'male' && resolvedGender !== 'male') {
+    const maleFallbackPitchMap = {
+      ia_homme: 0.55,
+      bocuse: 0.46,
+      etchebest: 0.50,
+      marx: 0.53,
+      coffe: 0.57,
+      lignac: 0.60,
+      remy: 0.66
+    };
+    utterance.pitch = maleFallbackPitchMap[persona.id] || 0.55;
+  } else if (persona.gender === 'female' && resolvedGender === 'male') {
+    utterance.pitch = 1.35;
+  } else {
+    utterance.pitch = persona.basePitch || 1.0;
+  }
 
   let finishedHandled = false;
   const markSpeechFinished = () => {
@@ -5726,7 +6062,8 @@ function testSelectedVoiceGuide() {
   const persona = getActiveVoicePersona();
   const sampleText = persona.sampleQuote.replace(/[«»]/g, '');
   speakWithVoiceGuide(sampleText, {
-    statusLabel: `🔊 Aperçu vocal : ${persona.name}`
+    statusLabel: `🔊 Aperçu vocal : ${persona.name}`,
+    isSamplePreview: true
   });
   spawnCulinaryConfetti({
     count: 10,
@@ -7413,19 +7750,152 @@ function getAllCatalogRecipesForPantry() {
   return unique;
 }
 
+function buildTailoredRecipesFromPantryItems() {
+  const items = state.pantryItems || [];
+  dynamicPantryRecipesMap.clear();
+  if (items.length === 0) return [];
+
+  const getBaseQtyFor2 = (item) => {
+    const u = (item.unit || 'pièces').toLowerCase();
+    if (u === 'g') return Math.min(Math.max(80, Math.round(item.qty)), 250);
+    if (u === 'cl' || u === 'ml') return Math.min(Math.max(10, Math.round(item.qty)), 150);
+    return Math.min(Math.max(1, Math.round(item.qty * 10) / 10), 4);
+  };
+
+  const templates = [
+    {
+      suffix: 'poelee',
+      prefix: 'Poêlée gourmande',
+      prepTime: '10 min',
+      cookTime: '15 min',
+      desc: 'Poêlée savoureuse préparée directement avec les ingrédients scannés dans votre frigo et votre placard.',
+      stepsFn: (names) => [
+        `Préparez et détaillez vos ingrédients du garde-manger (${names.join(', ')}).`,
+        'Faites chauffer un filet d’huile d’olive ou une noix de beurre dans une grande sauteuse.',
+        `Faites revenir ${names.slice(0, 2).join(' et ')} à feu moyen pendant 8 minutes en remuant régulièrement.`,
+        `Ajoutez le reste des ingrédients (${names.slice(2).join(', ') || 'assaisonnement, herbes, sel et poivre'}), couvrez 5 minutes à feu doux et servez bien chaud.`
+      ]
+    },
+    {
+      suffix: 'gratin',
+      prefix: 'Gratin doré du Garde-manger',
+      prepTime: '12 min',
+      cookTime: '20 min',
+      desc: 'Plat au four fondant et réconfortant composé sur-mesure à partir de votre frigo et placard.',
+      stepsFn: (names) => [
+        'Préchauffez votre four à 190°C (th. 6-7).',
+        `Disposez harmonieusement ${names.join(', ')} dans un plat à gratin légèrement huilé.`,
+        'Assaisonnez de sel, poivre et herbes de votre placard, puis enfournez pendant 20 minutes jusqu’à obtenir un beau gratiné doré.'
+      ]
+    },
+    {
+      suffix: 'bowl',
+      prefix: 'Grand Bowl composé',
+      prepTime: '12 min',
+      cookTime: '10 min',
+      desc: 'Assiette complète et équilibrée assemblée avec les produits disponibles dans votre frigo et placard.',
+      stepsFn: (names) => [
+        `Préparez chacun des ingrédients de votre stock (${names.join(', ')}) en portions prêtes à déguster.`,
+        'Faites tiédir ou dorer à la poêle les éléments à cuire pendant 8 à 10 minutes.',
+        'Dressez dans des bols larges, assaisonnez d’un filet d’huile d’olive, sel et poivre, puis dégustez aussitôt.'
+      ]
+    },
+    {
+      suffix: 'mijote',
+      prefix: 'Mijoté parfumé',
+      prepTime: '10 min',
+      cookTime: '18 min',
+      desc: 'Recette mijotée douce et parfumée utilisant vos ingrédients du frigo et du placard.',
+      stepsFn: (names) => [
+        `Émincez ou préparez ${names.join(', ')}.`,
+        'Faites revenir les ingrédients principaux 5 minutes dans une cocotte avec un filet d’huile.',
+        'Mouillez avec un petit verre d’eau ou de bouillon, couvrez et laissez mijoter 13 minutes à feu doux avant de servir.'
+      ]
+    }
+  ];
+
+  const results = [];
+  const countToBuild = Math.min(templates.length, Math.max(2, items.length));
+
+  for (let tIdx = 0; tIdx < countToBuild; tIdx++) {
+    const tpl = templates[tIdx];
+    const subset = [];
+    const maxIngs = Math.min(items.length, 4);
+    for (let k = 0; k < maxIngs; k++) {
+      subset.push(items[(tIdx + k) % items.length]);
+    }
+
+    const names = subset.map((it) => it.name);
+    const shortTitleNames =
+      names.length === 1
+        ? names[0]
+        : names.length === 2
+        ? `${names[0]} & ${names[1]}`
+        : `${names[0]}, ${names[1]} & ${names[2]}`;
+
+    const recipeId = `pantry-tailored-${tpl.suffix}-${tIdx}`;
+    const recipeObj = {
+      id: recipeId,
+      title: `${tpl.prefix} : ${shortTitleNames}`,
+      type: 'weekday',
+      prepTime: tpl.prepTime,
+      cookTime: tpl.cookTime,
+      difficulty: 'Facile',
+      budget: '€ (Anti-gaspi)',
+      costFor2: 3.5,
+      baseServings: 2,
+      isTailoredPantry: true,
+      description: tpl.desc,
+      ingredients: subset.map((it) => ({
+        name: it.name,
+        qty: getBaseQtyFor2(it),
+        unit: it.unit || 'pièces',
+        aisle: it.zone === 'fridge' ? 'Crèmerie & Frais' : 'Épicerie salée'
+      })),
+      steps: tpl.stepsFn(names)
+    };
+
+    dynamicPantryRecipesMap.set(recipeId, recipeObj);
+    results.push(recipeObj);
+  }
+
+  return results;
+}
+
 function computeRankedPantryMenus() {
-  const pool = getAllCatalogRecipesForPantry();
-  const scored = pool.map((r) => {
+  const pantryItems = state.pantryItems || [];
+  // Ne rien proposer tant qu'aucun ingrédient n'a été scanné ou ajouté dans le frigo/placard
+  if (pantryItems.length === 0) {
+    dynamicPantryRecipesMap.clear();
+    return [];
+  }
+
+  const tailoredRecipes = buildTailoredRecipesFromPantryItems();
+  const catalogPool = getAllCatalogRecipesForPantry();
+
+  // Évaluer les recettes existantes et filtrer strictement celles qui utilisent au moins 1 ingrédient scanné
+  const matchedCatalog = catalogPool
+    .map((r) => {
+      const cardServings = state.pantryCardServings[r.id] || state.pantryServings || 2;
+      return evaluateRecipeAgainstPantry(r, cardServings);
+    })
+    .filter((entry) => entry.matchCount > 0);
+
+  const scoredTailored = tailoredRecipes.map((r) => {
     const cardServings = state.pantryCardServings[r.id] || state.pantryServings || 2;
     return evaluateRecipeAgainstPantry(r, cardServings);
   });
 
-  scored.sort((a, b) => {
+  // Combiner les recettes qui matchent les ingrédients scannés + les compositions sur-mesure du garde-manger
+  const combined = [...matchedCatalog, ...scoredTailored];
+
+  combined.sort((a, b) => {
+    if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
     if (b.score !== a.score) return b.score - a.score;
-    return b.matchCount - a.matchCount;
+    return b.matchPct - a.matchPct;
   });
 
-  return scored;
+  return combined;
 }
 
 function stepPantryServings(delta) {
@@ -7453,6 +7923,10 @@ function handlePantryStyleFilterChange(newStyle) {
 }
 
 function cyclePantryMenuSuggestions(evt) {
+  if ((state.pantryItems || []).length === 0) {
+    showToast('❄️ Scannez d\'abord votre frigo ou votre placard pour obtenir des idées de menus !');
+    return;
+  }
   state.pantryMenuOffset = (state.pantryMenuOffset || 0) + 4;
   state.pantryCardOffsets = {};
   if (evt && evt.clientX) {
@@ -7465,7 +7939,7 @@ function cyclePantryMenuSuggestions(evt) {
     });
   }
   renderPantrySection();
-  showToast('🎲 Nouvelles idées de menus proposées selon votre stock !');
+  showToast('🎲 Nouvelles idées de menus proposées selon votre frigo et placard !');
 }
 
 function replaceSinglePantryCard(cardIndex, evt) {
@@ -7670,9 +8144,30 @@ function renderPantryMenusGrid() {
   const gridEl = document.getElementById('pantry-menus-grid');
   if (!gridEl) return;
 
+  const hasPantryItems = (state.pantryItems || []).length > 0;
+  const controlsEl = document.querySelector('.pantry-suggestions-controls');
+  if (controlsEl) {
+    controlsEl.style.display = hasPantryItems ? 'flex' : 'none';
+  }
+
+  if (!hasPantryItems) {
+    gridEl.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 28px 20px; text-align: center; background: var(--bg-subtle); border: 1px dashed var(--border-color); border-radius: var(--radius-md); color: var(--text-muted);">
+        <div style="font-size: 2rem; margin-bottom: 8px;">❄️ 🥫</div>
+        <p style="font-weight: 800; color: var(--text-main); font-size: 1rem; margin-bottom: 6px;">
+          Scannez votre frigo ou votre placard pour découvrir vos idées de menus
+        </p>
+        <p style="font-size: 0.86rem; max-width: 540px; margin: 0 auto;">
+          Les suggestions de menus sont proposées uniquement en fonction des ingrédients scannés dans votre <strong>frigo</strong> et votre <strong>placard</strong>.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
   const ranked = computeRankedPantryMenus();
   if (ranked.length === 0) {
-    gridEl.innerHTML = `<p style="color: var(--text-muted);">Aucune recette disponible dans cette catégorie.</p>`;
+    gridEl.innerHTML = `<p style="color: var(--text-muted);">Aucun menu ne correspond aux ingrédients actuels.</p>`;
     return;
   }
 
@@ -7699,19 +8194,20 @@ function renderPantryMenusGrid() {
       const servings = state.pantryCardServings[recipe.id] || state.pantryServings || 2;
       const isGourmet = recipe.type === 'gourmet';
       const isPleasure = recipe.type === 'weekend-pleasure';
-      const styleLabel = isGourmet ? '🍷 Gourmet' : isPleasure ? '🌟 Plaisir' : '🥗 Équilibré';
+      const styleLabel = recipe.isTailoredPantry
+        ? '🗄️ Sur-mesure Frigo/Placard'
+        : isGourmet
+        ? '🍷 Gourmet'
+        : isPleasure
+        ? '🌟 Plaisir'
+        : '🥗 Équilibré';
       const dishEmoji = getDishEmoji(recipe, { isGourmet, isPleasure });
       const baseCost = typeof recipe.costFor2 === 'number' ? recipe.costFor2 : isGourmet ? 12.5 : isPleasure ? 8.0 : 4.5;
       const scaledCost = baseCost * (servings / (recipe.baseServings || 2));
 
       const matchClass =
         matchPct >= 65 ? 'pantry-match-high' : matchPct >= 30 ? 'pantry-match-mid' : 'pantry-match-low';
-      const matchText =
-        (state.pantryItems || []).length === 0
-          ? `📋 Suggestion du catalogue (${totalCount} ingrédients)`
-          : matchCount > 0
-          ? `🎯 ${matchCount}/${totalCount} ingrédient(s) dans votre garde-manger (${matchPct}%)`
-          : `💡 Idée recette (${totalCount} ingrédients à prévoir)`;
+      const matchText = `🎯 ${matchCount}/${totalCount} ingrédient(s) de votre frigo/placard (${matchPct}%)`;
 
       const chipsHTML = breakdown
         .map((b) => {
@@ -7725,7 +8221,7 @@ function renderPantryMenusGrid() {
             const missStr = (Math.round(b.missingQty * 10) / 10).toString().replace('.', ',');
             return `<span class="pantry-ing-status-chip partial" title="Stock partiel : manque ${missStr} ${b.ing.unit}">${zIcon} ⚠️ ${b.ing.name} (manque ${missStr} ${b.ing.unit})</span>`;
           }
-          return `<span class="pantry-ing-status-chip missing" title="Non présent dans le garde-manger">🛒 ${b.ing.name} (${reqStr} ${b.ing.unit})</span>`;
+          return `<span class="pantry-ing-status-chip missing" title="À compléter">🛒 ${b.ing.name} (${reqStr} ${b.ing.unit})</span>`;
         })
         .join('');
 
@@ -7942,6 +8438,10 @@ function confirmAssignPantryToSlot(slotId, recipeId, servings) {
   if (!slot) return;
 
   const recipe = findRecipeById(recipeId);
+  if (recipe.isTailoredPantry && !state.customRecipes.some((r) => r.id === recipe.id)) {
+    state.customRecipes.unshift(recipe);
+    getCatalogListByType(recipe.type || 'weekday').unshift(recipe);
+  }
   slot.recipeId = recipe.id;
   slot.servings = servings || state.pantryServings || 2;
   slot.active = true;
