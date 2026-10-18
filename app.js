@@ -1,5 +1,5 @@
 // ============================================================================
-// APPLICATION PRINCIPALE : MENU SEMAINE & LISTE DE COURSES GOOGLE KEEP
+// APPLICATION PRINCIPALE : MENU SEMAINE & PANIER DE COURSES
 // ============================================================================
 
 const STORAGE_KEYS = {
@@ -11,7 +11,10 @@ const STORAGE_KEYS = {
   HISTORY: 'menusemaine_history_v1',
   CUSTOM_RECIPES: 'menusemaine_custom_recipes_v1',
   SEEN_RECIPES: 'menusemaine_seen_recipes_365_v1',
-  GEMINI_KEY: 'menusemaine_gemini_api_key_v1'
+  GEMINI_KEY: 'menusemaine_gemini_api_key_v1',
+  PANTRY_ITEMS: 'menusemaine_pantry_items_v1',
+  PANTRY_SERVINGS: 'menusemaine_pantry_servings_v1',
+  PANTRY_DEDUCT_MODE: 'menusemaine_pantry_deduct_v1'
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
@@ -63,7 +66,15 @@ let state = {
   customItems: [],        // [{ id, name, qty, aisle, inStock }]
   favorites: [],          // [recipeId, ...]
   history: [],            // [{ id, dateLabel, weekStartDate, slots }]
-  customRecipes: []       // Recettes ajoutées via IA ou manuellement
+  customRecipes: [],      // Recettes ajoutées via IA ou manuellement
+  pantryItems: [],        // [{ id, name, qty, unit, zone: 'fridge' | 'cupboard', aisle }]
+  pantryServings: 2,      // Nombre de parts pour les menus du garde-manger
+  pantryZoneFilter: 'all',// 'all' | 'fridge' | 'cupboard'
+  pantryStyleFilter: 'all', // 'all' | 'balanced' | 'pleasure' | 'gourmet'
+  pantryMenuOffset: 0,    // Index de rotation pour le bouton "Autre idée"
+  pantryCardOffsets: {},  // { cardIdx: extraOffset }
+  pantryCardServings: {}, // { recipeId: servings }
+  deductPantryFromShopping: true // Ajuster automatiquement la liste des courses avec le stock frigo/placard
 };
 
 let deferredPwaPrompt = null;
@@ -272,6 +283,18 @@ function applyAppConfigAndAccessControl() {
     adminBtn.style.display = 'inline-flex';
   }
 
+  // Mettre à jour les informations de la section À propos
+  const aboutNameEl = document.getElementById('about-app-name');
+  if (aboutNameEl && cfg.appName) {
+    aboutNameEl.textContent = cfg.appName;
+  }
+  const aboutVersionEl = document.getElementById('about-app-version');
+  if (aboutVersionEl) {
+    const ver = cfg.version || '1.5.0';
+    const updated = cfg.lastUpdated ? ` • Mis à jour le ${cfg.lastUpdated}` : '';
+    aboutVersionEl.textContent = `Version ${ver}${updated} • Application Web Progressive (PWA) 100% Hors-ligne`;
+  }
+
   // Afficher le bandeau d'annonce éventuel configuré par l'administrateur
   if (cfg.announcement && cfg.announcement.trim()) {
     const mainEl = document.querySelector('.main-container');
@@ -331,6 +354,23 @@ function loadStateFromStorage() {
     const savedCustomRecipes = localStorage.getItem(STORAGE_KEYS.CUSTOM_RECIPES);
     if (savedCustomRecipes) state.customRecipes = JSON.parse(savedCustomRecipes);
 
+    const savedPantry = localStorage.getItem(STORAGE_KEYS.PANTRY_ITEMS);
+    if (savedPantry) {
+      const parsedPantry = JSON.parse(savedPantry);
+      if (Array.isArray(parsedPantry)) state.pantryItems = parsedPantry;
+    }
+
+    const savedPantryServings = localStorage.getItem(STORAGE_KEYS.PANTRY_SERVINGS);
+    if (savedPantryServings) {
+      const sNum = parseInt(savedPantryServings, 10);
+      if (!isNaN(sNum) && sNum >= 1 && sNum <= 16) state.pantryServings = sNum;
+    }
+
+    const savedDeductMode = localStorage.getItem(STORAGE_KEYS.PANTRY_DEDUCT_MODE);
+    if (savedDeductMode !== null) {
+      state.deductPantryFromShopping = savedDeductMode === 'true';
+    }
+
     const savedSeen = localStorage.getItem(STORAGE_KEYS.SEEN_RECIPES);
     if (savedSeen) {
       const parsedSeen = JSON.parse(savedSeen);
@@ -343,6 +383,8 @@ function loadStateFromStorage() {
     if (savedKey) {
       const keyInput = document.getElementById('gemini-api-key');
       if (keyInput) keyInput.value = savedKey;
+      const pantryKeyInput = document.getElementById('pantry-gemini-key-input');
+      if (pantryKeyInput) pantryKeyInput.value = savedKey;
     }
   } catch (e) {
     console.error('Erreur chargement localStorage :', e);
@@ -358,6 +400,9 @@ function saveStateToStorage() {
     localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(state.favorites));
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(state.history));
     localStorage.setItem(STORAGE_KEYS.CUSTOM_RECIPES, JSON.stringify(state.customRecipes));
+    localStorage.setItem(STORAGE_KEYS.PANTRY_ITEMS, JSON.stringify(state.pantryItems || []));
+    localStorage.setItem(STORAGE_KEYS.PANTRY_SERVINGS, String(state.pantryServings || 2));
+    localStorage.setItem(STORAGE_KEYS.PANTRY_DEDUCT_MODE, String(!!state.deductPantryFromShopping));
     localStorage.setItem(STORAGE_KEYS.SEEN_RECIPES, JSON.stringify(Array.from(recentSeenIds)));
   } catch (e) {
     console.error('Erreur sauvegarde localStorage :', e);
@@ -1593,7 +1638,7 @@ function toggleValidateSlot(slotId, evt) {
       spawnCulinaryConfetti({ count: 32, spread: 260 });
       showDayCelebrationBanner(
         '🏆 Semaine 100% prête !',
-        `Les ${validatedCount} repas sont validés • Votre panier Google Keep vous attend !`,
+        `Les ${validatedCount} repas sont validés • Votre panier de courses vous attend !`,
         '🧑‍🍳'
       );
     } else if (isDayNowComplete) {
@@ -1627,7 +1672,7 @@ function toggleValidateAllMeals() {
     spawnCulinaryConfetti({ count: 30, spread: 250 });
     showDayCelebrationBanner(
       '🏆 Toute la semaine est validée !',
-      `${activeSlots.length} repas prêts pour votre liste de courses Google Keep`,
+      `${activeSlots.length} repas prêts dans votre panier de courses`,
       '👨‍🍳'
     );
   }
@@ -1670,6 +1715,9 @@ function renderAll() {
   renderDateHeaders();
   renderValidationStatus();
   renderPlannerCards();
+  if (typeof renderPantrySection === 'function') {
+    renderPantrySection();
+  }
   renderShoppingList();
   renderFavoritesAndHistory();
 }
@@ -2037,7 +2085,7 @@ function validateDayAndNext(dayOffset, evt) {
   } else {
     showDayCelebrationBanner(
       '🏆 Semaine bouclée avec brio !',
-      `${dayName} validé (${dayCost}) • Prêt à exporter vers Google Keep !`,
+      `${dayName} validé (${dayCost}) • Votre panier de courses est prêt !`,
       '🎉'
     );
     renderAll();
@@ -2203,7 +2251,7 @@ function createDayGroupHTML(dayOffset) {
             class="btn btn-keep btn-sm"
             onclick="handleGenerateShoppingListClick()"
           >
-            🧺 Mon Panier Keep ▶
+            🧺 Mon Panier ▶
           </button>
         `
         }
@@ -2701,6 +2749,17 @@ function selectDessertFromCatalog(dessertId) {
 // CALCUL DE LA LISTE DE COURSES PAR RAYON & GESTION DU STOCK
 // (Ne prend en compte QUE les repas comptabilisés ET validés : slot.active !== false && slot.validated)
 // ============================================================================
+function isShoppingItemInStock(item) {
+  if (!item) return false;
+  if (Object.prototype.hasOwnProperty.call(state.inStockKeys, item.key)) {
+    return !!state.inStockKeys[item.key];
+  }
+  if (state.deductPantryFromShopping && item.pantryCoveredFull) {
+    return true;
+  }
+  return false;
+}
+
 function buildAggregatedShoppingList() {
   const map = new Map();
 
@@ -2720,6 +2779,7 @@ function buildAggregatedShoppingList() {
           key: normalizedKey,
           name: ing.name,
           qty: scaledQty,
+          initialQty: scaledQty,
           unit: ing.unit,
           aisle: ing.aisle || 'Épicerie salée',
           sources: [`${slot.day} (${slot.mealLabel})`]
@@ -2727,6 +2787,7 @@ function buildAggregatedShoppingList() {
       } else {
         const existing = map.get(normalizedKey);
         existing.qty += scaledQty;
+        existing.initialQty = existing.qty;
         const sourceTag = `${slot.day} (${slot.mealLabel})`;
         if (!existing.sources.includes(sourceTag)) {
           existing.sources.push(sourceTag);
@@ -2746,6 +2807,7 @@ function buildAggregatedShoppingList() {
             key: normalizedKey,
             name: ing.name,
             qty: scaledQty,
+            initialQty: scaledQty,
             unit: ing.unit,
             aisle: ing.aisle || 'Épicerie sucrée & Pâtisserie',
             sources: [`Dessert ${slot.day} (${slot.mealLabel})`]
@@ -2753,6 +2815,7 @@ function buildAggregatedShoppingList() {
         } else {
           const existing = map.get(normalizedKey);
           existing.qty += scaledQty;
+          existing.initialQty = existing.qty;
           const sourceTag = `Dessert ${slot.day} (${slot.mealLabel})`;
           if (!existing.sources.includes(sourceTag)) {
             existing.sources.push(sourceTag);
@@ -2776,12 +2839,38 @@ function buildAggregatedShoppingList() {
     });
   });
 
-  return Array.from(map.values());
+  const list = Array.from(map.values());
+
+  // Déduction intelligente avec le contenu du Frigo & Placard (si activé)
+  if (state.deductPantryFromShopping && Array.isArray(state.pantryItems) && state.pantryItems.length > 0 && typeof matchShoppingItemWithPantry === 'function') {
+    list.forEach((item) => {
+      if (item.isCustom) return;
+      const match = matchShoppingItemWithPantry(item.name, item.qty, item.unit);
+      if (match && match.matchedPantryItem) {
+        item.pantryZone = match.matchedPantryItem.zone;
+        item.pantryItemName = match.matchedPantryItem.name;
+        if (match.status === 'covered') {
+          item.pantryCoveredFull = true;
+          item.pantryDeductedQty = item.initialQty;
+        } else if (match.status === 'partial' && match.deductedInTargetUnit > 0) {
+          item.pantryPartial = true;
+          item.pantryDeductedQty = match.deductedInTargetUnit;
+          item.qty = Math.max(0.1, Math.round((item.initialQty - match.deductedInTargetUnit) * 10) / 10);
+        }
+      }
+    });
+  }
+
+  return list;
 }
 
 function toggleIngredientStock(itemKey) {
-  if (state.inStockKeys[itemKey]) {
-    delete state.inStockKeys[itemKey];
+  const allItems = buildAggregatedShoppingList();
+  const target = allItems.find((x) => x.key === itemKey);
+  const currentlyInStock = target ? isShoppingItemInStock(target) : !!state.inStockKeys[itemKey];
+
+  if (currentlyInStock) {
+    state.inStockKeys[itemKey] = false;
   } else {
     state.inStockKeys[itemKey] = true;
   }
@@ -2792,7 +2881,9 @@ function toggleIngredientStock(itemKey) {
 function checkAllIngredients(shouldBuy) {
   const allItems = buildAggregatedShoppingList();
   if (shouldBuy) {
-    state.inStockKeys = {};
+    allItems.forEach((item) => {
+      state.inStockKeys[item.key] = false;
+    });
   } else {
     allItems.forEach((item) => {
       state.inStockKeys[item.key] = true;
@@ -2844,6 +2935,50 @@ function renderShoppingList() {
   const validatedSlots = activeSlots.filter((s) => s.validated);
   const allValidated = activeSlots.length > 0 && validatedSlots.length === activeSlots.length;
 
+  const deductBtn = document.getElementById('btn-toggle-pantry-deduction');
+  if (deductBtn) {
+    deductBtn.textContent = state.deductPantryFromShopping
+      ? `🗄️ Déduire mon Garde-manger : ON (${(state.pantryItems || []).length})`
+      : '🗄️ Déduire mon Garde-manger : OFF';
+    deductBtn.className = state.deductPantryFromShopping ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+  }
+
+  const deductionBanner = document.getElementById('shopping-pantry-deduction-banner');
+  const fullCoveredItems = items.filter((i) => i.pantryCoveredFull);
+  const partialCoveredItems = items.filter((i) => i.pantryPartial);
+
+  if (deductionBanner) {
+    if (state.deductPantryFromShopping && (fullCoveredItems.length > 0 || partialCoveredItems.length > 0)) {
+      deductionBanner.style.display = 'block';
+      deductionBanner.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+          <div style="font-size: 0.86rem; color: #065f46;">
+            🗄️ <strong>Ajustement Garde-manger actif :</strong>
+            <strong>${fullCoveredItems.length} ingrédient(s)</strong> intégralement couverts par votre frigo/placard et
+            <strong>${partialCoveredItems.length} quantité(s)</strong> réduite(s) automatiquement sur votre liste !
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="switchView('pantry')">
+            ❄️🥫 Modifier mon stock (${(state.pantryItems || []).length})
+          </button>
+        </div>
+      `;
+    } else if ((state.pantryItems || []).length > 0 && !state.deductPantryFromShopping) {
+      deductionBanner.style.display = 'block';
+      deductionBanner.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">
+            🗄️ Vous avez <strong>${state.pantryItems.length} ingrédient(s)</strong> dans votre Garde-manger. Activez la déduction pour ajuster les quantités à acheter.
+          </span>
+          <button type="button" class="btn btn-primary btn-sm" onclick="togglePantryDeductionMode()">
+            🔄 Activer la déduction du stock
+          </button>
+        </div>
+      `;
+    } else {
+      deductionBanner.style.display = 'none';
+    }
+  }
+
   if (unvalidatedWarning) {
     unvalidatedWarning.style.display = allValidated ? 'none' : 'block';
     if (unvalidatedWarningText) {
@@ -2858,7 +2993,7 @@ function renderShoppingList() {
   let inStockCount = 0;
 
   items.forEach((item) => {
-    if (state.inStockKeys[item.key]) {
+    if (isShoppingItemInStock(item)) {
       inStockCount++;
     } else {
       toBuyCount++;
@@ -2923,8 +3058,19 @@ function renderShoppingList() {
           const aisleItems = grouped[aisle];
           const rowsHTML = aisleItems
             .map((item) => {
-              const isInStock = !!state.inStockKeys[item.key];
+              const isInStock = isShoppingItemInStock(item);
               const safeKey = item.key.replace(/'/g, "\\'");
+              const zoneEmoji = item.pantryZone === 'fridge' ? '❄️ Frigo' : '🥫 Placard';
+              const deductedRounded = item.pantryDeductedQty ? (Math.round(item.pantryDeductedQty * 10) / 10).toString().replace('.', ',') : '';
+              const initRounded = item.initialQty ? (Math.round(item.initialQty * 10) / 10).toString().replace('.', ',') : '';
+
+              let pantryBadgeHTML = '';
+              if (item.pantryCoveredFull) {
+                pantryBadgeHTML = `<span class="pantry-deducted-tag" title="Couvert par votre garde-manger">${zoneEmoji} Couvert (${deductedRounded} ${item.unit})</span>`;
+              } else if (item.pantryPartial) {
+                pantryBadgeHTML = `<span class="pantry-deducted-tag" title="Quantité réduite grâce à votre stock (${initRounded} ${item.unit} requis − ${deductedRounded} ${item.unit} en stock)">${zoneEmoji} −${deductedRounded} ${item.unit} déduits</span>`;
+              }
+
               return `
                 <li class="ingredient-item ${isInStock ? 'in-stock' : ''}" onclick="toggleIngredientStock('${safeKey}')">
                   <div class="ing-left">
@@ -2939,7 +3085,8 @@ function renderShoppingList() {
                       <span class="ing-sources">${item.sources.join(' • ')}</span>
                     </div>
                   </div>
-                  <div class="ing-right">
+                  <div class="ing-right" style="flex-wrap: wrap; justify-content: flex-end;">
+                    ${pantryBadgeHTML}
                     ${isInStock ? '<span class="stock-tag">En stock</span>' : ''}
                     <span class="ing-qty">${formatIngredientQuantity(item)}</span>
                     ${
@@ -2968,185 +3115,6 @@ function renderShoppingList() {
         .join('');
     }
   }
-
-  const keepPreview = document.getElementById('keep-note-preview');
-  if (keepPreview) {
-    keepPreview.textContent = generateGoogleKeepNoteText(grouped, sortedAisles);
-  }
-}
-
-// ============================================================================
-// EXPORT VERS GOOGLE KEEP (MOBILE SHARE & COPIER + OUVRIR KEEP)
-// ============================================================================
-function generateGoogleKeepNoteText(grouped, sortedAisles) {
-  const mondayFull = formatMondayFullLabel(state.weekStartDate);
-  const validatedCost = evaluateValidatedWeekCost();
-  const validatedSlots = state.slots.filter((s) => s.active !== false && s.validated);
-
-  const lines = [];
-  lines.push(`🛒 LISTE DE COURSES — Semaine du ${mondayFull}`);
-  lines.push(`💶 Budget des ${validatedSlots.length} repas validé(s) : ${formatEuro(validatedCost)}`);
-  lines.push('');
-
-  let count = 0;
-  sortedAisles.forEach((aisle) => {
-    const toBuyInAisle = (grouped[aisle] || []).filter(
-      (item) => !state.inStockKeys[item.key]
-    );
-    if (toBuyInAisle.length === 0) return;
-
-    const icon = window.RECIPES_DB.categories[aisle]?.icon || '•';
-    lines.push(`${icon} ${aisle.toUpperCase()}`);
-    toBuyInAisle.forEach((item) => {
-      lines.push(`☐ ${item.name} : ${formatIngredientQuantity(item)}`);
-      count++;
-    });
-    lines.push('');
-  });
-
-  if (count === 0) {
-    lines.push(
-      validatedSlots.length === 0
-        ? 'Aucun repas validé pour le moment : validez vos repas pour générer la liste !'
-        : 'Tous les ingrédients des repas validés sont déjà cochés en stock !'
-    );
-  } else {
-    lines.push('---');
-    lines.push(`📌 Menus validés (${mondayFull}) :`);
-    validatedSlots.forEach((s) => {
-      const r = findRecipeById(s.recipeId);
-      const d = s.dessertId ? ` + ${findDessertById(s.dessertId).title}` : '';
-      const seas = getRecipeSeasonality(r, s);
-      const wine = getRecipeWinePairing(r, s);
-      const wineSuffix =
-        wine && (wine.appellation || wine.name)
-          ? ` [🍷 Vin : ${wine.appellation || wine.name} | Couleur : ${wine.color || '—'} | Région : ${wine.region || '—'} | Cépage : ${wine.grape || '—'}]`
-          : '';
-      const cost = formatEuro(evaluateSlotCost(s).totalCost);
-      lines.push(`• ${formatSlotDayHeader(s)} (${s.mealLabel} - ${s.servings}p - ${cost} - 🌿 ${seas.pct}% ingr. de saison) : ${r.title}${d}${wineSuffix}`);
-    });
-  }
-
-  return lines.join('\n');
-}
-
-function ensureNoteReadyForKeepExport() {
-  const activeSlots = state.slots.filter((s) => s.active !== false);
-  const validatedSlots = activeSlots.filter((s) => s.validated);
-
-  if (validatedSlots.length === 0 && state.customItems.length === 0) {
-    showToast('⚠️ Validez d\'abord au moins un plat avant d\'envoyer la liste dans Google Keep !');
-    return null;
-  }
-
-  return document.getElementById('keep-note-preview')?.textContent || '';
-}
-
-function openGoogleKeepAndroidDirect() {
-  const noteText = ensureNoteReadyForKeepExport();
-  if (!noteText) return;
-  const title = `🛒 Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
-
-  // Copier aussi dans le presse-papiers par sécurité
-  fallbackCopyText(noteText);
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(noteText).catch(() => {});
-  }
-
-  const ua = navigator.userAgent || '';
-  const isAndroid = /Android/i.test(ua);
-
-  if (isAndroid) {
-    // Lien Intent natif Android qui ouvre directement l'application Google Keep (com.google.android.keep) avec la note pré-remplie !
-    const intentUrl =
-      `intent://#Intent;` +
-      `action=android.intent.action.SEND;` +
-      `type=text/plain;` +
-      `package=com.google.android.keep;` +
-      `S.android.intent.extra.SUBJECT=${encodeURIComponent(title)};` +
-      `S.android.intent.extra.TEXT=${encodeURIComponent(noteText)};` +
-      `S.browser_fallback_url=${encodeURIComponent('https://keep.google.com/')};` +
-      `end`;
-
-    showToast('🚀 Ouverture directe de l\'application Google Keep...');
-    window.location.href = intentUrl;
-    return;
-  }
-
-  // Si cliqué depuis un iPhone ou un PC, basculer automatiquement sur le partage mobile ou l'ouverture Web
-  shareToGoogleKeepMobile();
-}
-
-async function shareToGoogleKeepMobile() {
-  const noteText = ensureNoteReadyForKeepExport();
-  if (!noteText) return;
-  const title = `🛒 Courses — Semaine du ${formatMondayFullLabel(state.weekStartDate)}`;
-
-  // Toujours copier en parallèle dans le presse-papiers
-  fallbackCopyText(noteText);
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(noteText).catch(() => {});
-  }
-
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: title,
-        text: noteText
-      });
-      showToast('Choisissez l\'icône jaune "Keep Notes" puis Enregistrer !');
-      return;
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      console.warn('Partage non supporté, bascule vers copie + Keep Web :', err);
-    }
-  }
-
-  copyAndOpenGoogleKeep();
-}
-
-function copyAndOpenGoogleKeep() {
-  const noteText = ensureNoteReadyForKeepExport();
-  if (!noteText) return;
-
-  // 1. Copie synchrone immédiate (pour ne pas bloquer l'ouverture de l'onglet Keep)
-  fallbackCopyText(noteText);
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(noteText).catch(() => {});
-  }
-
-  // 2. Ouverture synchrone de Google Keep (évite le blocage de pop-up du navigateur)
-  window.open('https://keep.google.com/', '_blank', 'noopener');
-
-  // 3. Afficher une indication claire pour coller la note dans Google Keep Web
-  showToast('📋 Liste copiée ! Cliquez sur "Créer une note..." dans Keep puis Coller (Ctrl+V)');
-}
-
-async function copyKeepListOnly() {
-  const noteText = ensureNoteReadyForKeepExport();
-  if (!noteText) return;
-  try {
-    await navigator.clipboard.writeText(noteText);
-    showToast('Liste de courses copiée dans le presse-papiers 📋');
-  } catch (e) {
-    fallbackCopyText(noteText);
-    showToast('Liste de courses copiée 📋');
-  }
-}
-
-function fallbackCopyText(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand('copy');
-  } catch (e) {}
-  document.body.removeChild(ta);
 }
 
 // ============================================================================
@@ -3482,19 +3450,30 @@ Format JSON attendu uniquement (sans markdown) :
 // NAVIGATION & PWA
 // ============================================================================
 function switchView(viewName) {
+  const normalizedView = viewName === 'studio' ? 'app' : viewName;
+  if (normalizedView !== 'pantry' && typeof stopPantryCamera === 'function') {
+    stopPantryCamera();
+  }
+
   document.querySelectorAll('.view-section').forEach((sec) => {
     sec.classList.remove('active');
   });
-  const target = document.getElementById(`view-${viewName}`);
+  const target = document.getElementById(`view-${normalizedView}`);
   if (target) target.classList.add('active');
 
   document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach((btn) => {
-    if (btn.getAttribute('data-view') === viewName) {
+    if (btn.getAttribute('data-view') === normalizedView) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
     }
   });
+
+  if (normalizedView === 'pantry' && typeof renderPantrySection === 'function') {
+    renderPantrySection();
+  } else if (normalizedView === 'shopping') {
+    renderShoppingList();
+  }
 }
 
 function showToast(message) {
@@ -3629,4 +3608,1575 @@ function closeInstallModal() {
 async function triggerPwaInstall() {
   return handleInstallAppClick();
 }
+
+// ============================================================================
+// SECTION : MENUS DU GARDE-MANGER (SCAN CAMÉRA FRIGO & PLACARD, INVENTAIRE,
+// PROPOSITIONS DE MENUS & DÉDUCTION DE LA LISTE DES COURSES DE LA SEMAINE)
+// ============================================================================
+let pantryCameraStream = null;
+let pantryActiveScanZone = 'fridge'; // 'fridge' | 'cupboard'
+let pantryAutoScanEnabled = true;
+let pantryAutoScanTimer = null;
+let pantryBarcodeTimer = null;
+let pantryAnalysisInFlight = false;
+let pantryVoiceRecognition = null;
+let pantryVoiceActive = false;
+const pantryRecentSessionDetections = new Map(); // normalizedName -> timestamp
+
+function normalizeIngToken(str) {
+  if (!str) return '';
+  return str
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/œ/g, 'oe')
+    .replace(/['’]/g, ' ')
+    .replace(/\b(de|du|des|d|le|la|les|au|aux|en|un|une|frais|fraiche|fraiches|bio|entier|entiers|entiere|entieres|rape|rapee|eminces|emince|concassee|concassees|filet|filets|pave|paves|blanc|blancs|tranche|tranches|gousse|gousses|boite|sachet)\b/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w.length > 4 && w.endsWith('x') ? w.slice(0, -1) : w))
+    .filter(Boolean)
+    .join(' ');
+}
+
+function areIngredientsMatching(nameA, nameB) {
+  const normA = normalizeIngToken(nameA);
+  const normB = normalizeIngToken(nameB);
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+  if (normA.includes(normB) || normB.includes(normA)) {
+    const shortest = normA.length < normB.length ? normA : normB;
+    if (shortest.length >= 3) return true;
+  }
+  const wordsA = normA.split(' ').filter((w) => w.length >= 3);
+  const wordsB = normB.split(' ').filter((w) => w.length >= 3);
+  if (wordsA.length > 0 && wordsB.length > 0) {
+    if (wordsA[0] === wordsB[0] && wordsA[0].length >= 4) return true;
+  }
+  return false;
+}
+
+function getCanonicalUnitGroup(unitStr) {
+  const u = (unitStr || '').toString().trim().toLowerCase();
+  if (u === 'g' || u === 'gr' || u === 'gramme' || u === 'grammes') return { group: 'mass', factorToBase: 1 };
+  if (u === 'kg' || u === 'kilo' || u === 'kilos') return { group: 'mass', factorToBase: 1000 };
+  if (u === 'ml' || u === 'millilitre' || u === 'millilitres') return { group: 'volume', factorToBase: 1 };
+  if (u === 'cl' || u === 'centilitre' || u === 'centilitres') return { group: 'volume', factorToBase: 10 };
+  if (u === 'l' || u === 'litre' || u === 'litres') return { group: 'volume', factorToBase: 1000 };
+  if (u === 'c.à.s' || u === 'cas' || u === 'cuillère à soupe') return { group: 'volume', factorToBase: 15 };
+  if (u === 'c.à.c' || u === 'cac' || u === 'cuillère à café') return { group: 'volume', factorToBase: 5 };
+  return { group: 'count', factorToBase: 1 };
+}
+
+function convertQtyBetweenUnits(qty, fromUnit, toUnit) {
+  const num = parseFloat(qty) || 0;
+  const fromMeta = getCanonicalUnitGroup(fromUnit);
+  const toMeta = getCanonicalUnitGroup(toUnit);
+  if (fromMeta.group === toMeta.group) {
+    return (num * fromMeta.factorToBase) / toMeta.factorToBase;
+  }
+  // Heuristique de correspondance courante en cuisine (ex: 1 pièce de légume ~ 150g, 1 boîte ~ 250g, 1 sachet ~ 150g)
+  if (fromMeta.group === 'count' && toMeta.group === 'mass') {
+    const baseGrams = (num * 150);
+    return baseGrams / toMeta.factorToBase;
+  }
+  if (fromMeta.group === 'mass' && toMeta.group === 'count') {
+    const grams = num * fromMeta.factorToBase;
+    return grams / 150;
+  }
+  return num;
+}
+
+function matchShoppingItemWithPantry(ingName, neededQty, neededUnit) {
+  if (!Array.isArray(state.pantryItems) || state.pantryItems.length === 0) return null;
+
+  const matchingItems = state.pantryItems.filter((p) => areIngredientsMatching(p.name, ingName));
+  if (matchingItems.length === 0) return null;
+
+  let totalAvailableInTargetUnit = 0;
+  matchingItems.forEach((p) => {
+    totalAvailableInTargetUnit += convertQtyBetweenUnits(p.qty, p.unit, neededUnit);
+  });
+
+  const primaryItem = matchingItems[0];
+  const req = parseFloat(neededQty) || 1;
+
+  if (totalAvailableInTargetUnit >= req * 0.95) {
+    return {
+      status: 'covered',
+      matchedPantryItem: primaryItem,
+      availableInTargetUnit: totalAvailableInTargetUnit,
+      deductedInTargetUnit: req,
+      missingInTargetUnit: 0
+    };
+  }
+
+  if (totalAvailableInTargetUnit > 0) {
+    return {
+      status: 'partial',
+      matchedPantryItem: primaryItem,
+      availableInTargetUnit: totalAvailableInTargetUnit,
+      deductedInTargetUnit: Math.round(totalAvailableInTargetUnit * 10) / 10,
+      missingInTargetUnit: Math.max(0.1, Math.round((req - totalAvailableInTargetUnit) * 10) / 10)
+    };
+  }
+
+  return null;
+}
+
+function inferAisleForIngredient(name, zone) {
+  const n = (name || '').toLowerCase();
+  if (/courgette|tomate|carotte|oignon|ail|poireau|epinard|brocoli|chou|pomme|citron|avocat|salade|champignon|patate|pomme de terre|poivron|courge|potimarron|endive|haricot vert|banane|poire/i.test(n)) {
+    return 'Fruits & Légumes';
+  }
+  if (/poulet|boeuf|porc|lardon|jambon|dinde|magret|canard|veau|steak|viande|saucisse/i.test(n)) {
+    return 'Viandes & Volailles';
+  }
+  if (/saumon|cabillaud|thon frais|crevette|saint-jacques|poisson|bar|dorade|truite/i.test(n)) {
+    return 'Poissons & Crustacés';
+  }
+  if (/oeuf|œuf|lait|beurre|creme|crème|fromage|comte|comté|chevre|chèvre|mozzarella|parmesan|yaourt|feta|ricotta|gruyere|emmental/i.test(n)) {
+    return 'Crèmerie & Œufs';
+  }
+  if (/chocolat|sucre|farine|miel|confiture|compote|vanille|biscuit|amande/i.test(n)) {
+    return 'Épicerie sucrée & Pâtisserie';
+  }
+  if (zone === 'fridge') return 'Crèmerie & Œufs';
+  return 'Épicerie salée';
+}
+
+function addOrMergePantryItem({ name, qty, unit, zone, mergeMode = 'replace' }) {
+  const cleanName = (name || '').trim();
+  if (!cleanName) return null;
+
+  const cleanZone = zone === 'cupboard' ? 'cupboard' : 'fridge';
+  const numQty = Math.max(0.1, Math.round((parseFloat(qty) || 1) * 10) / 10);
+  const cleanUnit = (unit || 'pièces').trim();
+
+  const existing = state.pantryItems.find(
+    (item) => item.zone === cleanZone && normalizeIngToken(item.name) === normalizeIngToken(cleanName)
+  );
+
+  if (existing) {
+    if (mergeMode === 'add') {
+      const added = convertQtyBetweenUnits(numQty, cleanUnit, existing.unit);
+      existing.qty = Math.round((existing.qty + added) * 10) / 10;
+    } else {
+      existing.qty = numQty;
+      existing.unit = cleanUnit;
+    }
+    existing.updatedAt = Date.now();
+    saveStateToStorage();
+    return existing;
+  }
+
+  const newItem = {
+    id: `pantry_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+    qty: numQty,
+    unit: cleanUnit,
+    zone: cleanZone,
+    aisle: inferAisleForIngredient(cleanName, cleanZone),
+    updatedAt: Date.now()
+  };
+
+  state.pantryItems.unshift(newItem);
+  saveStateToStorage();
+  return newItem;
+}
+
+function addManualPantryItem() {
+  const zoneEl = document.getElementById('pantry-new-zone');
+  const nameEl = document.getElementById('pantry-new-name');
+  const qtyEl = document.getElementById('pantry-new-qty');
+  const unitEl = document.getElementById('pantry-new-unit');
+
+  const name = nameEl?.value.trim() || '';
+  if (!name) {
+    showToast('⚠️ Indiquez le nom de l\'ingrédient à ajouter au garde-manger.');
+    return;
+  }
+
+  const zone = zoneEl?.value || 'fridge';
+  const qty = parseFloat(qtyEl?.value) || 1;
+  const unit = unitEl?.value || 'pièces';
+
+  const item = addOrMergePantryItem({ name, qty, unit, zone, mergeMode: 'add' });
+  if (nameEl) nameEl.value = '';
+  renderAll();
+  showToast(`${zone === 'fridge' ? '❄️ Frigo' : '🥫 Placard'} : + ${item.name} (${item.qty} ${item.unit})`);
+}
+
+function quickAddPantryStaple(name, qty, unit, zone) {
+  const item = addOrMergePantryItem({ name, qty, unit, zone, mergeMode: 'add' });
+  renderAll();
+  showToast(`${zone === 'fridge' ? '❄️' : '🥫'} ${item.name} (${item.qty} ${item.unit}) ajouté au garde-manger !`);
+}
+
+function stepPantryItemQty(itemId, direction) {
+  const item = state.pantryItems.find((x) => x.id === itemId);
+  if (!item) return;
+
+  const u = (item.unit || '').toLowerCase();
+  let step = 1;
+  if (u === 'g' || u === 'ml') step = 50;
+  else if (u === 'cl') step = 5;
+  else if (u === 'kg' || u === 'l') step = 0.5;
+
+  const nextQty = Math.round((item.qty + direction * step) * 10) / 10;
+  if (nextQty <= 0) {
+    removePantryItem(itemId);
+    return;
+  }
+  item.qty = nextQty;
+  saveStateToStorage();
+  renderAll();
+}
+
+function editPantryItemQtyPrompt(itemId) {
+  const item = state.pantryItems.find((x) => x.id === itemId);
+  if (!item) return;
+  const input = prompt(
+    `Modifier la quantité pour "${item.name}" (en ${item.unit}) :`,
+    String(item.qty)
+  );
+  if (input === null) return;
+  const val = parseFloat(input.replace(',', '.'));
+  if (!isNaN(val) && val > 0) {
+    item.qty = Math.round(val * 10) / 10;
+    saveStateToStorage();
+    renderAll();
+    showToast(`✓ Quantité mise à jour : ${item.name} (${item.qty} ${item.unit})`);
+  }
+}
+
+function togglePantryItemZone(itemId) {
+  const item = state.pantryItems.find((x) => x.id === itemId);
+  if (!item) return;
+  item.zone = item.zone === 'fridge' ? 'cupboard' : 'fridge';
+  saveStateToStorage();
+  renderAll();
+  showToast(`Déplacé vers ${item.zone === 'fridge' ? '❄️ le Frigo' : '🥫 le Placard'}`);
+}
+
+function removePantryItem(itemId) {
+  state.pantryItems = state.pantryItems.filter((x) => x.id !== itemId);
+  saveStateToStorage();
+  renderAll();
+}
+
+function clearPantryInventory() {
+  if (!state.pantryItems.length) return;
+  state.pantryItems = [];
+  saveStateToStorage();
+  renderAll();
+  showToast('🗑️ Inventaire du garde-manger vidé.');
+}
+
+function loadSamplePantryStock() {
+  const sample = [
+    { name: 'Œufs', qty: 6, unit: 'pièces', zone: 'fridge' },
+    { name: 'Courgettes', qty: 3, unit: 'pièces', zone: 'fridge' },
+    { name: 'Blancs de poulet', qty: 350, unit: 'g', zone: 'fridge' },
+    { name: 'Crème fraîche', qty: 20, unit: 'cl', zone: 'fridge' },
+    { name: 'Chèvre frais', qty: 150, unit: 'g', zone: 'fridge' },
+    { name: 'Comté', qty: 180, unit: 'g', zone: 'fridge' },
+    { name: 'Carottes', qty: 4, unit: 'pièces', zone: 'fridge' },
+    { name: 'Pâtes', qty: 500, unit: 'g', zone: 'cupboard' },
+    { name: 'Riz basmati', qty: 400, unit: 'g', zone: 'cupboard' },
+    { name: 'Lentilles corail', qty: 300, unit: 'g', zone: 'cupboard' },
+    { name: 'Tomates concassées', qty: 400, unit: 'g', zone: 'cupboard' },
+    { name: 'Lait de coco', qty: 20, unit: 'cl', zone: 'cupboard' },
+    { name: 'Oignons', qty: 3, unit: 'pièces', zone: 'cupboard' }
+  ];
+  sample.forEach((s) => addOrMergePantryItem({ ...s, mergeMode: 'replace' }));
+  state.pantryMenuOffset = 0;
+  state.pantryCardOffsets = {};
+  renderAll();
+  spawnCulinaryConfetti({ count: 16, spread: 150, emojis: ['❄️', '🥫', '🥚', '🥒', '🧀', '🍝'] });
+  showToast('✨ Exemple de Frigo & Placard chargé avec succès !');
+}
+
+function setPantryZoneFilter(zone) {
+  state.pantryZoneFilter = zone || 'all';
+  renderPantrySection();
+}
+
+function saveGeminiKeyFromPantry() {
+  const pantryInput = document.getElementById('pantry-gemini-key-input');
+  const studioInput = document.getElementById('gemini-api-key');
+  const key = pantryInput?.value.trim() || '';
+  localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, key);
+  if (studioInput) studioInput.value = key;
+  renderPantryAiKeyStatus();
+  showToast(key ? '🤖 Clé API Gemini Vision activée pour le scanner caméra ✓' : 'Clé API effacée');
+}
+
+function renderPantryAiKeyStatus() {
+  const key = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
+  const statusEl = document.getElementById('pantry-ai-key-status');
+  const inputEl = document.getElementById('pantry-gemini-key-input');
+  if (inputEl && key && !inputEl.value) {
+    inputEl.value = key;
+  }
+  if (statusEl) {
+    if (key) {
+      statusEl.textContent = '✅ Vision IA Active';
+      statusEl.style.background = '#dcfce7';
+      statusEl.style.color = '#166534';
+    } else {
+      statusEl.textContent = '⚡ Mode Code-barres + Dictée (Clé IA optionnelle)';
+      statusEl.style.background = '#fef3c7';
+      statusEl.style.color = '#92400e';
+    }
+  }
+}
+
+// ============================================================================
+// SCANNER VIDÉO EN DIRECT : FRIGO & PLACARD (CAMÉRA + GEMINI VISION + CODE-BARRES + VOIX)
+// ============================================================================
+async function startPantryCamera(zone) {
+  pantryActiveScanZone = zone === 'cupboard' ? 'cupboard' : 'fridge';
+  const zoneLabel = pantryActiveScanZone === 'fridge' ? '❄️ Scan du Frigo' : '🥫 Scan du Placard';
+
+  const camContainer = document.getElementById('pantry-camera-container');
+  const videoEl = document.getElementById('pantry-camera-video');
+  const badgeEl = document.getElementById('pantry-active-zone-badge');
+  const statusPill = document.getElementById('pantry-scan-status-pill');
+  const hudMsg = document.getElementById('pantry-scan-Hud-msg');
+  const btnFridge = document.getElementById('btn-scan-fridge');
+  const btnCupboard = document.getElementById('btn-scan-cupboard');
+
+  if (btnFridge) btnFridge.classList.toggle('active-scan', pantryActiveScanZone === 'fridge');
+  if (btnCupboard) btnCupboard.classList.toggle('active-scan', pantryActiveScanZone === 'cupboard');
+
+  if (badgeEl) {
+    badgeEl.textContent = `${zoneLabel} en direct`;
+    badgeEl.style.color = pantryActiveScanZone === 'fridge' ? '#38bdf8' : '#fbbf24';
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('⚠️ Caméra directe non disponible sur ce navigateur : utilisez le bouton "Prendre / Importer une photo".');
+    return;
+  }
+
+  try {
+    if (pantryCameraStream) {
+      pantryCameraStream.getTracks().forEach((t) => t.stop());
+      pantryCameraStream = null;
+    }
+
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+    } catch (firstErr) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+
+    pantryCameraStream = stream;
+    if (camContainer) camContainer.style.display = 'block';
+    if (videoEl) {
+      videoEl.srcObject = stream;
+      await videoEl.play().catch(() => {});
+    }
+
+    if (statusPill) {
+      statusPill.textContent = `${zoneLabel} actif`;
+    }
+    if (hudMsg) {
+      hudMsg.textContent = `Filmez l'intérieur du ${pantryActiveScanZone === 'fridge' ? 'frigo' : 'placard'} : détection en cours...`;
+    }
+
+    setupPantryAutoScanLoops();
+    showToast(`📹 ${zoneLabel} ouvert : filmez vos étagères !`);
+  } catch (err) {
+    console.error('Erreur ouverture caméra :', err);
+    showToast('⚠️ Impossible d\'accéder à la caméra. Autorisez la caméra ou utilisez "Prendre une photo".');
+  }
+}
+
+function stopPantryCamera() {
+  if (pantryAutoScanTimer) {
+    clearInterval(pantryAutoScanTimer);
+    pantryAutoScanTimer = null;
+  }
+  if (pantryBarcodeTimer) {
+    clearInterval(pantryBarcodeTimer);
+    pantryBarcodeTimer = null;
+  }
+  if (pantryVoiceActive && pantryVoiceRecognition) {
+    try {
+      pantryVoiceRecognition.stop();
+    } catch (e) {}
+    pantryVoiceActive = false;
+  }
+  if (pantryCameraStream) {
+    pantryCameraStream.getTracks().forEach((t) => t.stop());
+    pantryCameraStream = null;
+  }
+
+  const videoEl = document.getElementById('pantry-camera-video');
+  if (videoEl) videoEl.srcObject = null;
+
+  const camContainer = document.getElementById('pantry-camera-container');
+  if (camContainer) camContainer.style.display = 'none';
+
+  const btnFridge = document.getElementById('btn-scan-fridge');
+  const btnCupboard = document.getElementById('btn-scan-cupboard');
+  if (btnFridge) btnFridge.classList.remove('active-scan');
+  if (btnCupboard) btnCupboard.classList.remove('active-scan');
+
+  const statusPill = document.getElementById('pantry-scan-status-pill');
+  if (statusPill) statusPill.textContent = 'Caméra prête';
+}
+
+function togglePantryAutoScan() {
+  pantryAutoScanEnabled = !pantryAutoScanEnabled;
+  const btn = document.getElementById('btn-toggle-autoscan');
+  if (btn) {
+    btn.textContent = pantryAutoScanEnabled ? '🔄 Scan continu auto : ON' : '🔄 Scan continu auto : PAUSE';
+    btn.classList.toggle('active-autoscan', pantryAutoScanEnabled);
+  }
+  showToast(
+    pantryAutoScanEnabled
+      ? '🔄 Analyse automatique en filmant activée (toutes les 4 secondes)'
+      : '⏸️ Analyse automatique en pause (utilisez le bouton "Analyser cette étagère")'
+  );
+}
+
+function setupPantryAutoScanLoops() {
+  if (pantryAutoScanTimer) clearInterval(pantryAutoScanTimer);
+  if (pantryBarcodeTimer) clearInterval(pantryBarcodeTimer);
+
+  // 1. Boucle de lecture automatique des codes-barres (gratuite et instantanée via BarcodeDetector + OpenFoodFacts)
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new window.BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e']
+      });
+      const seenBarcodes = new Set();
+
+      pantryBarcodeTimer = setInterval(async () => {
+        const videoEl = document.getElementById('pantry-camera-video');
+        if (!videoEl || videoEl.readyState < 2 || !pantryCameraStream) return;
+        try {
+          const codes = await detector.detect(videoEl);
+          for (const c of codes) {
+            if (c.rawValue && !seenBarcodes.has(c.rawValue)) {
+              seenBarcodes.add(c.rawValue);
+              lookupOpenFoodFactsBarcode(c.rawValue, pantryActiveScanZone);
+            }
+          }
+        } catch (e) {}
+      }, 1300);
+    } catch (e) {}
+  }
+
+  // 2. Boucle d'analyse visuelle IA pendant qu'on filme (toutes les 4,5 secondes si une clé Gemini est active)
+  pantryAutoScanTimer = setInterval(() => {
+    if (!pantryAutoScanEnabled || !pantryCameraStream || pantryAnalysisInFlight) return;
+    const apiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+    if (apiKey) {
+      captureAndAnalyzeCurrentFrame(false);
+    }
+  }, 4500);
+}
+
+async function lookupOpenFoodFactsBarcode(barcode, zone) {
+  const hudMsg = document.getElementById('pantry-scan-Hud-msg');
+  if (hudMsg) hudMsg.textContent = `🔍 Code-barres détecté (${barcode})...`;
+  try {
+    const resp = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`);
+    const data = await resp.json();
+    if (data && data.product) {
+      const p = data.product;
+      const rawName = p.product_name_fr || p.generic_name_fr || p.product_name || '';
+      if (rawName) {
+        let qty = 1;
+        let unit = 'pièces';
+        const qStr = p.quantity || '';
+        const matchG = qStr.match(/(\d+(?:[.,]\d+)?)\s*(g|kg|ml|cl|l)\b/i);
+        if (matchG) {
+          qty = parseFloat(matchG[1].replace(',', '.')) || 1;
+          unit = matchG[2].toLowerCase();
+          if (unit === 'kg') {
+            qty = qty * 1000;
+            unit = 'g';
+          } else if (unit === 'l') {
+            qty = qty * 100;
+            unit = 'cl';
+          }
+        }
+        const added = addOrMergePantryItem({
+          name: rawName.split('-')[0].trim(),
+          qty,
+          unit,
+          zone,
+          mergeMode: 'replace'
+        });
+        if (added) {
+          appendLiveDetectionChip(added);
+          renderAll();
+          showToast(`📦 Produit scanné : ${added.name} (${added.qty} ${added.unit})`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Erreur lecture OpenFoodFacts :', err);
+  }
+}
+
+function appendLiveDetectionChip(item) {
+  const listEl = document.getElementById('pantry-live-detections-list');
+  if (!listEl) return;
+
+  if (listEl.querySelector('span')) {
+    listEl.innerHTML = '';
+  }
+
+  const chip = document.createElement('div');
+  chip.className = 'pantry-detected-pill';
+  chip.innerHTML = `${item.zone === 'fridge' ? '❄️' : '🥫'} + ${item.name} <strong>(${item.qty} ${item.unit})</strong>`;
+  listEl.prepend(chip);
+
+  while (listEl.children.length > 8) {
+    listEl.removeChild(listEl.lastChild);
+  }
+}
+
+async function captureAndAnalyzeCurrentFrame(isManualClick = true) {
+  const videoEl = document.getElementById('pantry-camera-video');
+  const canvasEl = document.getElementById('pantry-camera-canvas');
+  if (!videoEl || !canvasEl || videoEl.readyState < 2) {
+    if (isManualClick) {
+      showToast('⚠️ Ouvrez d\'abord la caméra (Scan Frigo ou Scan Placard).');
+    }
+    return;
+  }
+
+  const w = videoEl.videoWidth || 640;
+  const h = videoEl.videoHeight || 480;
+  const targetW = Math.min(800, w);
+  const targetH = Math.round((h / w) * targetW);
+
+  canvasEl.width = targetW;
+  canvasEl.height = targetH;
+  const ctx = canvasEl.getContext('2d');
+  ctx.drawImage(videoEl, 0, 0, targetW, targetH);
+
+  const dataUrl = canvasEl.toDataURL('image/jpeg', 0.72);
+  await analyzePantryImageBase64(dataUrl, pantryActiveScanZone, isManualClick);
+}
+
+async function handlePantryPhotoUpload(event, zone) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  pantryActiveScanZone = zone === 'cupboard' ? 'cupboard' : 'fridge';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target?.result;
+    if (dataUrl) {
+      await analyzePantryImageBase64(dataUrl, pantryActiveScanZone, true);
+    }
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+async function analyzePantryImageBase64(dataUrl, zone, isManual) {
+  if (pantryAnalysisInFlight) return;
+
+  const apiKey =
+    document.getElementById('pantry-gemini-key-input')?.value.trim() ||
+    document.getElementById('gemini-api-key')?.value.trim() ||
+    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+
+  const hudMsg = document.getElementById('pantry-scan-Hud-msg');
+  const captureBtn = document.getElementById('btn-capture-shelf');
+  const zoneLabel = zone === 'fridge' ? 'Frigo ❄️' : 'Placard 🥫';
+
+  if (!apiKey) {
+    if (isManual) {
+      // Mode assisté hors-clé IA : permet d'indiquer immédiatement ce qui est visible à l'écran ou d'activer la clé Gemini
+      const quickEntered = prompt(
+        `📷 Analyse rapide (${zoneLabel}) :\n` +
+          `Pour que l'IA reconnaisse automatiquement l'image, collez votre clé Gemini gratuite dans le champ "Reconnaissance visuelle IA" sous la caméra.\n\n` +
+          `Ou tapez directement les ingrédients filmés (ex: 4 œufs, 2 courgettes, 200g comté) :`
+      );
+      if (quickEntered && quickEntered.trim()) {
+        const count = parseSpokenOrTypedIngredientsToPantry(quickEntered, zone);
+        if (count > 0) {
+          showToast(`✨ ${count} ingrédient(s) ajouté(s) au ${zoneLabel} !`);
+        }
+      }
+    }
+    return;
+  }
+
+  pantryAnalysisInFlight = true;
+  if (hudMsg) hudMsg.textContent = `🤖 Analyse visuelle IA du ${zoneLabel} en cours...`;
+  if (captureBtn && isManual) {
+    captureBtn.disabled = true;
+    captureBtn.textContent = '⏳ Reconnaissance des ingrédients...';
+  }
+
+  const base64Data = dataUrl.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+
+  const visionPrompt = `Tu es un assistant culinaire expert. Analyse cette image de l'intérieur d'un ${
+    zone === 'fridge' ? 'réfrigérateur (frigo)' : 'placard de cuisine (garde-manger)'
+  }.
+Identifie tous les ingrédients alimentaires visibles et évalue leur quantité approximative.
+Réponds UNIQUEMENT avec un tableau JSON valide (sans markdown ni texte autour) au format suivant :
+[
+  {"name": "Œufs", "qty": 6, "unit": "pièces"},
+  {"name": "Courgettes", "qty": 2, "unit": "pièces"},
+  {"name": "Comté", "qty": 200, "unit": "g"},
+  {"name": "Crème fraîche", "qty": 20, "unit": "cl"}
+]
+Utilise des noms d'ingrédients simples et courants en français (ex: "Œufs", "Courgettes", "Lait", "Beurre", "Blancs de poulet", "Pâtes", "Riz basmati", "Tomates concassées", "Saumon frais") et des unités parmi : "pièces", "g", "cl", "ml", "boîte", "sachet", "tranches", "portion". Si aucun aliment n'est visible, renvoie [].`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(
+        apiKey
+      )}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: visionPrompt },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ]
+        })
+      }
+    );
+
+    const data = await response.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const cleaned = rawText.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      let addedCount = 0;
+      const now = Date.now();
+
+      parsed.forEach((det) => {
+        if (!det || !det.name) return;
+        const norm = normalizeIngToken(det.name);
+        const lastSeen = pantryRecentSessionDetections.get(norm) || 0;
+        // En scan continu auto, éviter d'additionner en boucle le même produit filmé à 4 secondes d'intervalle
+        if (!isManual && now - lastSeen < 20000) return;
+
+        pantryRecentSessionDetections.set(norm, now);
+        const item = addOrMergePantryItem({
+          name: det.name,
+          qty: det.qty || 1,
+          unit: det.unit || 'pièces',
+          zone,
+          mergeMode: 'replace'
+        });
+        if (item) {
+          appendLiveDetectionChip(item);
+          addedCount++;
+        }
+      });
+
+      if (addedCount > 0) {
+        renderAll();
+        if (hudMsg) {
+          hudMsg.textContent = `✅ ${addedCount} ingrédient(s) reconnu(s) et ajouté(s) ! Continuez à filmer...`;
+        }
+        if (isManual) {
+          showToast(`✨ ${addedCount} ingrédient(s) détecté(s) dans votre ${zoneLabel} !`);
+        }
+      } else if (hudMsg) {
+        hudMsg.textContent = `Filmez une autre étagère du ${zoneLabel}...`;
+      }
+    } else {
+      if (hudMsg) hudMsg.textContent = `Aucun nouvel aliment détecté sur ce plan. Rapprochez la caméra.`;
+      if (isManual) showToast('ℹ️ Aucun aliment clairement distingué sur cette image. Rapprochez-vous de l\'étagère.');
+    }
+  } catch (err) {
+    console.error('Erreur analyse Vision IA :', err);
+    if (hudMsg) hudMsg.textContent = '⚠️ Erreur d\'analyse IA (vérifiez votre clé Gemini).';
+    if (isManual) showToast('⚠️ Erreur lors de l\'analyse visuelle. Vérifiez votre clé API Gemini.');
+  } finally {
+    pantryAnalysisInFlight = false;
+    if (captureBtn && isManual) {
+      captureBtn.disabled = false;
+      captureBtn.textContent = '📸 Analyser cette étagère maintenant';
+    }
+  }
+}
+
+// Dictée vocale pendant le scan vidéo (ex: "3 courgettes, 6 œufs, 250 grammes de pâtes")
+function togglePantryVoiceRecognition() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = document.getElementById('btn-voice-scan');
+
+  if (!SpeechRec) {
+    const manualText = prompt(
+      `🎙️ Saisie rapide pendant le scan (${pantryActiveScanZone === 'fridge' ? '❄️ Frigo' : '🥫 Placard'}) :\n` +
+        `Indiquez vos ingrédients séparés par des virgules (ex: 6 œufs, 2 courgettes, 200g comté) :`
+    );
+    if (manualText) {
+      const added = parseSpokenOrTypedIngredientsToPantry(manualText, pantryActiveScanZone);
+      if (added > 0) showToast(`✅ ${added} ingrédient(s) ajouté(s) !`);
+    }
+    return;
+  }
+
+  if (pantryVoiceActive && pantryVoiceRecognition) {
+    try {
+      pantryVoiceRecognition.stop();
+    } catch (e) {}
+    pantryVoiceActive = false;
+    if (btn) btn.textContent = '🎙️ Dicter en filmant';
+    return;
+  }
+
+  const rec = new SpeechRec();
+  rec.lang = 'fr-FR';
+  rec.continuous = true;
+  rec.interimResults = false;
+
+  rec.onstart = () => {
+    pantryVoiceActive = true;
+    if (btn) {
+      btn.textContent = '🔴 Écoute en cours... (Parlez)';
+      btn.classList.add('active-autoscan');
+    }
+    showToast('🎙️ Dites à voix haute ce que vous filmez (ex: "4 œufs, 200 grammes de comté")...');
+  };
+
+  rec.onresult = (event) => {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        const transcript = event.results[i][0].transcript;
+        const count = parseSpokenOrTypedIngredientsToPantry(transcript, pantryActiveScanZone);
+        if (count > 0) {
+          showToast(`🎙️ Reconnu : "${transcript.trim()}" (${count} ajouté${count > 1 ? 's' : ''})`);
+        }
+      }
+    }
+  };
+
+  rec.onerror = () => {
+    pantryVoiceActive = false;
+    if (btn) {
+      btn.textContent = '🎙️ Dicter en filmant';
+      btn.classList.remove('active-autoscan');
+    }
+  };
+
+  rec.onend = () => {
+    pantryVoiceActive = false;
+    if (btn) {
+      btn.textContent = '🎙️ Dicter en filmant';
+      btn.classList.remove('active-autoscan');
+    }
+  };
+
+  pantryVoiceRecognition = rec;
+  rec.start();
+}
+
+function parseSpokenOrTypedIngredientsToPantry(rawText, zone) {
+  if (!rawText) return 0;
+  const wordNumbers = {
+    un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5,
+    six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, douze: 12
+  };
+
+  const segments = rawText
+    .split(/[,;et\n]+/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  let count = 0;
+  segments.forEach((seg) => {
+    let cleaned = seg.toLowerCase();
+    Object.keys(wordNumbers).forEach((w) => {
+      cleaned = cleaned.replace(new RegExp(`\\b${w}\\b`, 'gi'), String(wordNumbers[w]));
+    });
+
+    const match = cleaned.match(/^(\d+(?:[.,]\d+)?)?\s*(kg|g|grammes|gramme|cl|ml|l|litres|litre|boites|boite|sachets|sachet|tranches|tranche|pieces|piece|pavés|paves)?\s*(?:de\s+|d['’]\s*)?(.+)$/i);
+    if (match) {
+      let qty = parseFloat((match[1] || '1').replace(',', '.')) || 1;
+      let rawUnit = (match[2] || 'pièces').toLowerCase();
+      let name = (match[3] || '').trim();
+      if (!name || name.length < 2) return;
+
+      if (rawUnit === 'grammes' || rawUnit === 'gramme') rawUnit = 'g';
+      if (rawUnit === 'kg') {
+        qty *= 1000;
+        rawUnit = 'g';
+      }
+      if (rawUnit === 'litres' || rawUnit === 'litre' || rawUnit === 'l') {
+        qty *= 100;
+        rawUnit = 'cl';
+      }
+      if (rawUnit === 'boites') rawUnit = 'boîte';
+      if (rawUnit === 'sachets') rawUnit = 'sachet';
+      if (rawUnit === 'pieces' || rawUnit === 'piece') rawUnit = 'pièces';
+
+      const added = addOrMergePantryItem({
+        name,
+        qty,
+        unit: rawUnit,
+        zone,
+        mergeMode: 'replace'
+      });
+      if (added) {
+        appendLiveDetectionChip(added);
+        count++;
+      }
+    }
+  });
+
+  if (count > 0) {
+    renderAll();
+  }
+  return count;
+}
+
+// ============================================================================
+// MOTEUR DE PROPOSITION DE MENUS DU GARDE-MANGER & RENDU DE LA SECTION
+// ============================================================================
+function evaluateRecipeAgainstPantry(recipe, targetServings) {
+  const servings = targetServings || state.pantryServings || 2;
+  const ratio = servings / (recipe.baseServings || 2);
+  const ingredients = recipe.ingredients || [];
+
+  if (ingredients.length === 0) {
+    return {
+      recipe,
+      matchCount: 0,
+      coveredCount: 0,
+      partialCount: 0,
+      totalCount: 0,
+      matchPct: 0,
+      score: 0,
+      breakdown: []
+    };
+  }
+
+  let matchCount = 0;
+  let coveredCount = 0;
+  let partialCount = 0;
+
+  const breakdown = ingredients.map((ing) => {
+    const reqQty = Math.round(ing.qty * ratio * 10) / 10;
+    const m = matchShoppingItemWithPantry(ing.name, reqQty, ing.unit);
+    if (m && m.status === 'covered') {
+      matchCount++;
+      coveredCount++;
+      return {
+        ing,
+        reqQty,
+        status: 'covered',
+        pantryItem: m.matchedPantryItem,
+        missingQty: 0
+      };
+    }
+    if (m && m.status === 'partial') {
+      matchCount++;
+      partialCount++;
+      return {
+        ing,
+        reqQty,
+        status: 'partial',
+        pantryItem: m.matchedPantryItem,
+        missingQty: m.missingInTargetUnit
+      };
+    }
+    return {
+      ing,
+      reqQty,
+      status: 'missing',
+      pantryItem: null,
+      missingQty: reqQty
+    };
+  });
+
+  const totalCount = ingredients.length;
+  const weightedHits = coveredCount + partialCount * 0.65;
+  const matchPct = Math.round((matchCount / totalCount) * 100);
+  const score = (weightedHits / totalCount) * 100 + matchCount * 6;
+
+  return {
+    recipe,
+    matchCount,
+    coveredCount,
+    partialCount,
+    totalCount,
+    matchPct,
+    score,
+    breakdown
+  };
+}
+
+function getAllCatalogRecipesForPantry() {
+  const all = [
+    ...(window.RECIPES_DB.weekdayDinners || []),
+    ...(window.RECIPES_DB.weekendBalancedMeals || []),
+    ...(window.RECIPES_DB.weekendPleasureMeals || []),
+    ...(window.RECIPES_DB.gourmetMeals || [])
+  ];
+  const seen = new Set();
+  const unique = [];
+  all.forEach((r) => {
+    if (r && r.id && !seen.has(r.id)) {
+      seen.add(r.id);
+      unique.push(r);
+    }
+  });
+
+  if (state.pantryStyleFilter === 'balanced') {
+    return unique.filter((r) => r.type !== 'weekend-pleasure' && r.type !== 'gourmet');
+  }
+  if (state.pantryStyleFilter === 'pleasure') {
+    return unique.filter((r) => r.type === 'weekend-pleasure');
+  }
+  if (state.pantryStyleFilter === 'gourmet') {
+    return unique.filter((r) => r.type === 'gourmet');
+  }
+  return unique;
+}
+
+function computeRankedPantryMenus() {
+  const pool = getAllCatalogRecipesForPantry();
+  const scored = pool.map((r) => {
+    const cardServings = state.pantryCardServings[r.id] || state.pantryServings || 2;
+    return evaluateRecipeAgainstPantry(r, cardServings);
+  });
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return b.matchCount - a.matchCount;
+  });
+
+  return scored;
+}
+
+function stepPantryServings(delta) {
+  const next = Math.max(1, Math.min(12, (state.pantryServings || 2) + delta));
+  state.pantryServings = next;
+  // Réinitialiser les surcharges individuelles pour que toutes les cartes suivent le sélecteur global
+  state.pantryCardServings = {};
+  saveStateToStorage();
+  renderPantrySection();
+  showToast(`🍽️ Menus du garde-manger ajustés pour ${next} ${next > 1 ? 'parts' : 'part'}`);
+}
+
+function stepPantryCardServings(recipeId, delta) {
+  const current = state.pantryCardServings[recipeId] || state.pantryServings || 2;
+  const next = Math.max(1, Math.min(12, current + delta));
+  state.pantryCardServings[recipeId] = next;
+  renderPantrySection();
+}
+
+function handlePantryStyleFilterChange(newStyle) {
+  state.pantryStyleFilter = newStyle || 'all';
+  state.pantryMenuOffset = 0;
+  state.pantryCardOffsets = {};
+  renderPantrySection();
+}
+
+function cyclePantryMenuSuggestions(evt) {
+  state.pantryMenuOffset = (state.pantryMenuOffset || 0) + 4;
+  state.pantryCardOffsets = {};
+  if (evt && evt.clientX) {
+    spawnCulinaryConfetti({
+      x: evt.clientX,
+      y: evt.clientY,
+      count: 10,
+      spread: 110,
+      emojis: ['🎲', '🍽️', '🥗', '✨']
+    });
+  }
+  renderPantrySection();
+  showToast('🎲 Nouvelles idées de menus proposées selon votre stock !');
+}
+
+function replaceSinglePantryCard(cardIndex, evt) {
+  const currentExtra = state.pantryCardOffsets[cardIndex] || 0;
+  state.pantryCardOffsets[cardIndex] = currentExtra + 4;
+  if (evt && evt.clientX) {
+    spawnCulinaryConfetti({
+      x: evt.clientX,
+      y: evt.clientY,
+      count: 8,
+      spread: 90,
+      emojis: ['🎲', '👨‍🍳', '✨']
+    });
+  }
+  renderPantrySection();
+  showToast('🎲 Autre idée de menu sélectionnée !');
+}
+
+function togglePantryDeductionMode() {
+  state.deductPantryFromShopping = !state.deductPantryFromShopping;
+  saveStateToStorage();
+  renderAll();
+  showToast(
+    state.deductPantryFromShopping
+      ? '🗄️ Déduction automatique du stock Frigo & Placard activée sur la liste de courses !'
+      : '↺ Déduction du Garde-manger désactivée sur la liste de courses'
+  );
+}
+
+function syncPantryWithWeeklyShopping(navigateAfter = false) {
+  state.deductPantryFromShopping = true;
+  // Nettoyer les forçages manuels sur les ingrédients couverts par le garde-manger
+  const items = buildAggregatedShoppingList();
+  let coveredCount = 0;
+  let partialCount = 0;
+
+  items.forEach((item) => {
+    if (item.pantryCoveredFull) {
+      delete state.inStockKeys[item.key];
+      coveredCount++;
+    } else if (item.pantryPartial) {
+      partialCount++;
+    }
+  });
+
+  saveStateToStorage();
+  renderAll();
+
+  if (navigateAfter) {
+    switchView('shopping');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  showToast(
+    coveredCount > 0 || partialCount > 0
+      ? `🔄 Liste ajustée : ${coveredCount} ingrédient(s) en stock et ${partialCount} quantité(s) réduite(s) !`
+      : 'ℹ️ Liste de courses synchronisée avec votre garde-manger.'
+  );
+}
+
+function renderPantrySection() {
+  renderPantryAiKeyStatus();
+
+  const allPantry = state.pantryItems || [];
+  const fridgeItems = allPantry.filter((x) => x.zone === 'fridge');
+  const cupboardItems = allPantry.filter((x) => x.zone === 'cupboard');
+
+  // Badges de navigation
+  const navBadge = document.getElementById('nav-pantry-count');
+  if (navBadge) navBadge.textContent = allPantry.length;
+
+  const mobileBadge = document.getElementById('mobile-pantry-count');
+  if (mobileBadge) {
+    mobileBadge.textContent = allPantry.length;
+    mobileBadge.style.display = allPantry.length > 0 ? 'inline-flex' : 'none';
+  }
+
+  const fridgeCountEl = document.getElementById('pantry-fridge-count');
+  const cupboardCountEl = document.getElementById('pantry-cupboard-count');
+  const totalCountEl = document.getElementById('pantry-total-count');
+  if (fridgeCountEl) fridgeCountEl.textContent = fridgeItems.length;
+  if (cupboardCountEl) cupboardCountEl.textContent = cupboardItems.length;
+  if (totalCountEl) totalCountEl.textContent = allPantry.length;
+
+  // Onglets filtre zone
+  document.querySelectorAll('.pantry-tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-zone') === (state.pantryZoneFilter || 'all'));
+  });
+
+  // Liste des ingrédients du garde-manger
+  const listEl = document.getElementById('pantry-items-list');
+  if (listEl) {
+    const filtered =
+      state.pantryZoneFilter === 'fridge'
+        ? fridgeItems
+        : state.pantryZoneFilter === 'cupboard'
+        ? cupboardItems
+        : allPantry;
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `
+        <div style="padding: 22px 14px; text-align: center; background: var(--bg-subtle); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.85rem;">
+          <p style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+            🗄️ Votre liste Garde-manger est vide
+          </p>
+          <p style="margin-bottom: 10px;">
+            Lancez un <strong>❄️ Scan Frigo</strong> ou un <strong>🥫 Scan Placard</strong> avec la caméra, cliquez sur les boutons rapides ci-dessus, ou chargez un exemple.
+          </p>
+          <button type="button" class="btn btn-outline btn-sm" onclick="loadSamplePantryStock()">
+            ✨ Charger un exemple de Frigo &amp; Placard
+          </button>
+        </div>
+      `;
+    } else {
+      listEl.innerHTML = filtered
+        .map((item) => {
+          const isFridge = item.zone === 'fridge';
+          const qtyFormatted = (Math.round(item.qty * 10) / 10).toString().replace('.', ',');
+          return `
+            <div class="pantry-item-row ${isFridge ? 'zone-fridge' : 'zone-cupboard'}">
+              <div class="pantry-item-info">
+                <span
+                  class="pantry-zone-pill ${isFridge ? 'fridge' : 'cupboard'}"
+                  onclick="togglePantryItemZone('${item.id}')"
+                  title="Cliquer pour basculer entre Frigo ❄️ et Placard 🥫"
+                >
+                  ${isFridge ? '❄️ Frigo' : '🥫 Placard'}
+                </span>
+                <div style="min-width: 0;">
+                  <div class="pantry-item-name" title="${item.name}">${item.name}</div>
+                  <div style="font-size: 0.71rem; color: var(--text-muted);">${item.aisle || 'Garde-manger'}</div>
+                </div>
+              </div>
+
+              <div class="pantry-item-controls">
+                <button
+                  type="button"
+                  class="btn btn-outline btn-sm btn-step-servings"
+                  onclick="stepPantryItemQty('${item.id}', -1)"
+                  title="Diminuer la quantité"
+                >−</button>
+                <span
+                  class="pantry-qty-badge"
+                  onclick="editPantryItemQtyPrompt('${item.id}')"
+                  style="cursor: pointer;"
+                  title="Cliquer pour saisir une quantité exacte"
+                >
+                  ${qtyFormatted} ${item.unit}
+                </span>
+                <button
+                  type="button"
+                  class="btn btn-outline btn-sm btn-step-servings"
+                  onclick="stepPantryItemQty('${item.id}', 1)"
+                  title="Augmenter la quantité"
+                >+</button>
+                <button
+                  type="button"
+                  class="btn btn-outline btn-sm"
+                  style="padding: 3px 7px; color: #b91c1c; border-color: #fecaca;"
+                  onclick="removePantryItem('${item.id}')"
+                  title="Supprimer cet ingrédient"
+                >✕</button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+  }
+
+  // Bandeau de synchronisation avec la liste de courses de la semaine
+  const syncBox = document.getElementById('pantry-shopping-sync-box');
+  if (syncBox) {
+    const shoppingItems = buildAggregatedShoppingList();
+    const covered = shoppingItems.filter((i) => i.pantryCoveredFull).length;
+    const partial = shoppingItems.filter((i) => i.pantryPartial).length;
+
+    syncBox.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+        <div>
+          <strong>🧺 Impact sur la liste des courses de la semaine :</strong><br />
+          ${
+            allPantry.length === 0
+              ? 'Scannez ou ajoutez vos ingrédients pour déduire automatiquement votre stock de votre panier de courses.'
+              : `<strong>${covered} ingrédient(s)</strong> déjà en stock suffisant et <strong>${partial} quantité(s)</strong> réduite(s) sur les repas validés.`
+          }
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="syncPantryWithWeeklyShopping(true)">
+          🔄 Ajuster &amp; Voir la liste des courses
+        </button>
+      </div>
+    `;
+  }
+
+  // Badge nombre de parts global du garde-manger
+  const servingsBadge = document.getElementById('pantry-servings-badge');
+  if (servingsBadge) {
+    const s = state.pantryServings || 2;
+    servingsBadge.textContent = `${s} ${s > 1 ? 'parts' : 'part'}`;
+  }
+
+  renderPantryMenusGrid();
+}
+
+function renderPantryMenusGrid() {
+  const gridEl = document.getElementById('pantry-menus-grid');
+  if (!gridEl) return;
+
+  const ranked = computeRankedPantryMenus();
+  if (ranked.length === 0) {
+    gridEl.innerHTML = `<p style="color: var(--text-muted);">Aucune recette disponible dans cette catégorie.</p>`;
+    return;
+  }
+
+  const cardsCount = Math.min(4, ranked.length);
+  const baseOffset = state.pantryMenuOffset || 0;
+  const chosenEntries = [];
+  const usedIds = new Set();
+
+  for (let i = 0; i < cardsCount; i++) {
+    const cardExtra = state.pantryCardOffsets[i] || 0;
+    let idx = (baseOffset + i + cardExtra) % ranked.length;
+    let attempts = 0;
+    while (usedIds.has(ranked[idx].recipe.id) && attempts < ranked.length) {
+      idx = (idx + 1) % ranked.length;
+      attempts++;
+    }
+    usedIds.add(ranked[idx].recipe.id);
+    chosenEntries.push({ entry: ranked[idx], cardIndex: i });
+  }
+
+  gridEl.innerHTML = chosenEntries
+    .map(({ entry, cardIndex }) => {
+      const { recipe, matchCount, coveredCount, partialCount, totalCount, matchPct, breakdown } = entry;
+      const servings = state.pantryCardServings[recipe.id] || state.pantryServings || 2;
+      const isGourmet = recipe.type === 'gourmet';
+      const isPleasure = recipe.type === 'weekend-pleasure';
+      const styleLabel = isGourmet ? '🍷 Gourmet' : isPleasure ? '🌟 Plaisir' : '🥗 Équilibré';
+      const dishEmoji = getDishEmoji(recipe, { isGourmet, isPleasure });
+      const baseCost = typeof recipe.costFor2 === 'number' ? recipe.costFor2 : isGourmet ? 12.5 : isPleasure ? 8.0 : 4.5;
+      const scaledCost = baseCost * (servings / (recipe.baseServings || 2));
+
+      const matchClass =
+        matchPct >= 65 ? 'pantry-match-high' : matchPct >= 30 ? 'pantry-match-mid' : 'pantry-match-low';
+      const matchText =
+        (state.pantryItems || []).length === 0
+          ? `📋 Suggestion du catalogue (${totalCount} ingrédients)`
+          : matchCount > 0
+          ? `🎯 ${matchCount}/${totalCount} ingrédient(s) dans votre garde-manger (${matchPct}%)`
+          : `💡 Idée recette (${totalCount} ingrédients à prévoir)`;
+
+      const chipsHTML = breakdown
+        .map((b) => {
+          const reqStr = (Math.round(b.reqQty * 10) / 10).toString().replace('.', ',');
+          if (b.status === 'covered') {
+            const zIcon = b.pantryItem?.zone === 'fridge' ? '❄️' : '🥫';
+            return `<span class="pantry-ing-status-chip covered" title="Quantité couverte par votre stock">${zIcon} ✓ ${b.ing.name} (${reqStr} ${b.ing.unit})</span>`;
+          }
+          if (b.status === 'partial') {
+            const zIcon = b.pantryItem?.zone === 'fridge' ? '❄️' : '🥫';
+            const missStr = (Math.round(b.missingQty * 10) / 10).toString().replace('.', ',');
+            return `<span class="pantry-ing-status-chip partial" title="Stock partiel : manque ${missStr} ${b.ing.unit}">${zIcon} ⚠️ ${b.ing.name} (manque ${missStr} ${b.ing.unit})</span>`;
+          }
+          return `<span class="pantry-ing-status-chip missing" title="Non présent dans le garde-manger">🛒 ${b.ing.name} (${reqStr} ${b.ing.unit})</span>`;
+        })
+        .join('');
+
+      return `
+        <article class="meal-card ${isGourmet ? 'is-gourmet' : isPleasure ? 'is-pleasure' : ''}">
+          <div>
+            <div class="meal-card-header">
+              <span class="pantry-match-ribbon ${matchClass}">
+                ${matchText}
+              </span>
+              <span class="meta-pill">${styleLabel}</span>
+            </div>
+
+            <!-- Barre d'action : Ajustement des parts + Bouton Autre idée -->
+            <div class="servings-control" style="margin-top: 8px; flex-direction: row; align-items: center; justify-content: space-between; padding: 7px 12px; gap: 8px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 0.8rem; font-weight: 800;">🍽️ Parts :</span>
+                <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepPantryCardServings('${recipe.id}', -1)">−</button>
+                <span class="servings-badge" style="min-width: 78px; text-align: center; padding: 3px 8px;">
+                  ${servings} ${servings > 1 ? 'parts' : 'part'}
+                </span>
+                <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepPantryCardServings('${recipe.id}', 1)">+</button>
+              </div>
+
+              <button
+                type="button"
+                class="style-pill-btn"
+                onclick="replaceSinglePantryCard(${cardIndex}, event)"
+                title="Proposer une autre idée de menu"
+              >
+                🎲 Autre idée
+              </button>
+            </div>
+
+            <div class="meal-title-row" style="margin-top: 10px;">
+              <div class="meal-dish-avatar" onclick="openPantryRecipeModal('${recipe.id}', ${servings})" style="cursor: pointer;">
+                ${dishEmoji}
+              </div>
+              <div style="flex: 1;">
+                <h3 class="meal-title" onclick="openPantryRecipeModal('${recipe.id}', ${servings})">${recipe.title}</h3>
+                <p class="meal-desc">${recipe.description || ''}</p>
+              </div>
+            </div>
+
+            <div class="meal-meta" style="margin-top: 8px;">
+              <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Feu ${recipe.cookTime}</span>
+              <span class="meta-pill">💶 ~${formatEuro(scaledCost)} (${servings}p)</span>
+            </div>
+
+            <!-- Détail des ingrédients disponibles au frigo/placard vs à compléter -->
+            <div class="pantry-ing-breakdown">
+              <div style="font-size: 0.76rem; font-weight: 800; color: var(--text-main);">
+                🗄️ Ingrédients pour ${servings} ${servings > 1 ? 'parts' : 'part'} (${coveredCount} couvert${coveredCount > 1 ? 's' : ''}${partialCount > 0 ? `, ${partialCount} partiel${partialCount > 1 ? 's' : ''}` : ''}) :
+              </div>
+              <div class="pantry-ing-chips">
+                ${chipsHTML}
+              </div>
+            </div>
+          </div>
+
+          <div class="meal-card-actions" style="margin-top: 12px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="openPantryRecipeModal('${recipe.id}', ${servings})">
+              📖 Fiche cuisine
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openAssignPantryToWeekModal('${recipe.id}', ${servings})">
+              📅 Ajouter au menu de la semaine
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join('');
+}
+
+function openPantryRecipeModal(recipeId, servings) {
+  const recipe = findRecipeById(recipeId);
+  if (!recipe) return;
+
+  const s = servings || state.pantryServings || 2;
+  const ratio = s / (recipe.baseServings || 2);
+  const modalBody = document.getElementById('recipe-modal-body');
+  if (!modalBody) return;
+
+  const evalInfo = evaluateRecipeAgainstPantry(recipe, s);
+
+  const ingredientsHTML = evalInfo.breakdown
+    .map((b) => {
+      const scaled = formatScaledQty(b.ing.qty, ratio);
+      const badge =
+        b.status === 'covered'
+          ? '<span class="stock-tag" style="background:#dcfce7; color:#166534;">✓ En stock Frigo/Placard</span>'
+          : b.status === 'partial'
+          ? `<span class="stock-tag" style="background:#fef3c7; color:#92400e;">Stock partiel (manque ${Math.round(b.missingQty * 10) / 10} ${b.ing.unit})</span>`
+          : '';
+      return `<li><span>${b.ing.name} ${badge}</span> <strong>${scaled} ${b.ing.unit}</strong></li>`;
+    })
+    .join('');
+
+  const stepsHTML = (recipe.steps || []).map((st) => `<li>${st}</li>`).join('');
+
+  modalBody.innerHTML = `
+    <span class="meta-pill healthy-pill">🗄️ Menu du Garde-manger • Pour ${s} ${s > 1 ? 'parts' : 'part'}</span>
+    <h2 style="font-size: 1.35rem; font-weight: 800; margin-top: 8px; margin-bottom: 6px;">${recipe.title}</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 14px;">${recipe.description || ''}</p>
+
+    <div class="meal-meta" style="margin-bottom: 14px;">
+      <span class="meta-pill">⏱️ Préparation : ${recipe.prepTime}</span>
+      <span class="meta-pill">🔥 Cuisson : ${recipe.cookTime}</span>
+      <span class="meta-pill">🎯 ${evalInfo.matchCount}/${evalInfo.totalCount} ingrédient(s) en stock</span>
+    </div>
+
+    <div class="modal-section-title">🛒 Ingrédients (calculés pour ${s} ${s > 1 ? 'parts' : 'part'})</div>
+    <ul class="modal-ing-list">${ingredientsHTML}</ul>
+
+    <div class="modal-section-title">👩‍🍳 Étapes de préparation</div>
+    <ol class="modal-steps-list">${stepsHTML}</ol>
+
+    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+      <button type="button" class="btn btn-outline" onclick="closeRecipeModal()">Fermer</button>
+      <button type="button" class="btn btn-primary" onclick="openAssignPantryToWeekModal('${recipe.id}', ${s})">
+        📅 Planifier dans ma semaine
+      </button>
+    </div>
+  `;
+
+  document.getElementById('recipe-modal').classList.add('open');
+}
+
+function openAssignPantryToWeekModal(recipeId, servings) {
+  const recipe = findRecipeById(recipeId);
+  if (!recipe) return;
+  const s = servings || state.pantryServings || 2;
+  const modalBody = document.getElementById('recipe-modal-body');
+  if (!modalBody) return;
+
+  const slotButtonsHTML = state.slots
+    .map((slot) => {
+      const curRecipe = findRecipeById(slot.recipeId);
+      return `
+        <button
+          type="button"
+          class="btn btn-outline"
+          style="justify-content: space-between; text-align: left; width: 100%; padding: 10px 12px;"
+          onclick="confirmAssignPantryToSlot('${slot.slotId}', '${recipe.id}', ${s})"
+        >
+          <span><strong>${formatSlotDayHeader(slot)}</strong> — ${slot.mealLabel}</span>
+          <small style="color: var(--text-muted);">Remplacer : ${curRecipe.title}</small>
+        </button>
+      `;
+    })
+    .join('');
+
+  modalBody.innerHTML = `
+    <span class="meta-pill healthy-pill">📅 Planifier un menu du Garde-manger</span>
+    <h2 style="font-size: 1.2rem; font-weight: 800; margin-top: 8px; margin-bottom: 6px;">
+      Où souhaitez-vous placer « ${recipe.title} » (${s} parts) ?
+    </h2>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+      Choisissez le créneau de la semaine : le repas sera automatiquement validé et votre liste de courses déduira les ingrédients de votre garde-manger.
+    </p>
+    <div style="display: flex; flex-direction: column; gap: 7px; max-height: 360px; overflow-y: auto;">
+      ${slotButtonsHTML}
+    </div>
+    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+      <button type="button" class="btn btn-outline" onclick="closeRecipeModal()">Annuler</button>
+    </div>
+  `;
+
+  document.getElementById('recipe-modal').classList.add('open');
+}
+
+function confirmAssignPantryToSlot(slotId, recipeId, servings) {
+  const slot = state.slots.find((x) => x.slotId === slotId);
+  if (!slot) return;
+
+  const recipe = findRecipeById(recipeId);
+  slot.recipeId = recipe.id;
+  slot.servings = servings || state.pantryServings || 2;
+  slot.active = true;
+  slot.validated = true;
+
+  const newStyle =
+    recipe.type === 'gourmet'
+      ? 'gourmet'
+      : recipe.type === 'weekend-pleasure'
+      ? 'pleasure'
+      : 'balanced';
+  syncSlotStyleFlags(slot, newStyle);
+
+  state.deductPantryFromShopping = true;
+  saveStateToStorage();
+  closeRecipeModal();
+  renderAll();
+  showToast(`✅ "${recipe.title}" (${slot.servings}p) ajouté et validé pour ${slot.day} (${slot.mealLabel}) !`);
+}
+
+async function generatePantryRecipeWithAI() {
+  if (!state.pantryItems || state.pantryItems.length === 0) {
+    showToast('⚠️ Scannez ou ajoutez d\'abord quelques ingrédients dans votre frigo/placard !');
+    return;
+  }
+
+  const apiKey =
+    document.getElementById('pantry-gemini-key-input')?.value.trim() ||
+    document.getElementById('gemini-api-key')?.value.trim() ||
+    localStorage.getItem(STORAGE_KEYS.GEMINI_KEY);
+
+  if (!apiKey) {
+    showToast('ℹ️ Indiquez votre clé API Google Gemini dans le panneau Scanner pour créer une recette IA sur-mesure.');
+    const keyInput = document.getElementById('pantry-gemini-key-input');
+    if (keyInput) keyInput.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-pantry-ai-recipe');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Création du menu sur-mesure...';
+  }
+
+  const stockListText = state.pantryItems
+    .map((i) => `${i.name} (${i.qty} ${i.unit} - ${i.zone === 'fridge' ? 'Frigo' : 'Placard'})`)
+    .join(', ');
+
+  const servings = state.pantryServings || 2;
+  const promptText = `Tu es un chef cuisinier créatif. Crée une recette savoureuse, simple et rapide en français qui utilise prioritairement ces ingrédients disponibles dans le frigo et le placard : ${stockListText}.
+Les quantités de base dans le JSON doivent être données pour 2 personnes (baseServings: 2).
+Réponds UNIQUEMENT au format JSON strict (sans markdown) :
+{
+  "title": "Nom du plat",
+  "prepTime": "10 min",
+  "cookTime": "12 min",
+  "difficulty": "Facile",
+  "budget": "€ (Bon marché)",
+  "costFor2": 4.5,
+  "description": "Recette anti-gaspi sur-mesure créée avec votre garde-manger",
+  "ingredients": [
+    {"name": "Nom ingrédient", "qty": 200, "unit": "g", "aisle": "Fruits & Légumes"}
+  ],
+  "steps": ["Étape 1", "Étape 2", "Étape 3"]
+}`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(
+        apiKey
+      )}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleaned = rawText.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    const aiRecipe = {
+      id: `pantry-ai-${Date.now()}`,
+      title: parsed.title || 'Poêlée du Garde-manger',
+      type: state.pantryStyleFilter === 'gourmet' ? 'gourmet' : state.pantryStyleFilter === 'pleasure' ? 'weekend-pleasure' : 'weekday',
+      prepTime: parsed.prepTime || '10 min',
+      cookTime: parsed.cookTime || '12 min',
+      difficulty: 'Facile',
+      budget: parsed.budget || '€ (Bon marché)',
+      costFor2: parseFloat(parsed.costFor2) || 4.5,
+      baseServings: 2,
+      description: parsed.description || 'Recette créée sur-mesure à partir du scan de votre garde-manger.',
+      ingredients: parsed.ingredients || [],
+      steps: parsed.steps || []
+    };
+
+    state.customRecipes.unshift(aiRecipe);
+    getCatalogListByType(aiRecipe.type).unshift(aiRecipe);
+    state.pantryMenuOffset = 0;
+    state.pantryCardOffsets = {};
+    state.pantryCardServings[aiRecipe.id] = servings;
+
+    saveStateToStorage();
+    renderAll();
+    spawnCulinaryConfetti({ count: 18, spread: 160, emojis: ['✨', '🗄️', '🍽️', '👨‍🍳'] });
+    showToast(`✨ Menu sur-mesure "${aiRecipe.title}" créé avec votre stock !`);
+  } catch (err) {
+    console.error('Erreur génération recette garde-manger IA :', err);
+    showToast('⚠️ Erreur lors de la génération IA. Vérifiez votre clé API Gemini.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '✨ Créer un menu IA avec ce stock';
+    }
+  }
+}
+
 
