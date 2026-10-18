@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-semaine-v102';
+const CACHE_NAME = 'menu-semaine-v108';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,16 @@ const ASSETS = [
   './manifest.json',
   './assets/icon.svg',
   './assets/icon-192.png',
-  './assets/icon-512.png'
+  './assets/icon-512.png',
+  './assets/personas/maite.jpg',
+  './assets/personas/lignac.jpg',
+  './assets/personas/remy.jpg',
+  './assets/personas/bocuse.jpg',
+  './assets/personas/marx.jpg',
+  './assets/personas/etchebest.png',
+  './assets/personas/coffe.jpg',
+  './assets/personas/ia_homme.jpg',
+  './assets/personas/ia_femme.jpg'
 ];
 
 self.addEventListener('install', (event) => {
