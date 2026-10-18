@@ -14,7 +14,8 @@ const STORAGE_KEYS = {
   GEMINI_KEY: 'menusemaine_gemini_api_key_v1',
   PANTRY_ITEMS: 'menusemaine_pantry_items_v1',
   PANTRY_SERVINGS: 'menusemaine_pantry_servings_v1',
-  PANTRY_DEDUCT_MODE: 'menusemaine_pantry_deduct_v1'
+  PANTRY_DEDUCT_MODE: 'menusemaine_pantry_deduct_v1',
+  VOICE_SETTINGS: 'menusemaine_voice_settings_v1'
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
@@ -74,7 +75,14 @@ let state = {
   pantryMenuOffset: 0,    // Index de rotation pour le bouton "Autre idée"
   pantryCardOffsets: {},  // { cardIdx: extraOffset }
   pantryCardServings: {}, // { recipeId: servings }
-  deductPantryFromShopping: true // Ajuster automatiquement la liste des courses avec le stock frigo/placard
+  deductPantryFromShopping: true, // Ajuster automatiquement la liste des courses avec le stock frigo/placard
+  voiceSettings: {
+    persona: 'lignac',
+    voiceURI: 'auto',
+    rate: 1.0,
+    pitch: 1.0,
+    frenchOnly: true
+  }
 };
 
 let deferredPwaPrompt = null;
@@ -185,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!state.slots || state.slots.length !== SLOTS_DEFINITION.length) {
     generateFullWeekPlan();
   } else {
+    const hasResetServingsTo2 = localStorage.getItem('menusemaine_default_2_convives_v1');
     state.slots.forEach((slot) => {
       const def = SLOTS_DEFINITION.find((d) => d.id === slot.slotId);
       if (def && typeof slot.dayOffset !== 'number') {
@@ -192,6 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (typeof slot.active !== 'boolean') {
         slot.active = true;
+      }
+      if (!hasResetServingsTo2 || typeof slot.servings !== 'number' || slot.servings < 1) {
+        slot.servings = 2;
       }
       const recipe = findRecipeById(slot.recipeId);
       if (!slot.mealStyle) {
@@ -219,11 +231,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+    if (!localStorage.getItem('menusemaine_default_2_convives_v1')) {
+      state.pantryServings = 2;
+      state.pantryCardServings = {};
+      localStorage.setItem(STORAGE_KEYS.PANTRY_SERVINGS, '2');
+      localStorage.setItem('menusemaine_default_2_convives_v1', 'true');
+    }
     saveStateToStorage();
   }
 
   renderAll();
   setupPwaSupport();
+  setupVoiceGuide();
   setupDaySwipeGestures();
 });
 
@@ -386,6 +405,20 @@ function loadStateFromStorage() {
       const pantryKeyInput = document.getElementById('pantry-gemini-key-input');
       if (pantryKeyInput) pantryKeyInput.value = savedKey;
     }
+
+    const savedVoice = localStorage.getItem(STORAGE_KEYS.VOICE_SETTINGS);
+    if (savedVoice) {
+      const parsedVoice = JSON.parse(savedVoice);
+      if (parsedVoice && typeof parsedVoice === 'object') {
+        state.voiceSettings = {
+          persona: parsedVoice.persona || 'lignac',
+          voiceURI: parsedVoice.voiceURI || 'auto',
+          rate: typeof parsedVoice.rate === 'number' ? parsedVoice.rate : 1.0,
+          pitch: typeof parsedVoice.pitch === 'number' ? parsedVoice.pitch : 1.0,
+          frenchOnly: typeof parsedVoice.frenchOnly === 'boolean' ? parsedVoice.frenchOnly : true
+        };
+      }
+    }
   } catch (e) {
     console.error('Erreur chargement localStorage :', e);
   }
@@ -404,6 +437,7 @@ function saveStateToStorage() {
     localStorage.setItem(STORAGE_KEYS.PANTRY_SERVINGS, String(state.pantryServings || 2));
     localStorage.setItem(STORAGE_KEYS.PANTRY_DEDUCT_MODE, String(!!state.deductPantryFromShopping));
     localStorage.setItem(STORAGE_KEYS.SEEN_RECIPES, JSON.stringify(Array.from(recentSeenIds)));
+    localStorage.setItem(STORAGE_KEYS.VOICE_SETTINGS, JSON.stringify(state.voiceSettings || {}));
   } catch (e) {
     console.error('Erreur sauvegarde localStorage :', e);
   }
@@ -1581,7 +1615,7 @@ function updateSlotServings(slotId, newServings) {
 
   const badge = document.getElementById(`servings-badge-${slotId}`);
   if (badge) {
-    badge.textContent = `${count} ${count > 1 ? 'convives' : 'convive'}${count === 2 ? ' (2 adultes)' : ''}`;
+    badge.textContent = `${count} ${count > 1 ? 'convives' : 'convive'}`;
   }
 
   const costEl = document.getElementById(`cost-summary-${slotId}`);
@@ -1838,10 +1872,12 @@ function createMealCardHTML(slot) {
   const costInfo = evaluateSlotCost(slot);
   const isLunch = slot.mealLabel === 'Déjeuner';
   const mealIcon = isLunch ? '☀️' : '🌙';
+  const timeTagLabel = isLunch ? 'SERVICE DU MIDI • DÉJEUNER' : 'SERVICE DU SOIR • DÎNER';
   const dishEmoji = getDishEmoji(recipe, slot);
 
   const cardClasses = [
     'meal-card',
+    isLunch ? 'is-lunch-card' : 'is-dinner-card',
     !isSkipped && slot.validated ? 'is-validated' : '',
     !isSkipped && style === 'pleasure' ? 'is-pleasure' : '',
     !isSkipped && style === 'gourmet' ? 'is-gourmet' : '',
@@ -1854,10 +1890,11 @@ function createMealCardHTML(slot) {
   if (isSkipped) {
     return `
       <article id="meal-card-${slot.slotId}" class="${cardClasses}">
-        <div class="meal-card-header">
-          <span class="slot-label" style="background: #e2e8f0; color: #475569; border-color: #cbd5e1;">
-            ${mealIcon} ${slot.mealLabel} — Ignoré
-          </span>
+        <div class="meal-time-banner ${isLunch ? 'lunch-banner' : 'dinner-banner'} is-skipped-banner">
+          <div class="slot-label-group">
+            <span class="meal-time-icon">${mealIcon}</span>
+            <span class="meal-time-title">${slot.mealLabel} — Ignoré</span>
+          </div>
           <button
             class="btn btn-primary btn-sm"
             onclick="toggleSlotActive('${slot.slotId}')"
@@ -1892,15 +1929,19 @@ function createMealCardHTML(slot) {
   return `
     <article id="meal-card-${slot.slotId}" class="${cardClasses}">
       <div>
-        <div class="meal-card-header">
+        <!-- Bandeau Fort Contraste : MIDI (Solaire Clair) vs SOIR (Indigo Nuit) -->
+        <div class="meal-time-banner ${isLunch ? 'lunch-banner' : 'dinner-banner'}">
           <div class="slot-label-group">
-            <span class="slot-label ${!isLunch ? 'dinner-slot' : ''}">${mealIcon} ${slot.mealLabel}</span>
+            <span class="meal-time-icon">${mealIcon}</span>
+            <div>
+              <div class="meal-time-kicker">${isLunch ? '☀️ MIDI' : '🌙 SOIR'}</div>
+              <div class="meal-time-title">${slot.mealLabel}</div>
+            </div>
             ${slot.validated ? '<span class="chef-stamp-badge">✓ Validé</span>' : ''}
           </div>
           <div class="card-top-badges">
             <button
-              class="btn btn-outline btn-sm"
-              style="padding: 4px 8px; color: #b91c1c; border-color: #fecaca;"
+              class="btn btn-outline btn-sm btn-ignore-slot"
               onclick="toggleSlotActive('${slot.slotId}')"
               title="Ignorer ce repas (repas extérieur / restes)"
             >
@@ -1940,8 +1981,8 @@ function createMealCardHTML(slot) {
           <span style="font-size: 0.82rem; font-weight: 800; color: var(--text-main);">🍽️ À table (${slot.mealLabel.toLowerCase()}) :</span>
           <div style="display: flex; align-items: center; gap: 8px;">
             <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', -1)" aria-label="Moins un convive">−</button>
-            <span id="servings-badge-${slot.slotId}" class="servings-badge" style="min-width: 110px; text-align: center; padding: 4px 10px;">
-              ${slot.servings} ${slot.servings > 1 ? 'convives' : 'convive'}${slot.servings === 2 ? ' (2 adultes)' : ''}
+            <span id="servings-badge-${slot.slotId}" class="servings-badge" style="min-width: 96px; text-align: center; padding: 4px 10px;">
+              ${slot.servings} ${slot.servings > 1 ? 'convives' : 'convive'}
             </span>
             <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus un convive">+</button>
           </div>
@@ -2275,7 +2316,11 @@ function createDayGroupHTML(dayOffset) {
       </div>
 
       <div class="day-meals-pair">
-        ${daySlots.map(createMealCardHTML).join('')}
+        ${daySlots
+          .map(createMealCardHTML)
+          .join(
+            '<div class="lunch-dinner-separator" aria-hidden="true"><span class="sep-sun">☀️ Midi</span><span class="sep-line"></span><span class="sep-moon">🌙 Soir</span></div>'
+          )}
       </div>
 
       ${bottomPagerHTML}
@@ -2367,9 +2412,36 @@ function openRecipeModal(slotId) {
     })
     .join('');
 
-  const stepsHTML = recipe.steps.map((step) => `<li>${step}</li>`).join('');
+  const stepsHTML = recipe.steps
+    .map(
+      (step, idx) => `
+      <li
+        id="recipe-voice-step-${idx}"
+        onclick="speakRecipeStepByIndex(${idx})"
+        style="cursor: pointer; padding: 6px 8px; border-radius: 8px; transition: background 0.2s ease;"
+        title="🔊 Cliquez pour écouter cette étape avec le guide vocal"
+      >
+        ${step} <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-left: 4px;">🔊</span>
+      </li>`
+    )
+    .join('');
   const wineModalHTML = buildWinePairingBoxHTML(recipe, slot, true);
   const nutritionAndSeasonModalHTML = buildNutritionAndSeasonHTML(recipe, slot, false);
+
+  activeModalVoiceContext = {
+    title: recipe.title,
+    servings: slot.servings,
+    ingredients: (recipe.ingredients || []).map((ing) => ({
+      name: ing.name,
+      qtyText: `${formatScaledQty(ing.qty, ratio)} ${ing.unit}`
+    })),
+    steps: recipe.steps || [],
+    dessertTitle: dessert ? dessert.title : null,
+    dessertSteps: dessert ? dessert.steps || [] : [],
+    currentStepIndex: 0
+  };
+
+  const voiceToolbarHTML = buildModalVoiceToolbarHTML();
 
   let dessertSectionHTML = '';
   if (dessert) {
@@ -2424,6 +2496,8 @@ function openRecipeModal(slotId) {
       <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
     </div>
 
+    ${voiceToolbarHTML}
+
     ${nutritionAndSeasonModalHTML}
 
     ${wineModalHTML}
@@ -2438,7 +2512,7 @@ function openRecipeModal(slotId) {
       ${ingredientsHTML}
     </ul>
 
-    <h3 style="font-size: 1rem; font-weight: 800; margin-top: 18px;">👩‍🍳 Étapes de la recette</h3>
+    <h3 style="font-size: 1rem; font-weight: 800; margin-top: 18px;">👩‍🍳 Étapes de la recette <small style="font-weight: 600; font-size: 0.78rem; color: var(--text-muted);">(Touchez une étape pour l'écouter 🔊)</small></h3>
     <ol class="recipe-steps">
       ${stepsHTML}
     </ol>
@@ -2457,6 +2531,9 @@ function openRecipeModal(slotId) {
 }
 
 function closeRecipeModal() {
+  if (typeof stopVoiceGuide === 'function') {
+    stopVoiceGuide();
+  }
   document.getElementById('recipe-modal').classList.remove('open');
 }
 
@@ -3450,7 +3527,7 @@ Format JSON attendu uniquement (sans markdown) :
 // NAVIGATION & PWA
 // ============================================================================
 function switchView(viewName) {
-  const normalizedView = viewName === 'studio' ? 'app' : viewName;
+  const normalizedView = viewName === 'studio' || viewName === 'app' ? 'settings' : viewName;
   if (normalizedView !== 'pantry' && typeof stopPantryCamera === 'function') {
     stopPantryCamera();
   }
@@ -3473,6 +3550,8 @@ function switchView(viewName) {
     renderPantrySection();
   } else if (normalizedView === 'shopping') {
     renderShoppingList();
+  } else if (normalizedView === 'settings' && typeof renderVoiceGuideSettings === 'function') {
+    renderVoiceGuideSettings();
   }
 }
 
@@ -3607,6 +3686,1684 @@ function closeInstallModal() {
 
 async function triggerPwaInstall() {
   return handleInstallAppClick();
+}
+
+// ============================================================================
+// GUIDE VOCAL PAS-À-PAS EN CUISINE, 9 PERSONNALITÉS, RECONNAISSANCE VOCALE
+// ("SUIVANT" / "RÉPÉTER"), ANIMATION DU PERSONNAGE & MAINTIEN ÉCRAN ACTIF
+// ============================================================================
+let activeModalVoiceContext = null;
+
+// Définition des 9 personnalités demandées dans les Paramètres, avec leur caractère,
+// leurs expressions, leurs réglages de voix (genre, hauteur, vitesse) et leur avatar SVG animé
+const VOICE_PERSONAS = {
+  maite: {
+    id: 'maite',
+    name: 'Maïté',
+    shortTitle: 'Cuisine du Sud-Ouest & Générosité',
+    badge: '👩‍🌾 Terroir & Bonne Chère',
+    gender: 'female',
+    basePitch: 1.06,
+    baseRate: 0.96,
+    themeColor: '#b91c1c',
+    themeBg: '#fef2f2',
+    themeBorder: '#fca5a5',
+    particles: ['🦆', '🍲', '🧄', '🍷', '❤️', '🌿'],
+    description: 'Chaleureuse, chantante et généreuse ! Elle vous appelle « mes petits » et fait chanter les cocottes.',
+    sampleQuote: '« Bonjour mes petits ! Attachez votre tablier, aujourd\'hui nous allons cuisiner un bon petit plat qui chante dans la cocotte ! Ne lésinez pas, et quand vous êtes prêt, dites Suivant ! »',
+    buildIntro: (dish, servings) =>
+      `Bonjour mes petits ! Attachez bien votre tablier : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Oh, je sens qu'on va se régaler !`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Allez, faisons le tour du panier pour la préparation des ingrédients avec leurs quantités et leurs poids ! Pour nos ${servings} ${servings > 1 ? 'convives' : 'convive'}, préparez sur la table : ${ingListSpeech}. Ne lésinez pas sur la qualité, mes petits !`,
+    buildOvenAlert: (temp) =>
+      `Attention mes petits, étape très importante : allumez votre four et lancez le préchauffage à ${temp}. Il faut que le four soit bien chaud avant d'enfourner !`,
+    stepIntros: [
+      'Allez, première étape, on attaque de bon cœur :',
+      'Parfait mes petits ! Maintenant, écoutez bien la suite :',
+      'Oh que ça sent déjà bon dans la cuisine ! On continue :',
+      'Un bon coup de poignet pour cette étape :',
+      'Regardez-moi comme ça prend tournure ! Voici la suite :'
+    ],
+    repeatIntro: 'Mais oui mon petit, je te répète cette étape avec plaisir ! Écoute bien :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter pour réécouter.',
+    buildOutro: (dish) =>
+      `Et voilà le travail ! Notre plat « ${dish} » est prêt, ça chante et ça embaume toute la maison ! À table mes petits, servez bien chaud et je vous souhaite un très bon appétit !`
+  },
+
+  lignac: {
+    id: 'lignac',
+    name: 'Cyril Lignac',
+    shortTitle: 'Gourmand, Croquant & Joyeux',
+    badge: '👨‍🍳 Gourmand & Croquant',
+    gender: 'male',
+    basePitch: 1.07,
+    baseRate: 1.04,
+    themeColor: '#d97706',
+    themeBg: '#fffbeb',
+    themeBorder: '#fcd34d',
+    particles: ['✨', '👨‍🍳', '🍋', '🥘', '🌟', '🍴'],
+    description: 'Enthousiaste, souriant et chantant : il apporte du peps, du gourmand et du croquant à chaque étape !',
+    sampleQuote: '« Salut à tous ! Aujourd\'hui nous allons cuisiner une recette ultra gourmande et croquante ! C\'est super simple : quand vous êtes prêt, dites Suivant ! »',
+    buildIntro: (dish, servings) =>
+      `Salut à tous ! Aujourd'hui en cuisine, on va se faire super plaisir : nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Vous allez voir, c'est simple et ultra gourmand !`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `C'est parti pour la préparation des ingrédients avec leurs quantités et leurs poids ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, sortez devant vous : ${ingListSpeech}. Impeccable, on a tout sous la main !`,
+    buildOvenAlert: (temp) =>
+      `Petit réflexe du chef à cette étape : pensez à préchauffer votre four à ${temp} pour avoir une cuisson bien dorée et croustillante !`,
+    stepIntros: [
+      'Allez, c\'est parti pour la première étape :',
+      'Super ! Maintenant on passe à la suite pour amener du gourmand et du croquant :',
+      'Impeccable ! Étape suivante, vous allez voir c\'est un jeu d\'enfant :',
+      'Ça commence à sentir super bon ! On continue :',
+      'Et la petite touche qui amène tout le peps :'
+    ],
+    repeatIntro: 'Pas de souci, on se refait l\'étape en cours tranquillement :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    buildOutro: (dish) =>
+      `Regardez-moi ce plat « ${dish} » ultra gourmand et généreux ! Tout est terminé, régalez-vous bien et très bon appétit à tous !`
+  },
+
+  remy: {
+    id: 'remy',
+    name: 'Rémy (Ratatouille)',
+    shortTitle: 'Le Petit Chef Passionné',
+    badge: '🐭 Petit Chef • Gusteau',
+    gender: 'male',
+    basePitch: 1.24,
+    baseRate: 1.03,
+    themeColor: '#0284c7',
+    themeBg: '#f0f9ff',
+    themeBorder: '#7dd3fc',
+    particles: ['🐭', '🧀', '🌿', '🍅', '✨', '👨‍🍳'],
+    description: 'Le Petit Chef de Ratatouille ! Émerveillé par la magie des saveurs, curieux et plein d\'enthousiasme.',
+    sampleQuote: '« Tout le monde peut cuisiner ! Installez-vous sous votre toque, je guide vos gestes pas à pas. Quand vous êtes prêt, dites Suivant ! »',
+    buildIntro: (dish, servings) =>
+      `Bonjour Chef ! Comme le disait le grand Auguste Gusteau : tout le monde peut cuisiner ! Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} !`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Un grand plat commence par la préparation des ingrédients avec leur quantité exacte ! Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, rassemblez sur votre plan de travail : ${ingListSpeech}. Fermez les yeux une seconde, imaginez déjà ce mariage de saveurs !`,
+    buildOvenAlert: (temp) =>
+      `Hop, petit coup de patte sur le cadran du four : il faut préchauffer votre four à ${temp} dès cette étape pour une cuisson digne d'un grand restaurant parisien !`,
+    stepIntros: [
+      'Première étape, suivez bien mes petites pattes :',
+      'Merveilleux ! Maintenant, associons les saveurs à l\'étape suivante :',
+      'Sentez-vous ce parfum qui monte ? Voici la suite de la recette :',
+      'Attention, geste de vrai chef pour cette étape :',
+      'Encore un petit effort, notre chef-d\'œuvre prend vie :'
+    ],
+    repeatIntro: 'Oups, je m\'emballe sous la toque ! Je vous répète cette étape tout de suite :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    buildOutro: (dish) =>
+      `C'est magnifique ! Notre « ${dish} » est terminé, même Anton Ego en aurait les larmes aux yeux ! Servez à table et... très bon appétit, Chef !`
+  },
+
+  bocuse: {
+    id: 'bocuse',
+    name: 'Paul Bocuse',
+    shortTitle: 'Monsieur Paul • Grande Tradition',
+    badge: '👑 Pape de la Gastronomie',
+    gender: 'male',
+    basePitch: 0.84,
+    baseRate: 0.92,
+    themeColor: '#881337',
+    themeBg: '#fff1f2',
+    themeBorder: '#fda4af',
+    particles: ['👑', '🍷', '🐓', '🧈', '🏅', '🍽️'],
+    description: 'Solennel, bienveillant et amoureux des beaux produits et de la grande tradition gastronomique française.',
+    sampleQuote: '« Bonne cuisine et bon vin, c\'est le paradis sur terre ! En brigade, la précision fait les grands plats. Quand vous êtes prêt, dites Suivant. »',
+    buildIntro: (dish, servings) =>
+      `Bonjour et bienvenue dans notre brigade. Bonne cuisine et bon vin, c'est le paradis sur terre. Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'convives' : 'convive'}, dans les règles de l'art.`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `La grande cuisine commence par une mise en place irréprochable. Passons à la préparation des ingrédients avec leurs poids et quantités pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : ${ingListSpeech}.`,
+    buildOvenAlert: (temp) =>
+      `Point essentiel de la cuisson à cette étape : mettez votre four à préchauffer à ${temp}. La justesse de la chaleur fait la noblesse du plat.`,
+    stepIntros: [
+      'Commençons avec rigueur par la première étape :',
+      'Très bien. Poursuivons notre préparation avec l\'étape suivante :',
+      'Respectons bien les temps de cuisson et les gestes. Étape suivante :',
+      'La gourmandise prend forme dans les règles de l\'art. Continuons :',
+      'Apportons maintenant le plus grand soin à cette étape :'
+    ],
+    repeatIntro: 'En cuisine, la précision est reine. Je vous répète volontiers cette étape :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    buildOutro: (dish) =>
+      `Votre plat « ${dish} » est terminé et prêt à être servi. Félicitations pour ce beau travail de brigade, et je vous souhaite un excellent bon appétit !`
+  },
+
+  marx: {
+    id: 'marx',
+    name: 'Thierry Marx',
+    shortTitle: 'Esprit Zen, Précision & Science',
+    badge: '🥋 Zen & Justesse Thermique',
+    gender: 'male',
+    basePitch: 0.92,
+    baseRate: 0.95,
+    themeColor: '#0f766e',
+    themeBg: '#f0fdfa',
+    themeBorder: '#5eead4',
+    particles: ['🥋', '🔬', '🌿', '💧', '✨', '🍵'],
+    description: 'Calme, zen et d\'une précision chirurgicale sur les températures, les textures et l\'harmonie du geste.',
+    sampleQuote: '« En cuisine comme dans les arts martiaux, tout est question de calme et de justesse. Respirons, et quand vous êtes prêt, dites Suivant. »',
+    buildIntro: (dish, servings) =>
+      `Bonjour. En cuisine comme dans les arts martiaux, tout est question de calme, de justesse et d'attention. Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}.`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Respirons et organisons notre plan de travail. Voici la préparation des ingrédients avec leur quantité et leur poids exacts pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : ${ingListSpeech}. Chaque élément participe à l'équilibre de l'assiette.`,
+    buildOvenAlert: (temp) =>
+      `Maîtrise thermique indispensable à cette étape : engagez le préchauffage de votre four à exactement ${temp} afin de stabiliser la chaleur avant la cuisson.`,
+    stepIntros: [
+      'Entrons dans l\'action avec calme. Première étape :',
+      'Gardons cette belle concentration. Étape suivante :',
+      'Observons la transformation des textures. Poursuivons :',
+      'Précision du geste et maîtrise du temps pour la suite :',
+      'Finalisons maintenant l\'harmonie de notre assiette :'
+    ],
+    repeatIntro: 'Reprenons calmement l\'étape en cours pour que le geste soit parfait :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    buildOutro: (dish) =>
+      `L'équilibre des textures et des saveurs de votre plat « ${dish} » est atteint. Prenez le temps de déguster dans la sérénité. Très bon appétit.`
+  },
+
+  etchebest: {
+    id: 'etchebest',
+    name: 'Philippe Etchebest',
+    shortTitle: 'Chef de Brigade Énergique & Franc',
+    badge: '🔥 Brigade • Rigueur & Cœur',
+    gender: 'male',
+    basePitch: 0.87,
+    baseRate: 1.06,
+    themeColor: '#ea580c',
+    themeBg: '#fff7ed',
+    themeBorder: '#fdba74',
+    particles: ['🔥', '💪', '🔪', '👨‍🍳', '⚡', '🍽️'],
+    description: 'Tonique, direct, exigeant mais au grand cœur ! Il vous motive comme un vrai chef de brigade.',
+    sampleQuote: '« Allez chef, on se bouge en cuisine ! Je veux une mise en place carrée et de l\'envie ! Quand vous êtes prêt, dites Suivant ! »',
+    buildIntro: (dish, servings) =>
+      `Allez, bonjour chef ! On se met en tenue et on se concentre : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Je veux de l'envie, de la rigueur et de la gourmandise !`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Première règle en cuisine : une préparation des ingrédients carrée ! On ne cherche pas ses produits au dernier moment. Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, pesez et préparez immédiatement : ${ingListSpeech}. C'est clair ?`,
+    buildOvenAlert: (temp) =>
+      `Attention chef, ne me faites pas l'erreur d'enfourner à froid ! Vous me préchauffez le four tout de suite à ${temp}, allez hop !`,
+    stepIntros: [
+      'Allez, ça envoie ! Première étape de la recette, on y va :',
+      'Bien ! On garde le rythme chef, étape suivante :',
+      'On reste bien concentré sur sa cuisson, voici la suite :',
+      'On ne lâche rien, on arrive au moment clé :',
+      'Allez, dernière ligne droite, soignez-moi cette étape :'
+    ],
+    repeatIntro: 'Écoute-moi bien chef, je te répète l\'étape une fois pour que ce soit carré :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant ! Et s\'il faut réécouter, dites Répéter.',
+    buildOutro: (dish) =>
+      `Eh bien voilà ! Quand on est organisé et qu'on met du cœur, on sort un super « ${dish} » ! Franchement, beau boulot chef, envoyez à table et bon appétit !`
+  },
+
+  coffe: {
+    id: 'coffe',
+    name: 'Jean-Pierre Coffe',
+    shortTitle: 'Amour du Vrai Produit & Franc-Parler',
+    badge: '👓 Terroir & Authenticité',
+    gender: 'male',
+    basePitch: 0.95,
+    baseRate: 1.03,
+    themeColor: '#15803d',
+    themeBg: '#f0fdf4',
+    themeBorder: '#86efac',
+    particles: ['👓', '🍅', '🥕', '🥖', '🧀', '🌿'],
+    description: 'Passionné des vrais produits du marché, allergique à la malbouffe, théâtral et généreux !',
+    sampleQuote: '« Ah non mes amis, ici ce n\'est pas de la camelote industrielle, c\'est de la vraie cuisine ! Quand vous êtes prêt, dites Suivant ! »',
+    buildIntro: (dish, servings) =>
+      `Ah, mes amis ! Fini les plats industriels sous plastique, ici on fait de la vraie cuisine ! Aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, avec de vrais bons produits !`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Regardez-moi la générosité du marché ! Passons à la préparation des ingrédients avec leur quantité et leur poids pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : ${ingListSpeech}. Ça, mes amis, c'est du vrai produit !`,
+    buildOvenAlert: (temp) =>
+      `Nom d'un chien, n'oubliez surtout pas le four ! Allumez et préchauffez votre four dès maintenant à ${temp} pour saisir les sucs comme il se doit !`,
+    stepIntros: [
+      'Allons-y gaiement avec la première étape :',
+      'Magnifique ! Continuons à choyer nos beaux produits à l\'étape suivante :',
+      'Ah, écoutez-moi ça et respirez ces parfums ! Étape suivante :',
+      'Voilà ce que j\'appelle cuisiner avec sincérité ! La suite :',
+      'Et maintenant, l\'étape qui sublime tout notre plat :'
+    ],
+    repeatIntro: 'Vous n\'avez pas tout saisi ? Mais je vous répète cette étape bien volontiers, écoutez :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant, ou dites Répéter.',
+    buildOutro: (dish) =>
+      `Et voilà un vrai « ${dish} » fait maison, authentique et généreux ! Mettez-vous à table avec ceux que vous aimez, et je vous souhaite un formidable bon appétit !`
+  },
+
+  ia_homme: {
+    id: 'ia_homme',
+    name: 'Voix neutre IA Homme',
+    shortTitle: 'Assistant Vocal IA Masculin Neutre',
+    badge: '🤖👨 IA Neutre Homme',
+    gender: 'male',
+    basePitch: 0.92,
+    baseRate: 1.0,
+    themeColor: '#334155',
+    themeBg: '#f8fafc',
+    themeBorder: '#94a3b8',
+    particles: ['🤖', '🎙️', '🍽️', '⏱️', '✨'],
+    description: 'Voix masculine synthétique neutre, sobre, claire et structurée pour un guidage direct sans fioritures.',
+    sampleQuote: '« Bonjour. Guide vocal IA Homme activé. Nous allons cuisiner votre recette pas à pas. Quand vous êtes prêt, dites Suivant. »',
+    buildIntro: (dish, servings) =>
+      `Bonjour. Nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}.`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Préparation des ingrédients pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}. Voici les quantités et poids nécessaires : ${ingListSpeech}.`,
+    buildOvenAlert: (temp) =>
+      `Préchauffage du four : veuillez préchauffer votre four à ${temp}.`,
+    stepIntros: [
+      'Première étape de la recette :',
+      'Étape suivante :',
+      'Poursuivons avec l\'étape suivante :',
+      'Étape suivante :',
+      'Dernière étape de préparation :'
+    ],
+    repeatIntro: 'Je répète l\'étape en cours :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant. Pour réécouter, dites Répéter.',
+    buildOutro: (dish) =>
+      `La préparation de « ${dish} » est terminée. Je vous souhaite un très bon appétit.`
+  },
+
+  ia_femme: {
+    id: 'ia_femme',
+    name: 'Voix neutre IA Femme',
+    shortTitle: 'Assistante Vocale IA Féminine Neutre',
+    badge: '🤖👩 IA Neutre Femme',
+    gender: 'female',
+    basePitch: 1.1,
+    baseRate: 1.0,
+    themeColor: '#4f46e5',
+    themeBg: '#eef2ff',
+    themeBorder: '#a5b4fc',
+    particles: ['🤖', '🎙️', '🥗', '⏱️', '✨'],
+    description: 'Voix féminine synthétique neutre, douce, fluide et précise pour un accompagnement clair étape par étape.',
+    sampleQuote: '« Bonjour. Guide vocal IA Femme activé. Nous allons cuisiner votre recette pas à pas. Quand vous êtes prêt, dites Suivant. »',
+    buildIntro: (dish, servings) =>
+      `Bonjour. Nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}.`,
+    buildIngredients: (servings, ingListSpeech) =>
+      `Préparation des ingrédients pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}. Voici les quantités et poids nécessaires : ${ingListSpeech}.`,
+    buildOvenAlert: (temp) =>
+      `Préchauffage du four : veuillez préchauffer votre four à ${temp}.`,
+    stepIntros: [
+      'Première étape de la recette :',
+      'Étape suivante :',
+      'Poursuivons avec l\'étape suivante :',
+      'Étape suivante :',
+      'Dernière étape de préparation :'
+    ],
+    repeatIntro: 'Je répète l\'étape en cours :',
+    promptNext: 'Quand vous êtes prêt, dites Suivant. Pour réécouter, dites Répéter.',
+    buildOutro: (dish) =>
+      `La préparation de « ${dish} » est terminée. Je vous souhaite un très bon appétit.`
+  }
+};
+
+function getActiveVoicePersona() {
+  const personaId = state.voiceSettings?.persona || 'lignac';
+  return VOICE_PERSONAS[personaId] || VOICE_PERSONAS.lignac;
+}
+
+// Illustration SVG animée sur-mesure pour chacun des 9 personnages
+function buildPersonaAnimatedAvatarSVG(personaId) {
+  switch (personaId) {
+    case 'maite':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+          <!-- Coiffe / Foulard landais rouge à pois -->
+          <path d="M22 52 C22 22, 98 22, 98 52 Z" fill="#dc2626"/>
+          <circle cx="42" cy="34" r="3" fill="#fff"/>
+          <circle cx="60" cy="29" r="3" fill="#fff"/>
+          <circle cx="78" cy="34" r="3" fill="#fff"/>
+          <!-- Cheveux bruns chaleureux -->
+          <circle cx="26" cy="58" r="10" fill="#451a03"/>
+          <circle cx="94" cy="58" r="10" fill="#451a03"/>
+          <!-- Visage rond et souriant -->
+          <circle cx="60" cy="64" r="28" fill="#fde68a"/>
+          <!-- Joues roses généreuses -->
+          <circle cx="42" cy="68" r="6" fill="#f87171" opacity="0.55"/>
+          <circle cx="78" cy="68" r="6" fill="#f87171" opacity="0.55"/>
+          <!-- Yeux rieurs -->
+          <path d="M44 56 Q48 51 52 56" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M68 56 Q72 51 76 56" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <!-- Bouche animée -->
+          <ellipse class="svg-mouth" cx="60" cy="75" rx="9" ry="5" fill="#991b1b"/>
+          <!-- Tablier & Cocotte -->
+          <path d="M32 92 Q60 104 88 92 L94 114 L26 114 Z" fill="#dc2626"/>
+          <rect x="44" y="96" width="32" height="14" rx="5" fill="#7f1d1d"/>
+        </svg>
+      `;
+    case 'lignac':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#fef3c7" stroke="#f59e0b" stroke-width="3"/>
+          <!-- Cheveux châtains dynamiques -->
+          <path d="M32 48 C30 24, 90 24, 88 48 Z" fill="#78350f"/>
+          <path d="M38 28 Q55 18 76 26" stroke="#92400e" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <!-- Visage souriant -->
+          <circle cx="60" cy="60" r="26" fill="#fed7aa"/>
+          <circle cx="44" cy="65" r="5" fill="#fb923c" opacity="0.45"/>
+          <circle cx="76" cy="65" r="5" fill="#fb923c" opacity="0.45"/>
+          <!-- Yeux pétillants -->
+          <circle cx="49" cy="54" r="3.2" fill="#1e293b"/>
+          <circle cx="71" cy="54" r="3.2" fill="#1e293b"/>
+          <path d="M44 48 Q49 45 54 48" stroke="#78350f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M66 48 Q71 45 76 48" stroke="#78350f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Grand sourire gourmand -->
+          <ellipse class="svg-mouth" cx="60" cy="70" rx="10" ry="5.5" fill="#b91c1c"/>
+          <!-- Veste de chef blanche & foulard ambre -->
+          <path d="M30 90 Q60 100 90 90 L96 114 L24 114 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+          <path d="M46 88 L60 98 L74 88" fill="#f59e0b"/>
+        </svg>
+      `;
+    case 'remy':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#e0f2fe" stroke="#0284c7" stroke-width="3"/>
+          <!-- Grande Toque de Chef de Rémy -->
+          <path d="M38 42 C30 14, 90 14, 82 42 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <rect x="40" y="38" width="40" height="8" rx="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+          <!-- Grandes oreilles roses de Petit Chef -->
+          <circle cx="28" cy="54" r="14" fill="#64748b"/>
+          <circle cx="28" cy="54" r="9" fill="#fda4af"/>
+          <circle cx="92" cy="54" r="14" fill="#64748b"/>
+          <circle cx="92" cy="54" r="9" fill="#fda4af"/>
+          <!-- Tête bleu-gris de Rémy -->
+          <ellipse cx="60" cy="66" rx="25" ry="22" fill="#64748b"/>
+          <ellipse cx="60" cy="70" rx="16" ry="13" fill="#cbd5e1"/>
+          <!-- Yeux expressifs -->
+          <circle cx="50" cy="58" r="4" fill="#ffffff"/>
+          <circle cx="50" cy="58" r="2.2" fill="#0f172a"/>
+          <circle cx="70" cy="58" r="4" fill="#ffffff"/>
+          <circle cx="70" cy="58" r="2.2" fill="#0f172a"/>
+          <!-- Petit museau rose & moustaches -->
+          <circle cx="60" cy="68" r="4.5" fill="#fb7185"/>
+          <line x1="26" y1="68" x2="45" y2="70" stroke="#e2e8f0" stroke-width="1.8"/>
+          <line x1="26" y1="74" x2="45" y2="73" stroke="#e2e8f0" stroke-width="1.8"/>
+          <line x1="94" y1="68" x2="75" y2="70" stroke="#e2e8f0" stroke-width="1.8"/>
+          <line x1="94" y1="74" x2="75" y2="73" stroke="#e2e8f0" stroke-width="1.8"/>
+          <!-- Bouche animée -->
+          <ellipse class="svg-mouth" cx="60" cy="78" rx="6.5" ry="4" fill="#be123c"/>
+        </svg>
+      `;
+    case 'bocuse':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#ffe4e6" stroke="#be123c" stroke-width="3"/>
+          <!-- Haute Toque Traditionnelle de Monsieur Paul -->
+          <rect x="38" y="10" width="44" height="34" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <line x1="48" y1="14" x2="48" y2="40" stroke="#cbd5e1" stroke-width="1.5"/>
+          <line x1="60" y1="12" x2="60" y2="40" stroke="#cbd5e1" stroke-width="1.5"/>
+          <line x1="72" y1="14" x2="72" y2="40" stroke="#cbd5e1" stroke-width="1.5"/>
+          <!-- Visage noble et bienveillant -->
+          <circle cx="60" cy="64" r="24" fill="#fde68a"/>
+          <!-- Sourcils blancs & yeux -->
+          <path d="M44 52 Q49 49 54 52" stroke="#f8fafc" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M66 52 Q71 49 76 52" stroke="#f8fafc" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <circle cx="49" cy="57" r="2.8" fill="#1e293b"/>
+          <circle cx="71" cy="57" r="2.8" fill="#1e293b"/>
+          <!-- Bouche animée -->
+          <ellipse class="svg-mouth" cx="60" cy="73" rx="8" ry="4.5" fill="#881337"/>
+          <!-- Veste MOF Col Bleu-Blanc-Rouge -->
+          <path d="M30 90 Q60 100 90 90 L96 114 L24 114 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+          <path d="M42 88 Q60 98 78 88" stroke="#1d4ed8" stroke-width="3.5" fill="none"/>
+          <path d="M44 92 Q60 102 76 92" stroke="#dc2626" stroke-width="3.5" fill="none"/>
+        </svg>
+      `;
+    case 'marx':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#ccfbf1" stroke="#0d9488" stroke-width="3"/>
+          <!-- Crâne chauve zen emblématique -->
+          <circle cx="60" cy="58" r="26" fill="#fed7aa"/>
+          <!-- Lunettes rondes design -->
+          <circle cx="49" cy="55" r="7.5" fill="none" stroke="#0f172a" stroke-width="2.8"/>
+          <circle cx="71" cy="55" r="7.5" fill="none" stroke="#0f172a" stroke-width="2.8"/>
+          <line x1="56.5" y1="55" x2="63.5" y2="55" stroke="#0f172a" stroke-width="2.8"/>
+          <circle cx="49" cy="55" r="2.3" fill="#0f172a"/>
+          <circle cx="71" cy="55" r="2.3" fill="#0f172a"/>
+          <!-- Bouche calme animée -->
+          <ellipse class="svg-mouth" cx="60" cy="71" rx="7" ry="4" fill="#0f766e"/>
+          <!-- Veste kimono zen -->
+          <path d="M30 88 L60 102 L90 88 L96 114 L24 114 Z" fill="#1e293b"/>
+          <path d="M45 86 L60 102 L75 86" stroke="#5eead4" stroke-width="3" fill="none"/>
+        </svg>
+      `;
+    case 'etchebest':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#ffedd5" stroke="#ea580c" stroke-width="3"/>
+          <!-- Carrure solide & visage énergique -->
+          <circle cx="60" cy="58" r="26" fill="#fdba74"/>
+          <path d="M36 44 Q60 28 84 44" fill="#475569"/>
+          <!-- Sourcils froncés motivés de Chef -->
+          <line x1="42" y1="47" x2="54" y2="51" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="78" y1="47" x2="66" y2="51" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="49" cy="55" r="3" fill="#0f172a"/>
+          <circle cx="71" cy="55" r="3" fill="#0f172a"/>
+          <!-- Bouc / barbe courte & bouche dynamique -->
+          <path d="M46 68 Q60 84 74 68" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+          <ellipse class="svg-mouth" cx="60" cy="71" rx="9.5" ry="5.5" fill="#9a3412"/>
+          <!-- Veste Chef sombre col MOF -->
+          <path d="M26 88 Q60 100 94 88 L98 114 L22 114 Z" fill="#0f172a"/>
+          <path d="M44 88 Q60 96 76 88" stroke="#3b82f6" stroke-width="3" fill="none"/>
+          <path d="M46 91 Q60 99 74 91" stroke="#ef4444" stroke-width="3" fill="none"/>
+        </svg>
+      `;
+    case 'coffe':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#dcfce7" stroke="#16a34a" stroke-width="3"/>
+          <!-- Cheveux blancs sur les côtés -->
+          <circle cx="32" cy="56" r="9" fill="#f1f5f9"/>
+          <circle cx="88" cy="56" r="9" fill="#f1f5f9"/>
+          <!-- Visage expressif -->
+          <circle cx="60" cy="58" r="25" fill="#fde68a"/>
+          <!-- Célèbres lunettes rondes colorées de Jean-Pierre Coffe -->
+          <circle cx="48" cy="55" r="8.5" fill="rgba(255,255,255,0.5)" stroke="#dc2626" stroke-width="3.5"/>
+          <circle cx="72" cy="55" r="8.5" fill="rgba(255,255,255,0.5)" stroke="#dc2626" stroke-width="3.5"/>
+          <line x1="56.5" y1="55" x2="63.5" y2="55" stroke="#dc2626" stroke-width="3.5"/>
+          <circle cx="48" cy="55" r="2.5" fill="#1e293b"/>
+          <circle cx="72" cy="55" r="2.5" fill="#1e293b"/>
+          <!-- Bouche expressive animée -->
+          <ellipse class="svg-mouth" cx="60" cy="72" rx="9" ry="5" fill="#991b1b"/>
+          <!-- Gilet du marché & foulard vert -->
+          <path d="M30 88 Q60 100 90 88 L96 114 L24 114 Z" fill="#15803d"/>
+          <path d="M46 87 L60 100 L74 87" fill="#fef08a"/>
+        </svg>
+      `;
+    case 'ia_homme':
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#e2e8f0" stroke="#334155" stroke-width="3"/>
+          <circle cx="60" cy="60" r="46" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="6 4"/>
+          <!-- Casque & Avatar IA Masculin -->
+          <rect x="34" y="32" width="52" height="48" rx="18" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
+          <!-- Yeux LED bleus -->
+          <rect x="44" y="48" width="10" height="6" rx="3" fill="#38bdf8"/>
+          <rect x="66" y="48" width="10" height="6" rx="3" fill="#38bdf8"/>
+          <!-- Onde vocale bouche IA -->
+          <ellipse class="svg-mouth" cx="60" cy="66" rx="11" ry="4" fill="#38bdf8"/>
+          <!-- Corps IA -->
+          <path d="M34 90 Q60 98 86 90 L92 114 L28 114 Z" fill="#334155"/>
+        </svg>
+      `;
+    case 'ia_femme':
+    default:
+      return `
+        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
+          <circle cx="60" cy="60" r="54" fill="#e0e7ff" stroke="#4f46e5" stroke-width="3"/>
+          <circle cx="60" cy="60" r="46" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="6 4"/>
+          <!-- Avatar IA Féminin -->
+          <rect x="34" y="32" width="52" height="48" rx="22" fill="#312e81" stroke="#c084fc" stroke-width="2.5"/>
+          <!-- Yeux LED lumineux -->
+          <circle cx="49" cy="51" r="4" fill="#e879f9"/>
+          <circle cx="71" cy="51" r="4" fill="#e879f9"/>
+          <!-- Onde vocale bouche IA -->
+          <ellipse class="svg-mouth" cx="60" cy="66" rx="10" ry="4" fill="#e879f9"/>
+          <!-- Corps IA -->
+          <path d="M34 90 Q60 98 86 90 L92 114 L28 114 Z" fill="#4338ca"/>
+        </svg>
+      `;
+  }
+}
+
+// ============================================================================
+// MAINTIEN DU SMARTPHONE ACTIF DURANT LE MODE VOCAL (WAKE LOCK + AUDIO KEEP-ALIVE)
+// ============================================================================
+let screenWakeLockSentinel = null;
+let wakeLockKeepAliveAudioCtx = null;
+let wakeLockKeepAliveTimer = null;
+
+async function acquireKitchenWakeLock() {
+  // 1. Screen Wake Lock API standard (Android Chrome, iOS 16.4+, Edge)
+  if ('wakeLock' in navigator && navigator.wakeLock && typeof navigator.wakeLock.request === 'function') {
+    try {
+      if (!screenWakeLockSentinel || screenWakeLockSentinel.released) {
+        screenWakeLockSentinel = await navigator.wakeLock.request('screen');
+        screenWakeLockSentinel.addEventListener('release', () => {
+          updateWakeLockBadgeUI(false);
+        });
+      }
+      updateWakeLockBadgeUI(true);
+    } catch (err) {
+      // Fallback silencieux si refusé ou en arrière-plan
+    }
+  }
+
+  // 2. Fallback Audio Keep-Alive inaudible pour empêcher la mise en veille sur tous les smartphones
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      if (!wakeLockKeepAliveAudioCtx) {
+        wakeLockKeepAliveAudioCtx = new AudioCtx();
+      }
+      if (wakeLockKeepAliveAudioCtx.state === 'suspended') {
+        await wakeLockKeepAliveAudioCtx.resume().catch(() => {});
+      }
+      if (!wakeLockKeepAliveTimer) {
+        wakeLockKeepAliveTimer = setInterval(() => {
+          if (!voiceGuideSession.active || !wakeLockKeepAliveAudioCtx) return;
+          try {
+            if (wakeLockKeepAliveAudioCtx.state === 'suspended') {
+              wakeLockKeepAliveAudioCtx.resume().catch(() => {});
+            }
+            const osc = wakeLockKeepAliveAudioCtx.createOscillator();
+            const gain = wakeLockKeepAliveAudioCtx.createGain();
+            gain.gain.value = 0.0001; // Totalement inaudible mais garde le thread média mobile éveillé
+            osc.connect(gain);
+            gain.connect(wakeLockKeepAliveAudioCtx.destination);
+            osc.start();
+            osc.stop(wakeLockKeepAliveAudioCtx.currentTime + 0.05);
+          } catch (e) {}
+        }, 15000);
+      }
+    }
+  } catch (e) {}
+
+  updateWakeLockBadgeUI(true);
+}
+
+async function releaseKitchenWakeLock() {
+  if (screenWakeLockSentinel) {
+    try {
+      await screenWakeLockSentinel.release();
+    } catch (e) {}
+    screenWakeLockSentinel = null;
+  }
+  if (wakeLockKeepAliveTimer) {
+    clearInterval(wakeLockKeepAliveTimer);
+    wakeLockKeepAliveTimer = null;
+  }
+  updateWakeLockBadgeUI(false);
+}
+
+function updateWakeLockBadgeUI(isActive) {
+  const badge = document.getElementById('voice-wakelock-badge');
+  if (badge) {
+    badge.style.display = isActive ? 'inline-flex' : 'none';
+  }
+}
+
+// Ré-acquérir automatiquement le Wake Lock si l'utilisateur revient sur l'application pendant le mode vocal
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && voiceGuideSession && voiceGuideSession.active) {
+    acquireKitchenWakeLock();
+  }
+});
+
+// ============================================================================
+// ÉTAT DE LA SESSION DE GUIDAGE VOCAL PAS-À-PAS & RECONNAISSANCE VOCALE
+// ============================================================================
+let voiceGuideSession = {
+  active: false,
+  isSpeaking: false,
+  isListening: false,
+  finished: false,
+  sequence: [], // [{ type: 'intro' | 'ingredients' | 'step' | 'outro', title, visualText, spokenText, ovenTemp, recipeStepIdx }]
+  currentIndex: 0,
+  recognition: null,
+  lastSpokenEndTime: 0,
+  restartRecTimer: null
+};
+
+// Conversion naturelle des unités de cuisine pour la synthèse vocale
+function formatQtyUnitForSpeech(qtyStr, unitStr, ingName) {
+  const q = String(qtyStr || '').trim().replace('.', ',');
+  const u = String(unitStr || '').trim().toLowerCase();
+  let spokenUnit = unitStr || '';
+
+  if (u === 'g' || u === 'gr' || u === 'gramme' || u === 'grammes') {
+    spokenUnit = 'grammes';
+  } else if (u === 'kg' || u === 'kilo' || u === 'kilos') {
+    spokenUnit = 'kilos';
+  } else if (u === 'ml') {
+    spokenUnit = 'millilitres';
+  } else if (u === 'cl') {
+    spokenUnit = 'centilitres';
+  } else if (u === 'l' || u === 'litre' || u === 'litres') {
+    spokenUnit = 'litre';
+  } else if (u === 'c. à soupe' || u === 'c.à.s' || u === 'cas') {
+    spokenUnit = 'cuillère à soupe';
+  } else if (u === 'c. à café' || u === 'c.à.c' || u === 'cac') {
+    spokenUnit = 'cuillère à café';
+  } else if (u === 'pièce' || u === 'pièces') {
+    return `${q} ${ingName}`;
+  }
+
+  const startsWithVowel = /^[aeiouyéèêëîïôùûüœh]/i.test(ingName || '');
+  const prep = startsWithVowel ? "d'" : 'de ';
+  return `${q} ${spokenUnit} ${prep}${ingName}`;
+}
+
+// Analyse intelligente du préchauffage du four et de la température dans la recette
+function analyzeRecipeOvenRequirements(title, steps) {
+  const allText = [title || '', ...(steps || [])].join(' ');
+  const usesOven = /\b(four|enfourner|enfournant|préchauffer|prechauffer|gratin|gratiner|papillote)\b/i.test(allText);
+  if (!usesOven) {
+    return { usesOven: false, tempText: null, preheatStepIdx: -1, bakeStepIdx: -1 };
+  }
+
+  // Chercher une température explicite (ex: "180°C", "190 °C", "200 degrés", "thermostat 6")
+  let tempText = '180°C';
+  const tempMatch = allText.match(/(\d{3})\s*(?:°\s*c|°|degrés|degres)/i);
+  if (tempMatch) {
+    tempText = `${tempMatch[1]}°C`;
+  } else if (/gril/i.test(allText)) {
+    tempText = '210°C (mode gril)';
+  }
+
+  let preheatStepIdx = -1;
+  let bakeStepIdx = -1;
+  (steps || []).forEach((st, idx) => {
+    if (preheatStepIdx === -1 && /préchauff|prechauff/i.test(st)) {
+      preheatStepIdx = idx;
+    }
+    if (bakeStepIdx === -1 && /\b(four|enfourner|gratin|papillote)\b/i.test(st)) {
+      bakeStepIdx = idx;
+    }
+  });
+
+  // Si la recette enfourne à une étape mais n'a pas mentionné "préchauffer" avant,
+  // on place l'alerte de préchauffage dès la 1ère étape de préparation pour que le four soit chaud à temps !
+  if (preheatStepIdx === -1) {
+    preheatStepIdx = 0;
+  }
+
+  return {
+    usesOven: true,
+    tempText,
+    preheatStepIdx,
+    bakeStepIdx
+  };
+}
+
+// Construire la séquence complète pas-à-pas selon le plat et la personnalité choisie
+function buildStepByStepVoiceSequence(ctx) {
+  const persona = getActiveVoicePersona();
+  const dish = ctx.title || 'notre plat du jour';
+  const servings = ctx.servings || 2;
+  const sequence = [];
+
+  // 1. D'abord le nom du plat préparé : "Nous allons cuisiner 'nom du plat'"
+  const introMain = persona.buildIntro(dish, servings);
+  sequence.push({
+    type: 'intro',
+    badge: '1️⃣ Présentation du plat',
+    title: `🍽️ Nous allons cuisiner « ${dish} »`,
+    visualText: `${introMain}`,
+    spokenText: `${introMain} ${persona.promptNext}`,
+    repeatSpokenText: `${persona.repeatIntro} ${introMain} ${persona.promptNext}`,
+    ovenTemp: null,
+    recipeStepIdx: -1
+  });
+
+  // 2. Puis préparation des ingrédients avec leur quantité ou poids
+  const ingSpeechParts = (ctx.ingredients || []).map((ing) =>
+    formatQtyUnitForSpeech(ing.qtyRaw || ing.qtyText.split(' ')[0], ing.unitRaw || ing.qtyText.split(' ').slice(1).join(' '), ing.name)
+  );
+  const ingVisualList = (ctx.ingredients || []).map((ing) => `• <strong>${ing.qtyText}</strong> — ${ing.name}`).join('<br/>');
+  const ingMainSpeech = persona.buildIngredients(servings, ingSpeechParts.join(', '));
+
+  sequence.push({
+    type: 'ingredients',
+    badge: '2️⃣ Préparation des ingrédients (Quantités & Poids)',
+    title: `🛒 Préparation des ingrédients (${servings} ${servings > 1 ? 'parts' : 'part'})`,
+    visualText: ingVisualList || 'Préparez vos ingrédients sur le plan de travail.',
+    spokenText: `${ingMainSpeech} ${persona.promptNext}`,
+    repeatSpokenText: `${persona.repeatIntro} ${ingMainSpeech} ${persona.promptNext}`,
+    ovenTemp: null,
+    recipeStepIdx: -1
+  });
+
+  // 3. Puis étapes de la recette (avec détection du préchauffage du four et de sa température à la bonne étape)
+  const rawSteps = ctx.steps || [];
+  const ovenInfo = analyzeRecipeOvenRequirements(dish, rawSteps);
+
+  rawSteps.forEach((stepText, idx) => {
+    const stepNum = idx + 1;
+    const totalSteps = rawSteps.length;
+    const introPhrase = persona.stepIntros[idx % persona.stepIntros.length] || `Étape ${stepNum} :`;
+    const isPreheatStep = ovenInfo.usesOven && ovenInfo.preheatStepIdx === idx;
+    const isBakeStep = ovenInfo.usesOven && ovenInfo.bakeStepIdx === idx && idx !== ovenInfo.preheatStepIdx;
+
+    let spokenStepBody = stepText.replace(/°C/gi, ' degrés Celsius ');
+    let ovenPrefixSpeech = '';
+    let ovenVisualCallout = null;
+
+    if (isPreheatStep) {
+      ovenVisualCallout = `🔥 Préchauffage du four : ${ovenInfo.tempText}`;
+      // Si l'étape ne contient pas déjà les mots "préchauffer le four", on l'ajoute vocalement avec le caractère du chef
+      if (!/préchauff|prechauff/i.test(stepText)) {
+        ovenPrefixSpeech = `${persona.buildOvenAlert(ovenInfo.tempText.replace('°C', ' degrés Celsius'))} Ensuite : `;
+      } else if (!/\d{3}/.test(stepText)) {
+        ovenPrefixSpeech = `Préchauffez le four à ${ovenInfo.tempText.replace('°C', ' degrés Celsius')}. `;
+      } else {
+        ovenPrefixSpeech = `${persona.buildOvenAlert(ovenInfo.tempText.replace('°C', ' degrés Celsius'))} `;
+      }
+    } else if (isBakeStep) {
+      ovenVisualCallout = `🔥 Cuisson au four : ${ovenInfo.tempText}`;
+      if (!/\d{3}/.test(stepText)) {
+        spokenStepBody += ` (dans votre four préchauffé à ${ovenInfo.tempText.replace('°C', ' degrés Celsius')}).`;
+      }
+    }
+
+    const fullStepSpeech = `Étape ${stepNum} sur ${totalSteps}. ${introPhrase} ${ovenPrefixSpeech}${spokenStepBody}`;
+
+    sequence.push({
+      type: 'step',
+      badge: `👩‍🍳 Étape ${stepNum} / ${totalSteps} de la recette`,
+      title: `Étape ${stepNum} sur ${totalSteps}`,
+      visualText: stepText,
+      spokenText: `${fullStepSpeech} ${persona.promptNext}`,
+      repeatSpokenText: `${persona.repeatIntro} ${fullStepSpeech} ${persona.promptNext}`,
+      ovenTemp: ovenVisualCallout,
+      recipeStepIdx: idx
+    });
+  });
+
+  // 4. Quand tout est terminé, souhaiter un bon appétit !
+  const outroMain = persona.buildOutro(dish);
+  sequence.push({
+    type: 'outro',
+    badge: '🎉 Recette terminée • Bon appétit !',
+    title: `🍽️ Bon appétit avec ${persona.name} !`,
+    visualText: outroMain,
+    spokenText: outroMain,
+    repeatSpokenText: outroMain,
+    ovenTemp: null,
+    recipeStepIdx: -1
+  });
+
+  return sequence;
+}
+
+// ============================================================================
+// CONFIGURATION DES VOIX SYSTÈME & ADAPTATION AU GENRE DE LA PERSONNALITÉ
+// ============================================================================
+function setupVoiceGuide() {
+  if (!state.voiceSettings) {
+    state.voiceSettings = {
+      persona: 'lignac',
+      voiceURI: 'auto',
+      rate: 1.0,
+      pitch: 1.0,
+      frenchOnly: true
+    };
+  }
+  if (!state.voiceSettings.persona || !VOICE_PERSONAS[state.voiceSettings.persona]) {
+    state.voiceSettings.persona = 'lignac';
+  }
+
+  renderVoiceGuideSettings();
+
+  if ('speechSynthesis' in window) {
+    if (typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+      window.speechSynthesis.onvoiceschanged = () => {
+        renderVoiceGuideSettings();
+      };
+    }
+    setTimeout(renderVoiceGuideSettings, 250);
+    setTimeout(renderVoiceGuideSettings, 1000);
+  }
+}
+
+function getSortedSpeechVoices(frenchOnly = true) {
+  if (!('speechSynthesis' in window)) return [];
+  const rawVoices = window.speechSynthesis.getVoices() || [];
+  const isFrenchVoice = (v) => /^fr([-_]|$)/i.test(v.lang || '') || /french|français|francais/i.test(v.name || '');
+
+  const scoreVoiceQuality = (v) => {
+    let score = 0;
+    const name = (v.name || '').toLowerCase();
+    const lang = (v.lang || '').toLowerCase();
+    if (isFrenchVoice(v)) score += 100;
+    if (lang === 'fr-fr' || lang === 'fr_fr') score += 30;
+    if (name.includes('natural') || name.includes('neural') || name.includes('premium') || name.includes('enhanced')) score += 45;
+    if (name.includes('google') || name.includes('denise') || name.includes('henri') || name.includes('eloise') || name.includes('paul') || name.includes('julie') || name.includes('thomas') || name.includes('hortense') || name.includes('audrey')) score += 25;
+    if (v.default) score += 10;
+    return score;
+  };
+
+  let filtered = frenchOnly ? rawVoices.filter(isFrenchVoice) : [...rawVoices];
+  if (frenchOnly && filtered.length === 0 && rawVoices.length > 0) {
+    filtered = [...rawVoices];
+  }
+
+  filtered.sort((a, b) => {
+    const diff = scoreVoiceQuality(b) - scoreVoiceQuality(a);
+    if (diff !== 0) return diff;
+    return (a.name || '').localeCompare(b.name || '', 'fr');
+  });
+
+  return filtered;
+}
+
+function guessVoiceGender(voice) {
+  const n = ((voice && voice.name) || '').toLowerCase();
+  if (/henri|paul|thomas|daniel|mathieu|nicolas|claude|jerome|jérôme|alain|pierre|lucas|gabriel|male|homme/i.test(n)) {
+    return 'male';
+  }
+  if (/denise|julie|hortense|eloise|éloïse|amelie|amélie|audrey|marie|celine|céline|brigitte|vivienne|female|femme/i.test(n)) {
+    return 'female';
+  }
+  return 'unknown';
+}
+
+function resolveActiveSpeechVoice(preferredGender) {
+  if (!('speechSynthesis' in window)) return null;
+  const allVoices = window.speechSynthesis.getVoices() || [];
+  if (allVoices.length === 0) return null;
+
+  const targetURI = state.voiceSettings?.voiceURI || 'auto';
+  if (targetURI !== 'auto') {
+    const exact = allVoices.find((v) => v.voiceURI === targetURI || v.name === targetURI);
+    if (exact) return exact;
+  }
+
+  const persona = getActiveVoicePersona();
+  const targetGender = preferredGender || persona.gender || 'male';
+  const frenchVoices = getSortedSpeechVoices(true);
+
+  if (frenchVoices.length > 0) {
+    const genderMatched = frenchVoices.find((v) => guessVoiceGender(v) === targetGender);
+    if (genderMatched) return genderMatched;
+    return frenchVoices[0];
+  }
+
+  return allVoices[0] || null;
+}
+
+function formatVoiceOptionLabel(voice) {
+  const isFr = /^fr([-_]|$)/i.test(voice.lang || '') || /french|français|francais/i.test(voice.name || '');
+  const flag = isFr ? '🇫🇷' : '🌍';
+  const cleanName = (voice.name || 'Voix système').replace(/^Microsoft\s+/i, 'Microsoft ');
+  const isNatural = /natural|neural|premium|enhanced|google/i.test(cleanName);
+  const badge = isNatural ? ' ✨ Haute qualité' : '';
+  return `${flag} ${cleanName} (${voice.lang || 'fr-FR'})${badge}`;
+}
+
+function selectVoicePersona(personaId, playSample = false) {
+  if (!VOICE_PERSONAS[personaId]) return;
+  if (!state.voiceSettings) {
+    state.voiceSettings = { persona: personaId, voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
+  } else {
+    state.voiceSettings.persona = personaId;
+    // Remettre le timbre système en auto pour qu'il choisisse automatiquement la voix homme/femme adaptée
+    state.voiceSettings.voiceURI = 'auto';
+  }
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+
+  // Si une fiche cuisine est ouverte, mettre à jour le bandeau et le guide vocal en direct
+  const modalEl = document.getElementById('recipe-modal');
+  if (modalEl && modalEl.classList.contains('open') && activeModalVoiceContext) {
+    const container = document.getElementById('modal-voice-guide-wrapper');
+    if (container) {
+      if (voiceGuideSession.active) {
+        const currentIdx = voiceGuideSession.currentIndex;
+        voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
+        voiceGuideSession.currentIndex = Math.min(currentIdx, voiceGuideSession.sequence.length - 1);
+        renderActiveVoiceStageUI();
+        speakCurrentStepInGuide(false);
+        return;
+      } else {
+        container.innerHTML = buildModalVoiceToolbarHTML();
+      }
+    }
+  }
+
+  const p = VOICE_PERSONAS[personaId];
+  showToast(`🎙️ Assistant vocal : ${p.name} (${p.shortTitle})`);
+
+  if (playSample) {
+    testSelectedVoiceGuide();
+  }
+}
+
+function renderVoiceGuideSettings() {
+  const vs = state.voiceSettings || { persona: 'lignac', voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
+  const activePersona = getActiveVoicePersona();
+
+  // Mettre à jour la pastille en haut des Paramètres
+  const statusPill = document.getElementById('voice-guide-status-pill');
+  if (statusPill && !voiceGuideSession.isSpeaking) {
+    statusPill.textContent = `🎙️ Voix active : ${activePersona.name}`;
+    statusPill.className = 'meta-pill healthy-pill';
+  }
+
+  // Mettre à jour le menu déroulant des personnalités
+  const personaSelect = document.getElementById('voice-persona-select');
+  if (personaSelect) {
+    personaSelect.value = activePersona.id;
+  }
+
+  // Rendre la grille de cartes des 9 personnalités dans les Paramètres
+  const personaGrid = document.getElementById('voice-persona-grid');
+  if (personaGrid) {
+    personaGrid.innerHTML = Object.values(VOICE_PERSONAS)
+      .map((p) => {
+        const isSelected = p.id === activePersona.id;
+        return `
+          <div
+            class="voice-persona-card ${isSelected ? 'is-selected' : ''}"
+            style="--persona-color: ${p.themeColor}; --persona-bg: ${p.themeBg}; --persona-border: ${p.themeBorder};"
+            onclick="selectVoicePersona('${p.id}', false)"
+          >
+            <div class="voice-persona-card-top">
+              <div class="voice-persona-avatar-mini ${isSelected && voiceGuideSession.isSpeaking ? 'is-speaking' : ''}">
+                ${buildPersonaAnimatedAvatarSVG(p.id)}
+              </div>
+              <div class="voice-persona-meta">
+                <div class="voice-persona-name-row">
+                  <strong>${p.name}</strong>
+                  ${isSelected ? '<span class="voice-persona-active-tag">✓ Choisi</span>' : ''}
+                </div>
+                <span class="voice-persona-badge">${p.badge}</span>
+                <p class="voice-persona-desc">${p.description}</p>
+              </div>
+            </div>
+            <div class="voice-persona-quote">${p.sampleQuote}</div>
+            <div class="voice-persona-actions">
+              <button
+                type="button"
+                class="btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline'}"
+                onclick="event.stopPropagation(); selectVoicePersona('${p.id}', false);"
+              >
+                ${isSelected ? '✓ Personnalité active' : 'Choisir cette voix'}
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                onclick="event.stopPropagation(); selectVoicePersona('${p.id}', true);"
+                title="Écouter un aperçu vocal de ${p.name}"
+              >
+                🔊 Écouter
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  const frCheckbox = document.getElementById('voice-french-only-checkbox');
+  if (frCheckbox) {
+    frCheckbox.checked = vs.frenchOnly !== false;
+  }
+
+  const selectEl = document.getElementById('voice-guide-select');
+  const voices = getSortedSpeechVoices(vs.frenchOnly !== false);
+  const bestAutoVoice = resolveActiveSpeechVoice(activePersona.gender);
+
+  if (selectEl) {
+    const autoLabel = bestAutoVoice
+      ? `🌟 Auto (${activePersona.name}) — ${bestAutoVoice.name}`
+      : '🌟 Ajustement automatique selon la personnalité';
+
+    const optionsHTML = [
+      `<option value="auto">${autoLabel}</option>`,
+      ...voices.map((v) => {
+        const val = (v.voiceURI || v.name).replace(/"/g, '&quot;');
+        const selected = vs.voiceURI === v.voiceURI || vs.voiceURI === v.name ? 'selected' : '';
+        return `<option value="${val}" ${selected}>${formatVoiceOptionLabel(v)}</option>`;
+      })
+    ].join('');
+
+    selectEl.innerHTML = optionsHTML;
+    if (vs.voiceURI === 'auto' || !voices.some((v) => v.voiceURI === vs.voiceURI || v.name === vs.voiceURI)) {
+      selectEl.value = 'auto';
+    }
+  }
+
+  const rateInput = document.getElementById('voice-guide-rate');
+  const rateLabel = document.getElementById('voice-rate-label');
+  const rateVal = typeof vs.rate === 'number' ? vs.rate : 1.0;
+  if (rateInput) rateInput.value = String(rateVal);
+  if (rateLabel) {
+    const desc = rateVal < 0.95 ? 'Calme' : rateVal > 1.08 ? 'Dynamique' : 'Normale';
+    rateLabel.textContent = `${rateVal.toFixed(2).replace('.', ',').replace(/0$/, '')}x (${desc})`;
+  }
+}
+
+function handleVoiceGuideSelectionChange(newVoiceURI) {
+  state.voiceSettings.voiceURI = newVoiceURI || 'auto';
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+  const chosen = resolveActiveSpeechVoice();
+  showToast(chosen ? `🗣️ Timbre système : ${chosen.name}` : '🗣️ Timbre automatique sélectionné');
+}
+
+function handleVoiceFilterToggle(frenchOnly) {
+  state.voiceSettings.frenchOnly = !!frenchOnly;
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+}
+
+function handleVoiceRateInput(val) {
+  const num = parseFloat(val);
+  if (isNaN(num)) return;
+  state.voiceSettings.rate = Math.max(0.7, Math.min(1.5, num));
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+}
+
+function setVoiceGuideRate(val) {
+  handleVoiceRateInput(val);
+  showToast(`⏱️ Vitesse du guide vocal réglée sur ${String(val).replace('.', ',')}x`);
+}
+
+function handleVoicePitchInput(val) {
+  const num = parseFloat(val);
+  if (isNaN(num)) return;
+  state.voiceSettings.pitch = Math.max(0.7, Math.min(1.4, num));
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+}
+
+function setVoiceGuidePitch(val) {
+  handleVoicePitchInput(val);
+  showToast(`🎵 Timbre du guide vocal ajusté`);
+}
+
+function updateVoiceStatusIndicators(isSpeaking, labelText) {
+  const persona = getActiveVoicePersona();
+  const settingsPill = document.getElementById('voice-guide-status-pill');
+  if (settingsPill) {
+    settingsPill.textContent = labelText || (isSpeaking ? `🔊 ${persona.name} vous parle...` : `🎙️ Voix active : ${persona.name}`);
+    settingsPill.className = isSpeaking ? 'meta-pill pleasure-pill' : 'meta-pill healthy-pill';
+  }
+}
+
+// ============================================================================
+// SYNTHÈSE VOCALE & RECONNAISSANCE DES COMMANDES VOCALES ("SUIVANT" / "RÉPÉTER")
+// ============================================================================
+function speakWithVoiceGuide(textToSpeak, options = {}) {
+  if (!('speechSynthesis' in window)) {
+    showToast('⚠️ La synthèse vocale n\'est pas disponible sur cet appareil.');
+    return;
+  }
+
+  // Suspendre temporairement le déclenchement micro pendant que le personnage parle
+  voiceGuideSession.isSpeaking = true;
+  updateCharacterStageAnimationState();
+
+  try {
+    window.speechSynthesis.cancel();
+  } catch (e) {}
+
+  const cleanText = String(textToSpeak || '').trim();
+  if (!cleanText) {
+    voiceGuideSession.isSpeaking = false;
+    updateCharacterStageAnimationState();
+    return;
+  }
+
+  const persona = getActiveVoicePersona();
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  const voice = resolveActiveSpeechVoice(persona.gender);
+
+  if (voice) {
+    utterance.voice = voice;
+    utterance.lang = voice.lang || 'fr-FR';
+  } else {
+    utterance.lang = 'fr-FR';
+  }
+
+  const userRateMultiplier = state.voiceSettings?.rate || 1.0;
+  utterance.rate = Math.max(0.7, Math.min(1.45, (persona.baseRate || 1.0) * userRateMultiplier));
+  utterance.pitch = persona.basePitch || 1.0;
+
+  utterance.onstart = () => {
+    voiceGuideSession.isSpeaking = true;
+    updateVoiceStatusIndicators(true, options.statusLabel || `🔊 ${persona.name} parle...`);
+    updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
+  };
+
+  utterance.onend = () => {
+    voiceGuideSession.isSpeaking = false;
+    voiceGuideSession.lastSpokenEndTime = Date.now();
+    updateVoiceStatusIndicators(false);
+    updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
+    if (typeof options.onEnd === 'function') {
+      options.onEnd();
+    }
+  };
+
+  utterance.onerror = () => {
+    voiceGuideSession.isSpeaking = false;
+    voiceGuideSession.lastSpokenEndTime = Date.now();
+    updateVoiceStatusIndicators(false);
+    updateCharacterStageAnimationState();
+    if (typeof options.onEnd === 'function') {
+      options.onEnd();
+    }
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function testSelectedVoiceGuide() {
+  const persona = getActiveVoicePersona();
+  const sampleText = persona.sampleQuote.replace(/[«»]/g, '');
+  speakWithVoiceGuide(sampleText, {
+    statusLabel: `🔊 Aperçu vocal : ${persona.name}`
+  });
+  spawnCulinaryConfetti({
+    count: 10,
+    spread: 120,
+    emojis: persona.particles
+  });
+  showToast(`🔊 ${persona.name} : démonstration vocale en cours...`);
+}
+
+// Démarrer l'écoute vocale continue pour les commandes "Suivant" et "Répéter"
+function startVoiceCommandListener() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec || !voiceGuideSession.active || voiceGuideSession.finished) {
+    voiceGuideSession.isListening = false;
+    updateCharacterStageAnimationState();
+    return;
+  }
+
+  if (voiceGuideSession.recognition) {
+    try {
+      voiceGuideSession.recognition.onend = null;
+      voiceGuideSession.recognition.stop();
+    } catch (e) {}
+    voiceGuideSession.recognition = null;
+  }
+
+  try {
+    const rec = new SpeechRec();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 3;
+
+    rec.onstart = () => {
+      voiceGuideSession.isListening = true;
+      updateCharacterStageAnimationState();
+    };
+
+    rec.onresult = (event) => {
+      // Ignorer si l'assistant est lui-même en train de parler (évite l'auto-déclenchement sur "dites Suivant")
+      if (voiceGuideSession.isSpeaking) return;
+      if (Date.now() - (voiceGuideSession.lastSpokenEndTime || 0) < 400) return;
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        const transcript = (res[0]?.transcript || '').toLowerCase().trim();
+        if (!transcript) continue;
+
+        // Détecter la commande "Suivant"
+        if (/\b(suivant|suivante|continuer|continue|prêt|pret|prête|prete|c'est bon|valider|valide|étape suivante|oui|ok|suite)\b/i.test(transcript)) {
+          triggerVoiceCommandFeedback('« Suivant » reconnu ✓');
+          try {
+            rec.stop();
+          } catch (e) {}
+          nextVoiceGuideStep();
+          return;
+        }
+
+        // Détecter la commande "Répéter"
+        if (/\b(répéter|repeter|répète|repete|répétez|repetez|redire|redis|encore|réécouter|reecouter)\b/i.test(transcript)) {
+          triggerVoiceCommandFeedback('« Répéter » reconnu 🔄');
+          try {
+            rec.stop();
+          } catch (e) {}
+          repeatCurrentVoiceGuideStep();
+          return;
+        }
+
+        // Détecter la commande "Précédent"
+        if (res.isFinal && /\b(précédent|precedent|précédente|retour|arrière|avant)\b/i.test(transcript)) {
+          triggerVoiceCommandFeedback('« Précédent » reconnu ⏮️');
+          try {
+            rec.stop();
+          } catch (e) {}
+          prevVoiceGuideStep();
+          return;
+        }
+
+        // Détecter la commande "Stop / Arrêter"
+        if (res.isFinal && /\b(stop|arrêter|arreter|quitter|fermer)\b/i.test(transcript)) {
+          triggerVoiceCommandFeedback('« Stop » reconnu ⏹️');
+          stopVoiceGuide();
+          return;
+        }
+      }
+    };
+
+    rec.onerror = (e) => {
+      if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')) {
+        voiceGuideSession.isListening = false;
+        updateCharacterStageAnimationState();
+      }
+    };
+
+    rec.onend = () => {
+      // Tant que le mode guide vocal est actif et attend la validation d'une étape, maintenir l'écoute active
+      if (voiceGuideSession.active && !voiceGuideSession.finished && !voiceGuideSession.isSpeaking) {
+        clearTimeout(voiceGuideSession.restartRecTimer);
+        voiceGuideSession.restartRecTimer = setTimeout(() => {
+          if (voiceGuideSession.active && !voiceGuideSession.finished && !voiceGuideSession.isSpeaking) {
+            startVoiceCommandListener();
+          }
+        }, 350);
+      } else {
+        voiceGuideSession.isListening = false;
+        updateCharacterStageAnimationState();
+      }
+    };
+
+    voiceGuideSession.recognition = rec;
+    rec.start();
+  } catch (e) {
+    voiceGuideSession.isListening = false;
+    updateCharacterStageAnimationState();
+  }
+}
+
+function stopVoiceCommandListener() {
+  clearTimeout(voiceGuideSession.restartRecTimer);
+  if (voiceGuideSession.recognition) {
+    try {
+      voiceGuideSession.recognition.onend = null;
+      voiceGuideSession.recognition.stop();
+    } catch (e) {}
+    voiceGuideSession.recognition = null;
+  }
+  voiceGuideSession.isListening = false;
+}
+
+function triggerVoiceCommandFeedback(text) {
+  const pill = document.getElementById('voice-heard-command-pill');
+  if (pill) {
+    pill.textContent = `🎙️ ${text}`;
+    pill.style.display = 'inline-flex';
+    setTimeout(() => {
+      if (pill) pill.style.display = 'none';
+    }, 2200);
+  }
+  const persona = getActiveVoicePersona();
+  spawnCulinaryConfetti({
+    count: 8,
+    spread: 95,
+    emojis: persona.particles
+  });
+}
+
+// ============================================================================
+// INTERFACE VISUELLE & THÉÂTRE D'ANIMATION DU GUIDE VOCAL DANS LA FICHE CUISINE
+// ============================================================================
+function buildModalVoiceToolbarHTML() {
+  const persona = getActiveVoicePersona();
+  const personaOptions = Object.values(VOICE_PERSONAS)
+    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name}</option>`)
+    .join('');
+
+  return `
+    <div id="modal-voice-guide-wrapper" class="modal-voice-guide-wrapper">
+      <div class="voice-launch-banner" style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};">
+        <div class="voice-launch-left">
+          <div class="voice-launch-avatar" onclick="startInteractiveVoiceGuide()" title="Lancer le guide vocal avec ${persona.name}">
+            ${buildPersonaAnimatedAvatarSVG(persona.id)}
+          </div>
+          <div class="voice-launch-info">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span class="voice-persona-badge" style="background: #fff;">${persona.badge}</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">📱 Écran maintenu actif</span>
+            </div>
+            <div style="font-weight: 800; font-size: 0.98rem; color: var(--text-main); margin-top: 2px;">
+              Guide Vocal Pas-à-Pas avec <span style="color: ${persona.themeColor};">${persona.name}</span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              Annonce du plat &rarr; Quantités &amp; poids des ingrédients &rarr; Étapes &amp; Four &rarr; Commandes <strong>« Suivant »</strong> / <strong>« Répéter »</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-launch-actions">
+          <select
+            class="input-field voice-quick-persona-select"
+            aria-label="Choisir la voix du chef"
+            onchange="selectVoicePersona(this.value, false)"
+            title="Changer la voix de l'assistant vocal"
+          >
+            ${personaOptions}
+          </select>
+          <button
+            type="button"
+            class="btn btn-primary btn-launch-voice-guide"
+            onclick="startInteractiveVoiceGuide()"
+          >
+            🎙️ Guide vocal
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Lancer le Guide Vocal Pas-à-Pas
+async function startInteractiveVoiceGuide() {
+  if (!activeModalVoiceContext) return;
+
+  voiceGuideSession.active = true;
+  voiceGuideSession.finished = false;
+  voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
+  voiceGuideSession.currentIndex = 0;
+
+  // Activer le maintien de l'écran du smartphone allumé
+  await acquireKitchenWakeLock();
+
+  // Afficher le théâtre animé du personnage dans la Fiche Cuisine
+  renderActiveVoiceStageUI();
+
+  // Lancer la lecture de la 1ère étape ("Nous allons cuisiner...")
+  speakCurrentStepInGuide(false);
+}
+
+function renderActiveVoiceStageUI() {
+  const wrapper = document.getElementById('modal-voice-guide-wrapper');
+  if (!wrapper || !voiceGuideSession.active) return;
+
+  const persona = getActiveVoicePersona();
+  const seq = voiceGuideSession.sequence || [];
+  const idx = voiceGuideSession.currentIndex || 0;
+  const item = seq[idx] || seq[0];
+  if (!item) return;
+
+  const total = seq.length;
+  const pct = Math.round(((idx + 1) / total) * 100);
+  const isLastOutro = item.type === 'outro';
+
+  const personaOptions = Object.values(VOICE_PERSONAS)
+    .map((p) => `<option value="${p.id}" ${p.id === persona.id ? 'selected' : ''}>${p.name}</option>`)
+    .join('');
+
+  // Mettre en évidence dans la fiche cuisine la section correspondante (Ingrédients ou Étape N)
+  highlightModalRecipeSection(item);
+
+  wrapper.innerHTML = `
+    <div
+      id="voice-character-stage"
+      class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''} ${isLastOutro ? 'is-celebrating' : ''}"
+      style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};"
+    >
+      <!-- Barre supérieure : Statut Wake Lock + Sélecteur rapide de voix + Bouton Quitter -->
+      <div class="voice-stage-topbar">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span class="voice-stage-step-pill">${item.badge}</span>
+          <span id="voice-wakelock-badge" class="voice-wakelock-pill">📱 Smartphone maintenu actif</span>
+          <span id="voice-heard-command-pill" class="voice-heard-pill" style="display: none;">🎙️ « Suivant » reconnu ✓</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <select
+            class="input-field voice-quick-persona-select"
+            aria-label="Changer de personnage"
+            onchange="selectVoicePersona(this.value, false)"
+            title="Changer de personnage en direct"
+          >
+            ${personaOptions}
+          </select>
+          <button type="button" class="btn btn-outline btn-sm" onclick="stopVoiceGuide()" title="Quitter le mode guide vocal">
+            ✕ Quitter
+          </button>
+        </div>
+      </div>
+
+      <!-- Barre de progression pas-à-pas -->
+      <div class="voice-stage-progress-track">
+        <div class="voice-stage-progress-fill" style="width: ${pct}%;"></div>
+      </div>
+
+      <!-- Scène centrale : Personnage Animé + Bulle de Dialogue -->
+      <div class="voice-stage-main">
+        <div class="voice-character-Theater">
+          <div class="voice-character-halo"></div>
+          <div class="voice-character-float-particles" aria-hidden="true">
+            <span>${persona.particles[0] || '✨'}</span>
+            <span>${persona.particles[1] || '🍳'}</span>
+            <span>${persona.particles[2] || '🌿'}</span>
+          </div>
+          <div class="voice-character-portrait">
+            ${buildPersonaAnimatedAvatarSVG(persona.id)}
+          </div>
+          <!-- Égaliseur d'ondes vocales sous le personnage -->
+          <div class="voice-wave-bars" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="voice-character-name-tag">${persona.name}</div>
+        </div>
+
+        <div class="voice-speech-bubble">
+          <div class="voice-speech-title">${item.title}</div>
+          ${
+            item.ovenTemp
+              ? `<div class="voice-oven-alert-box">🔥 <strong>Attention Préchauffage / Four :</strong> Réglez votre four sur <strong>${item.ovenTemp.replace('🔥 ', '')}</strong></div>`
+              : ''
+          }
+          <div class="voice-speech-text">${item.visualText}</div>
+
+          ${
+            !isLastOutro
+              ? `
+            <div id="voice-mic-prompt-box" class="voice-mic-prompt-box">
+              <span class="mic-pulse-dot"></span>
+              <span id="voice-mic-status-label">
+                ${
+                  voiceGuideSession.isSpeaking
+                    ? `🔊 <strong>${persona.name}</strong> vous guide...`
+                    : `🎙️ <strong>Quand vous êtes prêt, dites « Suivant »</strong> (ou dites <strong>« Répéter »</strong>)`
+                }
+              </span>
+            </div>
+          `
+              : `
+            <div class="voice-bon-appetit-banner">
+              🍽️ <strong>Bon appétit !</strong> Votre plat est terminé !
+            </div>
+          `
+          }
+        </div>
+      </div>
+
+      <!-- Commandes tactiles & vocales en bas de scène -->
+      <div class="voice-stage-controls">
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          onclick="prevVoiceGuideStep()"
+          ${idx === 0 ? 'disabled style="opacity:0.45; pointer-events:none;"' : ''}
+        >
+          ⏮️ Précédent
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-outline btn-voice-repeat"
+          onclick="repeatCurrentVoiceGuideStep()"
+        >
+          🔄 Répéter l'étape
+        </button>
+
+        ${
+          !isLastOutro
+            ? `
+          <button
+            type="button"
+            class="btn btn-primary btn-voice-next"
+            onclick="nextVoiceGuideStep()"
+          >
+            ✓ Suivant ▶
+          </button>
+        `
+            : `
+          <button
+            type="button"
+            class="btn btn-primary btn-voice-next"
+            onclick="stopVoiceGuide()"
+          >
+            🎉 Terminer (Bon appétit !)
+          </button>
+        `
+        }
+      </div>
+    </div>
+  `;
+}
+
+function updateCharacterStageAnimationState() {
+  const stage = document.getElementById('voice-character-stage');
+  if (!stage) return;
+
+  const persona = getActiveVoicePersona();
+  stage.classList.toggle('is-speaking', !!voiceGuideSession.isSpeaking);
+  stage.classList.toggle('is-listening', !voiceGuideSession.isSpeaking && !!voiceGuideSession.isListening);
+
+  const micLabel = document.getElementById('voice-mic-status-label');
+  if (micLabel) {
+    if (voiceGuideSession.isSpeaking) {
+      micLabel.innerHTML = `🔊 <strong>${persona.name}</strong> vous parle...`;
+    } else if (voiceGuideSession.isListening) {
+      micLabel.innerHTML = `🎙️ <strong>Micro actif :</strong> Quand vous êtes prêt, dites <strong>« Suivant »</strong> ou <strong>« Répéter »</strong>`;
+    } else {
+      micLabel.innerHTML = `👆 Quand vous êtes prêt, appuyez sur <strong>« Suivant »</strong> ou <strong>« Répéter »</strong>`;
+    }
+  }
+}
+
+function highlightModalRecipeSection(stepItem) {
+  const ingListEl = document.getElementById('modal-ingredients-list');
+  if (ingListEl) {
+    if (stepItem && stepItem.type === 'ingredients') {
+      ingListEl.classList.add('voice-active-ingredients-highlight');
+    } else {
+      ingListEl.classList.remove('voice-active-ingredients-highlight');
+    }
+  }
+
+  document.querySelectorAll('[id^="recipe-voice-step-"]').forEach((el, idx) => {
+    if (stepItem && stepItem.type === 'step' && idx === stepItem.recipeStepIdx) {
+      el.classList.add('voice-active-step-highlight');
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      el.classList.remove('voice-active-step-highlight');
+    }
+  });
+}
+
+function speakCurrentStepInGuide(isRepeat = false) {
+  if (!voiceGuideSession.active || !voiceGuideSession.sequence.length) return;
+
+  stopVoiceCommandListener();
+  const item = voiceGuideSession.sequence[voiceGuideSession.currentIndex];
+  if (!item) return;
+
+  renderActiveVoiceStageUI();
+
+  const textToRead = isRepeat ? item.repeatSpokenText : item.spokenText;
+  const isFinalOutro = item.type === 'outro';
+
+  if (isFinalOutro) {
+    voiceGuideSession.finished = true;
+    const persona = getActiveVoicePersona();
+    spawnCulinaryConfetti({
+      count: 26,
+      spread: 220,
+      emojis: persona.particles
+    });
+  }
+
+  speakWithVoiceGuide(textToRead, {
+    statusLabel: `${item.badge}`,
+    onEnd: () => {
+      if (voiceGuideSession.active && !voiceGuideSession.finished) {
+        startVoiceCommandListener();
+      }
+    }
+  });
+}
+
+function nextVoiceGuideStep() {
+  if (!voiceGuideSession.active) {
+    startInteractiveVoiceGuide();
+    return;
+  }
+  if (voiceGuideSession.currentIndex < voiceGuideSession.sequence.length - 1) {
+    voiceGuideSession.currentIndex++;
+    speakCurrentStepInGuide(false);
+  } else {
+    stopVoiceGuide();
+  }
+}
+
+function prevVoiceGuideStep() {
+  if (!voiceGuideSession.active) return;
+  if (voiceGuideSession.currentIndex > 0) {
+    voiceGuideSession.finished = false;
+    voiceGuideSession.currentIndex--;
+    speakCurrentStepInGuide(false);
+  }
+}
+
+function repeatCurrentVoiceGuideStep() {
+  if (!voiceGuideSession.active) {
+    startInteractiveVoiceGuide();
+    return;
+  }
+  speakCurrentStepInGuide(true);
+}
+
+function stopVoiceGuide() {
+  voiceGuideSession.active = false;
+  voiceGuideSession.isSpeaking = false;
+  voiceGuideSession.isListening = false;
+  voiceGuideSession.finished = false;
+
+  stopVoiceCommandListener();
+  releaseKitchenWakeLock();
+
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+
+  highlightModalRecipeSection(null);
+  updateVoiceStatusIndicators(false);
+
+  const wrapper = document.getElementById('modal-voice-guide-wrapper');
+  if (wrapper && activeModalVoiceContext) {
+    wrapper.innerHTML = buildModalVoiceToolbarHTML();
+  }
+}
+
+function speakRecipeStepByIndex(stepIndex) {
+  if (!activeModalVoiceContext) return;
+  if (!voiceGuideSession.active) {
+    voiceGuideSession.active = true;
+    voiceGuideSession.finished = false;
+    voiceGuideSession.sequence = buildStepByStepVoiceSequence(activeModalVoiceContext);
+    acquireKitchenWakeLock();
+  }
+  const targetSeqIdx = voiceGuideSession.sequence.findIndex(
+    (s) => s.type === 'step' && s.recipeStepIdx === stepIndex
+  );
+  if (targetSeqIdx !== -1) {
+    voiceGuideSession.currentIndex = targetSeqIdx;
+    speakCurrentStepInGuide(false);
+  }
+}
+
+function stepRecipeVoiceGuide(delta) {
+  if (delta > 0) nextVoiceGuideStep();
+  else prevVoiceGuideStep();
+}
+
+function speakRecipeFullGuide() {
+  startInteractiveVoiceGuide();
 }
 
 // ============================================================================
@@ -4812,11 +6569,11 @@ function renderPantrySection() {
     `;
   }
 
-  // Badge nombre de parts global du garde-manger
+  // Badge nombre de convives global du garde-manger
   const servingsBadge = document.getElementById('pantry-servings-badge');
   if (servingsBadge) {
     const s = state.pantryServings || 2;
-    servingsBadge.textContent = `${s} ${s > 1 ? 'parts' : 'part'}`;
+    servingsBadge.textContent = `${s} ${s > 1 ? 'convives' : 'convive'}`;
   }
 
   renderPantryMenusGrid();
@@ -4895,13 +6652,13 @@ function renderPantryMenusGrid() {
               <span class="meta-pill">${styleLabel}</span>
             </div>
 
-            <!-- Barre d'action : Ajustement des parts + Bouton Autre idée -->
+            <!-- Barre d'action : Ajustement des convives + Bouton Autre idée -->
             <div class="servings-control" style="margin-top: 8px; flex-direction: row; align-items: center; justify-content: space-between; padding: 7px 12px; gap: 8px; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 0.8rem; font-weight: 800;">🍽️ Parts :</span>
+                <span style="font-size: 0.8rem; font-weight: 800;">🍽️ À table :</span>
                 <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepPantryCardServings('${recipe.id}', -1)">−</button>
-                <span class="servings-badge" style="min-width: 78px; text-align: center; padding: 3px 8px;">
-                  ${servings} ${servings > 1 ? 'parts' : 'part'}
+                <span class="servings-badge" style="min-width: 90px; text-align: center; padding: 3px 8px;">
+                  ${servings} ${servings > 1 ? 'convives' : 'convive'}
                 </span>
                 <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepPantryCardServings('${recipe.id}', 1)">+</button>
               </div>
@@ -4980,7 +6737,34 @@ function openPantryRecipeModal(recipeId, servings) {
     })
     .join('');
 
-  const stepsHTML = (recipe.steps || []).map((st) => `<li>${st}</li>`).join('');
+  const stepsHTML = (recipe.steps || [])
+    .map(
+      (st, idx) => `
+      <li
+        id="recipe-voice-step-${idx}"
+        onclick="speakRecipeStepByIndex(${idx})"
+        style="cursor: pointer; padding: 6px 8px; border-radius: 8px; transition: background 0.2s ease;"
+        title="🔊 Cliquez pour écouter cette étape avec le guide vocal"
+      >
+        ${st} <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-left: 4px;">🔊</span>
+      </li>`
+    )
+    .join('');
+
+  activeModalVoiceContext = {
+    title: recipe.title,
+    servings: s,
+    ingredients: (recipe.ingredients || []).map((ing) => ({
+      name: ing.name,
+      qtyText: `${formatScaledQty(ing.qty, ratio)} ${ing.unit}`
+    })),
+    steps: recipe.steps || [],
+    dessertTitle: null,
+    dessertSteps: [],
+    currentStepIndex: 0
+  };
+
+  const voiceToolbarHTML = buildModalVoiceToolbarHTML();
 
   modalBody.innerHTML = `
     <span class="meta-pill healthy-pill">🗄️ Menu du Garde-manger • Pour ${s} ${s > 1 ? 'parts' : 'part'}</span>
@@ -4993,10 +6777,12 @@ function openPantryRecipeModal(recipeId, servings) {
       <span class="meta-pill">🎯 ${evalInfo.matchCount}/${evalInfo.totalCount} ingrédient(s) en stock</span>
     </div>
 
+    ${voiceToolbarHTML}
+
     <div class="modal-section-title">🛒 Ingrédients (calculés pour ${s} ${s > 1 ? 'parts' : 'part'})</div>
     <ul class="modal-ing-list">${ingredientsHTML}</ul>
 
-    <div class="modal-section-title">👩‍🍳 Étapes de préparation</div>
+    <div class="modal-section-title">👩‍🍳 Étapes de préparation <small style="font-weight: 600; font-size: 0.78rem; color: var(--text-muted);">(Touchez une étape pour l'écouter 🔊)</small></div>
     <ol class="modal-steps-list">${stepsHTML}</ol>
 
     <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
