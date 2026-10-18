@@ -2484,7 +2484,7 @@ function openRecipeModal(slotId) {
   const seasInfo = getRecipeSeasonality(recipe, slot);
 
   const ingredientsHTML = recipe.ingredients
-    .map((ing) => {
+    .map((ing, idx) => {
       const check =
         typeof window.isIngredientInSeason === 'function'
           ? window.isIngredientInSeason(ing.name, slotMonth)
@@ -2494,9 +2494,14 @@ function openRecipeModal(slotId) {
         ? `<span style="font-size: 0.72rem; padding: 1px 6px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 700; margin-left: 6px;">🌿 De saison</span>`
         : `<span style="font-size: 0.72rem; padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #92400e; font-weight: 600; margin-left: 6px;">Hors pleine saison (${seasonMeta.monthName})</span>`;
       return `
-      <li style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border-color); font-size: 0.9rem;">
+      <li
+        id="recipe-voice-ing-${idx}"
+        onclick="speakRecipeIngredientByIndex(${idx})"
+        title="🔊 Cliquez pour écouter cet ingrédient avec le guide vocal"
+        style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px dashed var(--border-color); font-size: 0.9rem; cursor: pointer; border-radius: 8px; transition: background 0.2s ease;"
+      >
         <span>${ing.name} ${seasTag}</span>
-        <strong>${formatScaledQty(ing.qty, ratio)} ${ing.unit}</strong>
+        <strong>${formatScaledQty(ing.qty, ratio)} ${ing.unit} <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-left: 4px;">🔊</span></strong>
       </li>
     `;
     })
@@ -4477,12 +4482,16 @@ let voiceGuideSession = {
   active: false,
   isSpeaking: false,
   isListening: false,
+  isPaused: false,
   finished: false,
-  sequence: [], // [{ type: 'intro' | 'ingredients' | 'step' | 'outro', title, visualText, spokenText, ovenTemp, recipeStepIdx }]
+  sequence: [], // [{ type: 'intro' | 'ingredient' | 'step' | 'outro', title, visualText, spokenText, ovenTemp, ingredientIdx, recipeStepIdx }]
   currentIndex: 0,
   recognition: null,
   lastSpokenEndTime: 0,
-  restartRecTimer: null
+  lastCommandTime: 0,
+  lastHeardTranscript: '',
+  restartRecTimer: null,
+  recWatchdogTimer: null
 };
 
 // Conversion naturelle des unités de cuisine pour la synthèse vocale
@@ -4573,26 +4582,59 @@ function buildStepByStepVoiceSequence(ctx) {
     spokenText: `${introMain} ${persona.promptNext}`,
     repeatSpokenText: `${persona.repeatIntro} ${introMain} ${persona.promptNext}`,
     ovenTemp: null,
+    ingredientIdx: -1,
     recipeStepIdx: -1
   });
 
-  // 2. Puis préparation des ingrédients avec leur quantité ou poids
-  const ingSpeechParts = (ctx.ingredients || []).map((ing) =>
-    formatQtyUnitForSpeech(ing.qtyRaw || ing.qtyText.split(' ')[0], ing.unitRaw || ing.qtyText.split(' ').slice(1).join(' '), ing.name)
-  );
-  const ingVisualList = (ctx.ingredients || []).map((ing) => `• <strong>${ing.qtyText}</strong> — ${ing.name}`).join('<br/>');
-  const ingMainSpeech = persona.buildIngredients(servings, ingSpeechParts.join(', '));
+  // 2. Puis préparation des ingrédients UN PAR UN avec leur quantité ou poids,
+  // en proposant « Suivant » et « Répéter » pour CHAQUE ingrédient à préparer !
+  const ingredientsList = ctx.ingredients || [];
+  if (ingredientsList.length > 0) {
+    const totalIngs = ingredientsList.length;
+    ingredientsList.forEach((ing, idx) => {
+      const ingNum = idx + 1;
+      const singleIngSpeech = formatQtyUnitForSpeech(
+        ing.qtyRaw || ing.qtyText.split(' ')[0],
+        ing.unitRaw || ing.qtyText.split(' ').slice(1).join(' '),
+        ing.name
+      );
 
-  sequence.push({
-    type: 'ingredients',
-    badge: '2️⃣ Préparation des ingrédients (Quantités & Poids)',
-    title: `🛒 Préparation des ingrédients (${servings} ${servings > 1 ? 'parts' : 'part'})`,
-    visualText: ingVisualList || 'Préparez vos ingrédients sur le plan de travail.',
-    spokenText: `${ingMainSpeech} ${persona.promptNext}`,
-    repeatSpokenText: `${persona.repeatIntro} ${ingMainSpeech} ${persona.promptNext}`,
-    ovenTemp: null,
-    recipeStepIdx: -1
-  });
+      let ingSpokenBody = '';
+      if (idx === 0) {
+        // Pour le 1er ingrédient, on annonce le début de la pesée / préparation pour X personnes avec la personnalité du chef
+        ingSpokenBody = `${persona.buildIngredients(servings, singleIngSpeech)} (Ingrédient 1 sur ${totalIngs}).`;
+      } else {
+        ingSpokenBody = `Ingrédient ${ingNum} sur ${totalIngs} à préparer : prenez ${singleIngSpeech}.`;
+      }
+
+      const repeatIngBody = `Ingrédient ${ingNum} sur ${totalIngs} pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : préparez ${singleIngSpeech}.`;
+
+      sequence.push({
+        type: 'ingredient',
+        badge: `🛒 Ingrédient ${ingNum} / ${totalIngs} à préparer`,
+        title: `🛒 Ingrédient ${ingNum} sur ${totalIngs} (${servings} ${servings > 1 ? 'parts' : 'part'})`,
+        visualText: `Préparez sur le plan de travail : <strong style="font-size: 1.08rem; color: var(--primary);">${ing.qtyText}</strong> — <strong>${ing.name}</strong>`,
+        spokenText: `${ingSpokenBody} ${persona.promptNext}`,
+        repeatSpokenText: `${persona.repeatIntro} ${repeatIngBody} ${persona.promptNext}`,
+        ovenTemp: null,
+        ingredientIdx: idx,
+        recipeStepIdx: -1
+      });
+    });
+  } else {
+    const fallbackSpeech = persona.buildIngredients(servings, 'vos ingrédients sur le plan de travail');
+    sequence.push({
+      type: 'ingredient',
+      badge: '🛒 Préparation des ingrédients',
+      title: `🛒 Préparation des ingrédients (${servings} ${servings > 1 ? 'parts' : 'part'})`,
+      visualText: 'Préparez vos ingrédients sur le plan de travail.',
+      spokenText: `${fallbackSpeech} ${persona.promptNext}`,
+      repeatSpokenText: `${persona.repeatIntro} ${fallbackSpeech} ${persona.promptNext}`,
+      ovenTemp: null,
+      ingredientIdx: 0,
+      recipeStepIdx: -1
+    });
+  }
 
   // 3. Puis étapes de la recette (avec détection du préchauffage du four et de sa température à la bonne étape)
   const rawSteps = ctx.steps || [];
@@ -4611,7 +4653,6 @@ function buildStepByStepVoiceSequence(ctx) {
 
     if (isPreheatStep) {
       ovenVisualCallout = `🔥 Préchauffage du four : ${ovenInfo.tempText}`;
-      // Si l'étape ne contient pas déjà les mots "préchauffer le four", on l'ajoute vocalement avec le caractère du chef
       if (!/préchauff|prechauff/i.test(stepText)) {
         ovenPrefixSpeech = `${persona.buildOvenAlert(ovenInfo.tempText.replace('°C', ' degrés Celsius'))} Ensuite : `;
       } else if (!/\d{3}/.test(stepText)) {
@@ -4636,6 +4677,7 @@ function buildStepByStepVoiceSequence(ctx) {
       spokenText: `${fullStepSpeech} ${persona.promptNext}`,
       repeatSpokenText: `${persona.repeatIntro} ${fullStepSpeech} ${persona.promptNext}`,
       ovenTemp: ovenVisualCallout,
+      ingredientIdx: -1,
       recipeStepIdx: idx
     });
   });
@@ -4650,6 +4692,7 @@ function buildStepByStepVoiceSequence(ctx) {
     spokenText: outroMain,
     repeatSpokenText: outroMain,
     ovenTemp: null,
+    ingredientIdx: -1,
     recipeStepIdx: -1
   });
 
@@ -4657,12 +4700,39 @@ function buildStepByStepVoiceSequence(ctx) {
 }
 
 // ============================================================================
-// CONFIGURATION DES VOIX SYSTÈME & ADAPTATION AU GENRE DE LA PERSONNALITÉ
+// CONFIGURATION DES VOIX SYSTÈME & STUDIO DE CLONAGE VOCAL IA (ELEVENLABS)
 // ============================================================================
+let cachedElevenLabsVoices = [];
+
+function getEffectiveElevenLabsApiKey() {
+  const saved = (localStorage.getItem(STORAGE_KEYS.ELEVENLABS_KEY) || '').trim();
+  if (saved) return saved;
+  const voiceKey = (localStorage.getItem(STORAGE_KEYS.VOICE_AI_KEY) || '').trim();
+  if (voiceKey && (voiceKey.startsWith('sk_') || voiceKey.startsWith('xi-'))) {
+    return voiceKey;
+  }
+  return '';
+}
+
+function getResolvedElevenLabsVoiceId(personaId) {
+  const pId = personaId || state.voiceSettings?.persona || 'lignac';
+  const customId = (state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim();
+  if (customId) return customId;
+  const p = VOICE_PERSONAS[pId] || VOICE_PERSONAS.lignac;
+  return p.defaultElevenLabsVoiceId || 'ErXwobaYiN019PkySvjV';
+}
+
+function hasCustomVoiceClone(personaId) {
+  const pId = personaId || state.voiceSettings?.persona || 'lignac';
+  return Boolean((state.voiceSettings?.clonedVoiceIds?.[pId] || '').trim());
+}
+
 function setupVoiceGuide() {
   if (!state.voiceSettings) {
     state.voiceSettings = {
       persona: 'lignac',
+      engine: 'elevenlabs',
+      clonedVoiceIds: {},
       voiceURI: 'auto',
       rate: 1.0,
       pitch: 1.0,
@@ -4672,8 +4742,18 @@ function setupVoiceGuide() {
   if (!state.voiceSettings.persona || !VOICE_PERSONAS[state.voiceSettings.persona]) {
     state.voiceSettings.persona = 'lignac';
   }
+  if (!state.voiceSettings.engine) {
+    state.voiceSettings.engine = 'elevenlabs';
+  }
+  if (!state.voiceSettings.clonedVoiceIds || typeof state.voiceSettings.clonedVoiceIds !== 'object') {
+    state.voiceSettings.clonedVoiceIds = {};
+  }
 
   renderVoiceGuideSettings();
+
+  if (getEffectiveElevenLabsApiKey()) {
+    syncElevenLabsLibraryVoices(false);
+  }
 
   if ('speechSynthesis' in window) {
     if (typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
@@ -4683,6 +4763,227 @@ function setupVoiceGuide() {
     }
     setTimeout(renderVoiceGuideSettings, 250);
     setTimeout(renderVoiceGuideSettings, 1000);
+  }
+}
+
+function handleVoiceEngineChange(engineValue) {
+  if (!state.voiceSettings) setupVoiceGuide();
+  state.voiceSettings.engine = engineValue === 'system' ? 'system' : 'elevenlabs';
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+  showToast(
+    state.voiceSettings.engine === 'elevenlabs'
+      ? '🎙️ Mode 3 activé : Voix Clonée Haute-Fidélité (ElevenLabs Neural v2)'
+      : '🗣️ Mode Voix Système / Navigateur activé'
+  );
+}
+
+async function saveElevenLabsKeyAndSync() {
+  const inputEl = document.getElementById('elevenlabs-api-key');
+  if (!inputEl) return;
+  const val = (inputEl.value || '').trim();
+  if (val) {
+    localStorage.setItem(STORAGE_KEYS.ELEVENLABS_KEY, val);
+    state.voiceSettings.engine = 'elevenlabs';
+    saveStateToStorage();
+    showToast('🔑 Clé API ElevenLabs enregistrée ! Synchronisation des voix clonées...');
+    await syncElevenLabsLibraryVoices(true);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.ELEVENLABS_KEY);
+    renderVoiceGuideSettings();
+    showToast('ℹ️ Clé API ElevenLabs retirée.');
+  }
+}
+
+async function syncElevenLabsLibraryVoices(showNotification = true) {
+  const xiKey = getEffectiveElevenLabsApiKey();
+  if (!xiKey) {
+    renderVoiceGuideSettings();
+    if (showNotification) {
+      showToast('⚠️ Renseignez d\'abord votre clé API ElevenLabs (xi-api-key).');
+    }
+    return;
+  }
+
+  try {
+    const resp = await fetch('https://api.elevenlabs.io/v1/voices', {
+      method: 'GET',
+      headers: {
+        'xi-api-key': xiKey
+      }
+    });
+    if (!resp.ok) {
+      if (showNotification) showToast('⚠️ Clé ElevenLabs invalide ou erreur réseau.');
+      renderVoiceGuideSettings();
+      return;
+    }
+    const data = await resp.json();
+    cachedElevenLabsVoices = Array.isArray(data.voices) ? data.voices : [];
+
+    // Auto-associer les voix clonées dont le nom correspond à l'une de nos personnalités
+    let autoMatched = 0;
+    cachedElevenLabsVoices.forEach((v) => {
+      const vName = (v.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      Object.values(VOICE_PERSONAS).forEach((p) => {
+        if (!state.voiceSettings.clonedVoiceIds[p.id]) {
+          const pKey = p.id.toLowerCase();
+          if (
+            vName.includes(pKey) ||
+            (p.id === 'maite' && vName.includes('maite')) ||
+            (p.id === 'lignac' && vName.includes('cyril')) ||
+            (p.id === 'bocuse' && vName.includes('paul')) ||
+            (p.id === 'marx' && vName.includes('thierry')) ||
+            (p.id === 'etchebest' && vName.includes('philippe')) ||
+            (p.id === 'coffe' && vName.includes('coffe'))
+          ) {
+            state.voiceSettings.clonedVoiceIds[p.id] = v.voice_id;
+            autoMatched++;
+          }
+        }
+      });
+    });
+
+    if (autoMatched > 0) {
+      saveStateToStorage();
+    }
+
+    renderVoiceGuideSettings();
+    if (showNotification) {
+      const clonedCount = cachedElevenLabsVoices.filter((v) => v.category === 'cloned' || v.category === 'generated').length;
+      showToast(`✅ ${cachedElevenLabsVoices.length} voix ElevenLabs synchronisées (${clonedCount} voix clonées/personnalisées) !`);
+    }
+  } catch (e) {
+    renderVoiceGuideSettings();
+    if (showNotification) {
+      showToast('⚠️ Impossible de joindre l\'API ElevenLabs.');
+    }
+  }
+}
+
+function saveCustomVoiceIdForActivePersona() {
+  const inputEl = document.getElementById('persona-custom-voiceid-input');
+  if (!inputEl) return;
+  const activePersona = getActiveVoicePersona();
+  const customId = (inputEl.value || '').trim();
+  if (!state.voiceSettings.clonedVoiceIds) state.voiceSettings.clonedVoiceIds = {};
+
+  if (customId) {
+    state.voiceSettings.clonedVoiceIds[activePersona.id] = customId;
+    saveStateToStorage();
+    renderVoiceGuideSettings();
+    showToast(`🧬 Voice ID cloné enregistré pour ${activePersona.name} !`);
+  } else {
+    delete state.voiceSettings.clonedVoiceIds[activePersona.id];
+    saveStateToStorage();
+    renderVoiceGuideSettings();
+    showToast(`↺ Voice ID par défaut rétabli pour ${activePersona.name}.`);
+  }
+}
+
+function assignLibraryVoiceToActivePersona(voiceId) {
+  if (!voiceId) return;
+  const activePersona = getActiveVoicePersona();
+  if (!state.voiceSettings.clonedVoiceIds) state.voiceSettings.clonedVoiceIds = {};
+  state.voiceSettings.clonedVoiceIds[activePersona.id] = voiceId;
+  const inputEl = document.getElementById('persona-custom-voiceid-input');
+  if (inputEl) inputEl.value = voiceId;
+  saveStateToStorage();
+  renderVoiceGuideSettings();
+  const found = cachedElevenLabsVoices.find((v) => v.voice_id === voiceId);
+  showToast(`🧬 Voix « ${found ? found.name : voiceId} » assignée à ${activePersona.name} !`);
+}
+
+async function createInstantVoiceCloneFromFiles() {
+  const xiKey = getEffectiveElevenLabsApiKey();
+  if (!xiKey) {
+    showToast('⚠️ Veuillez d\'abord enregistrer votre clé API ElevenLabs ci-dessus.');
+    return;
+  }
+
+  const targetPersonaSelect = document.getElementById('clone-target-persona');
+  const fileInput = document.getElementById('clone-audio-files');
+  const statusEl = document.getElementById('clone-creation-status');
+  const btnEl = document.getElementById('btn-create-voice-clone');
+
+  const targetPersonaId = (targetPersonaSelect && targetPersonaSelect.value) || state.voiceSettings?.persona || 'lignac';
+  const targetPersona = VOICE_PERSONAS[targetPersonaId] || getActiveVoicePersona();
+  const files = fileInput && fileInput.files ? Array.from(fileInput.files) : [];
+
+  if (files.length === 0) {
+    showToast('⚠️ Sélectionnez au moins un fichier audio (MP3, WAV ou M4A) de la personnalité.');
+    return;
+  }
+
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.textContent = '⏳ Clonage neuronal en cours...';
+  }
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#eff6ff';
+    statusEl.style.color = '#1e40af';
+    statusEl.innerHTML = `🧬 Envoi de ${files.length} échantillon(s) audio à ElevenLabs Instant Voice Cloning pour <strong>${targetPersona.name}</strong>...`;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append('name', `${targetPersona.name} (Cuisine Clone)`);
+    formData.append(
+      'description',
+      `Clone vocal culinaire de ${targetPersona.name} (${targetPersona.shortTitle}) pour le Guide Vocal Pas-à-Pas.`
+    );
+    files.forEach((file) => {
+      formData.append('files', file, file.name);
+    });
+
+    const resp = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': xiKey
+      },
+      body: formData
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.voice_id) {
+      const errMsg = data?.detail?.message || data?.detail || 'Vérifiez que votre abonnement ElevenLabs inclut Instant Voice Cloning.';
+      if (statusEl) {
+        statusEl.style.background = '#fef2f2';
+        statusEl.style.color = '#991b1b';
+        statusEl.innerHTML = `❌ Échec du clonage : ${errMsg}`;
+      }
+      showToast(`⚠️ Échec du clonage vocal : ${errMsg}`);
+      return;
+    }
+
+    if (!state.voiceSettings.clonedVoiceIds) state.voiceSettings.clonedVoiceIds = {};
+    state.voiceSettings.clonedVoiceIds[targetPersonaId] = data.voice_id;
+    state.voiceSettings.persona = targetPersonaId;
+    state.voiceSettings.engine = 'elevenlabs';
+    saveStateToStorage();
+
+    if (statusEl) {
+      statusEl.style.background = '#dcfce7';
+      statusEl.style.color = '#166534';
+      statusEl.innerHTML = `✅ Voix clonée créée avec succès pour <strong>${targetPersona.name}</strong> ! (Voice ID : <code>${data.voice_id}</code>). Lancement d'un aperçu vocal...`;
+    }
+
+    await syncElevenLabsLibraryVoices(false);
+    renderVoiceGuideSettings();
+    showToast(`🎉 Voix clonée de ${targetPersona.name} activée !`);
+    testSelectedVoiceGuide();
+  } catch (err) {
+    if (statusEl) {
+      statusEl.style.background = '#fef2f2';
+      statusEl.style.color = '#991b1b';
+      statusEl.innerHTML = `❌ Erreur réseau lors de l'envoi des fichiers audio.`;
+    }
+    showToast('⚠️ Erreur réseau lors du clonage vocal.');
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.textContent = '🧬 Cloner & Associer la voix';
+    }
   }
 }
 
@@ -4764,14 +5065,18 @@ function formatVoiceOptionLabel(voice) {
 function selectVoicePersona(personaId, playSample = false) {
   if (!VOICE_PERSONAS[personaId]) return;
   if (!state.voiceSettings) {
-    state.voiceSettings = { persona: personaId, voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
+    state.voiceSettings = { persona: personaId, engine: 'elevenlabs', clonedVoiceIds: {}, voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
   } else {
     state.voiceSettings.persona = personaId;
-    // Remettre le timbre système en auto pour qu'il choisisse automatiquement la voix homme/femme adaptée
     state.voiceSettings.voiceURI = 'auto';
   }
   saveStateToStorage();
   renderVoiceGuideSettings();
+
+  const cloneTargetSelect = document.getElementById('clone-target-persona');
+  if (cloneTargetSelect) {
+    cloneTargetSelect.value = personaId;
+  }
 
   // Si une fiche cuisine est ouverte, mettre à jour le bandeau et le guide vocal en direct
   const modalEl = document.getElementById('recipe-modal');
@@ -4800,17 +5105,77 @@ function selectVoicePersona(personaId, playSample = false) {
 }
 
 function renderVoiceGuideSettings() {
-  const vs = state.voiceSettings || { persona: 'lignac', voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
+  const vs = state.voiceSettings || { persona: 'lignac', engine: 'elevenlabs', clonedVoiceIds: {}, voiceURI: 'auto', rate: 1.0, pitch: 1.0, frenchOnly: true };
   const activePersona = getActiveVoicePersona();
-  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice'));
+  const xiKey = getEffectiveElevenLabsApiKey();
+  const hasElevenLabs = Boolean(xiKey) && vs.engine !== 'system';
+  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice')) || hasElevenLabs;
+  const isCustomCloned = hasCustomVoiceClone(activePersona.id);
 
   // Mettre à jour la pastille en haut des Paramètres
   const statusPill = document.getElementById('voice-guide-status-pill');
   if (statusPill && !voiceGuideSession.isSpeaking) {
-    statusPill.textContent = hasVoiceAiKey
-      ? `🎙️ Voix active : ${activePersona.name} • 🔑 IA Active`
-      : `🎙️ Voix active : ${activePersona.name}`;
+    if (hasElevenLabs) {
+      statusPill.textContent = `🧬 Voix Clonée active : ${activePersona.name}${isCustomCloned ? ' (Clone Perso)' : ' (Neural v2)'}`;
+    } else if (hasVoiceAiKey) {
+      statusPill.textContent = `🎙️ Voix active : ${activePersona.name} • 🔑 IA Active`;
+    } else {
+      statusPill.textContent = `🎙️ Voix active : ${activePersona.name}`;
+    }
     statusPill.className = 'meta-pill healthy-pill';
+  }
+
+  // Mettre à jour le sélecteur de moteur vocal (Mode 3 Clonage vs Système)
+  const engineSelect = document.getElementById('voice-engine-select');
+  if (engineSelect) {
+    engineSelect.value = vs.engine || 'elevenlabs';
+  }
+
+  // Mettre à jour le Studio de Clonage Vocal ElevenLabs
+  const xiInput = document.getElementById('elevenlabs-api-key');
+  if (xiInput && document.activeElement !== xiInput) {
+    xiInput.value = xiKey;
+  }
+
+  const xiBadge = document.getElementById('elevenlabs-status-badge');
+  if (xiBadge) {
+    if (xiKey) {
+      xiBadge.textContent = isCustomCloned
+        ? `🧬 Clone vocal actif (${activePersona.name})`
+        : `✅ ElevenLabs Neural v2 actif`;
+      xiBadge.className = 'meta-pill healthy-pill';
+    } else {
+      xiBadge.textContent = '⚪ Clé ElevenLabs requise pour le clonage';
+      xiBadge.className = 'meta-pill';
+    }
+  }
+
+  const activePersonaLabel = document.getElementById('clone-active-persona-label');
+  if (activePersonaLabel) {
+    activePersonaLabel.textContent = activePersona.name;
+  }
+
+  const customVoiceIdInput = document.getElementById('persona-custom-voiceid-input');
+  if (customVoiceIdInput && document.activeElement !== customVoiceIdInput) {
+    customVoiceIdInput.value = vs.clonedVoiceIds?.[activePersona.id] || '';
+    customVoiceIdInput.placeholder = `Par défaut : ${activePersona.defaultElevenLabsVoiceId || 'Voix Neural FR'}`;
+  }
+
+  const libSelect = document.getElementById('elevenlabs-library-voices-select');
+  if (libSelect) {
+    const currentCustomId = vs.clonedVoiceIds?.[activePersona.id] || '';
+    if (cachedElevenLabsVoices.length === 0) {
+      libSelect.innerHTML = `<option value="">-- Cliquez sur « Synchroniser mes voix » après avoir saisi votre clé --</option>`;
+    } else {
+      libSelect.innerHTML = [
+        `<option value="">-- Choisir parmi vos ${cachedElevenLabsVoices.length} voix ElevenLabs (${activePersona.name}) --</option>`,
+        ...cachedElevenLabsVoices.map((v) => {
+          const catBadge = v.category === 'cloned' ? '🧬 [CLONE] ' : v.category === 'generated' ? '✨ [DESIGN] ' : '🎙️ ';
+          const sel = v.voice_id === currentCustomId ? 'selected' : '';
+          return `<option value="${v.voice_id}" ${sel}>${catBadge}${v.name} (${v.voice_id.slice(0, 8)}…)</option>`;
+        })
+      ].join('');
+    }
   }
 
   // Mettre à jour le menu déroulant des personnalités
@@ -4825,6 +5190,12 @@ function renderVoiceGuideSettings() {
     personaGrid.innerHTML = Object.values(VOICE_PERSONAS)
       .map((p) => {
         const isSelected = p.id === activePersona.id;
+        const hasCloneForP = hasCustomVoiceClone(p.id);
+        const clonePill = hasCloneForP
+          ? `<span class="voice-persona-active-tag" style="background:#7c3aed;">🧬 Voix Clonée</span>`
+          : hasElevenLabs
+          ? `<span class="voice-persona-active-tag" style="background:#0284c7;">✨ Neural v2</span>`
+          : '';
         return `
           <div
             class="voice-persona-card ${isSelected ? 'is-selected' : ''}"
@@ -4839,6 +5210,7 @@ function renderVoiceGuideSettings() {
                 <div class="voice-persona-name-row">
                   <strong>${p.name}</strong>
                   ${isSelected ? '<span class="voice-persona-active-tag">✓ Choisi</span>' : ''}
+                  ${clonePill}
                 </div>
                 <span class="voice-persona-badge">${p.badge}</span>
                 <p class="voice-persona-desc">${p.description}</p>
@@ -4963,10 +5335,13 @@ function setVoiceGuidePitch(val) {
 
 function updateVoiceStatusIndicators(isSpeaking, labelText) {
   const persona = getActiveVoicePersona();
-  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice'));
+  const hasElevenLabs = Boolean(getEffectiveElevenLabsApiKey()) && state.voiceSettings?.engine !== 'system';
+  const hasVoiceAiKey = Boolean(getEffectiveAiApiKey('voice')) || hasElevenLabs;
   const settingsPill = document.getElementById('voice-guide-status-pill');
   if (settingsPill) {
-    const idleLabel = hasVoiceAiKey
+    const idleLabel = hasElevenLabs
+      ? `🧬 Voix Clonée active : ${persona.name}`
+      : hasVoiceAiKey
       ? `🎙️ Voix active : ${persona.name} • 🔑 IA Active`
       : `🎙️ Voix active : ${persona.name}`;
     settingsPill.textContent = labelText || (isSpeaking ? `🔊 ${persona.name} vous parle...` : idleLabel);
@@ -5320,36 +5695,16 @@ function triggerVoiceCommandFeedback(text) {
 // INTERFACE VISUELLE & THÉÂTRE D'ANIMATION DU GUIDE VOCAL DANS LA FICHE CUISINE
 // ============================================================================
 function buildModalVoiceToolbarHTML() {
-  const persona = getActiveVoicePersona();
-
   return `
-    <div id="modal-voice-guide-wrapper" class="modal-voice-guide-wrapper">
-      <div class="voice-launch-banner" style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};">
-        <div class="voice-launch-left">
-          <div class="voice-launch-info">
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span class="voice-persona-badge" style="background: #fff;">${persona.badge}</span>
-              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">📱 Écran maintenu actif</span>
-            </div>
-            <div style="font-weight: 800; font-size: 0.98rem; color: var(--text-main); margin-top: 2px;">
-              Guide Vocal Pas-à-Pas avec <span style="color: ${persona.themeColor};">${persona.name}</span>
-            </div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">
-              Annonce du plat &rarr; Quantités &amp; poids des ingrédients &rarr; Étapes &amp; Four &rarr; Commandes <strong>« Suivant »</strong> / <strong>« Répéter »</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="voice-launch-actions">
-          <button
-            type="button"
-            class="btn btn-primary btn-launch-voice-guide"
-            onclick="startInteractiveVoiceGuide()"
-          >
-            🎙️ Guide vocal
-          </button>
-        </div>
-      </div>
+    <div id="modal-voice-guide-wrapper" class="modal-voice-guide-wrapper" style="margin: 12px 0;">
+      <button
+        type="button"
+        class="btn btn-primary btn-launch-voice-guide"
+        style="width: 100%; justify-content: center;"
+        onclick="startInteractiveVoiceGuide()"
+      >
+        🎙️ Guide vocal
+      </button>
     </div>
   `;
 }
@@ -5366,7 +5721,7 @@ async function startInteractiveVoiceGuide() {
   // Activer le maintien de l'écran du smartphone allumé
   await acquireKitchenWakeLock();
 
-  // Afficher le théâtre animé du personnage dans la Fiche Cuisine
+  // Afficher le guide vocal pas-à-pas dans la Fiche Cuisine
   renderActiveVoiceStageUI();
 
   // Lancer la lecture de la 1ère étape ("Nous allons cuisiner...")
@@ -5396,12 +5751,10 @@ function renderActiveVoiceStageUI() {
       class="voice-character-stage ${voiceGuideSession.isSpeaking ? 'is-speaking' : ''} ${voiceGuideSession.isListening ? 'is-listening' : ''} ${isLastOutro ? 'is-celebrating' : ''}"
       style="--persona-color: ${persona.themeColor}; --persona-bg: ${persona.themeBg}; --persona-border: ${persona.themeBorder};"
     >
-      <!-- Barre supérieure : Statut Wake Lock + Voix active + Bouton Quitter -->
+      <!-- Barre supérieure : Étape + Bouton Quitter -->
       <div class="voice-stage-topbar">
         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
           <span class="voice-stage-step-pill">${item.badge}</span>
-          <span class="voice-persona-badge" style="background: #fff;">🎙️ ${persona.name}</span>
-          <span id="voice-wakelock-badge" class="voice-wakelock-pill">📱 Smartphone maintenu actif</span>
           <span id="voice-heard-command-pill" class="voice-heard-pill" style="display: none;">🎙️ « Suivant » reconnu ✓</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
@@ -7040,7 +7393,7 @@ function openPantryRecipeModal(recipeId, servings) {
   const evalInfo = evaluateRecipeAgainstPantry(recipe, s);
 
   const ingredientsHTML = evalInfo.breakdown
-    .map((b) => {
+    .map((b, idx) => {
       const scaled = formatScaledQty(b.ing.qty, ratio);
       const badge =
         b.status === 'covered'
@@ -7048,7 +7401,16 @@ function openPantryRecipeModal(recipeId, servings) {
           : b.status === 'partial'
           ? `<span class="stock-tag" style="background:#fef3c7; color:#92400e;">Stock partiel (manque ${Math.round(b.missingQty * 10) / 10} ${b.ing.unit})</span>`
           : '';
-      return `<li><span>${b.ing.name} ${badge}</span> <strong>${scaled} ${b.ing.unit}</strong></li>`;
+      return `
+      <li
+        id="recipe-voice-ing-${idx}"
+        onclick="speakRecipeIngredientByIndex(${idx})"
+        title="🔊 Cliquez pour écouter cet ingrédient avec le guide vocal"
+        style="cursor: pointer; padding: 6px 8px; border-radius: 8px; transition: background 0.2s ease;"
+      >
+        <span>${b.ing.name} ${badge}</span>
+        <strong>${scaled} ${b.ing.unit} <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-left: 4px;">🔊</span></strong>
+      </li>`;
     })
     .join('');
 
