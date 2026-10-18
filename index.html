@@ -494,7 +494,7 @@
       <div class="section-banner">
         <div class="banner-text-col">
           <h2>⚙️ Paramètres de l'Application</h2>
-          <p>Choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe ou Voix IA neutres), activez le micro et la caméra, et retrouvez les consignes d'installation.</p>
+          <p>Choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril, Rémy, Paul, Thierry, Philippe, Jean-Pierre ou Voix IA), activez le micro et la caméra, et retrouvez les consignes d'installation.</p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button type="button" id="btn-header-enable-mic" class="btn btn-outline btn-sm" onclick="requestAppMicrophonePermission()">
@@ -544,11 +544,11 @@
             </p>
           </div>
           <span id="voice-guide-status-pill" class="meta-pill healthy-pill" style="font-size: 0.82rem; padding: 5px 12px;">
-            🎙️ Voix active : Cyril Lignac
+            🎙️ Voix active : Cyril
           </span>
         </div>
 
-        <!-- Grille de sélection des 9 personnalités (Maïté, Cyril Lignac, Rémy, Paul Bocuse, Thierry Marx, Etchebest, Jean-Pierre Coffe, IA Homme, IA Femme) -->
+        <!-- Grille de sélection des personnalités -->
         <div id="voice-persona-grid" class="voice-persona-grid" style="margin-top: 14px; margin-bottom: 16px;"></div>
 
         <div class="studio-form-box" style="margin-bottom: 0;">
@@ -560,15 +560,15 @@
                 </label>
               </div>
               <select id="voice-persona-select" class="input-field" style="font-weight: 700;" onchange="selectVoicePersona(this.value, true)">
-                <option value="maite">👩‍🌾 Maïté (Généreuse, Sud-Ouest &amp; bonne chère)</option>
-                <option value="lignac">👨‍🍳 Cyril Lignac (Gourmand, croquant &amp; joyeux)</option>
-                <option value="remy">🐭 Rémy - Ratatouille (Le Petit Chef passionné)</option>
-                <option value="bocuse">👑 Paul Bocuse (Monsieur Paul, tradition &amp; noblesse)</option>
-                <option value="marx">🥋 Thierry Marx (Esprit Zen, précision &amp; températures)</option>
-                <option value="etchebest">🔥 Philippe Etchebest (Chef de brigade énergique &amp; franc)</option>
-                <option value="coffe">👓 Jean-Pierre Coffe (Passion du vrai terroir &amp; franc-parler)</option>
-                <option value="ia_homme">🤖👨 Voix neutre IA Homme (Clair, sobre &amp; précis)</option>
-                <option value="ia_femme">🤖👩 Voix neutre IA Femme (Claire, douce &amp; précise)</option>
+                <option value="maite">Maïté</option>
+                <option value="lignac">Cyril</option>
+                <option value="remy">Rémy</option>
+                <option value="bocuse">Paul</option>
+                <option value="marx">Thierry</option>
+                <option value="etchebest">Philippe</option>
+                <option value="coffe">Jean-Pierre</option>
+                <option value="ia_homme">Voix Homme (IA)</option>
+                <option value="ia_femme">Voix Femme (IA)</option>
               </select>
             </div>
 
