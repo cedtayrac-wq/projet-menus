@@ -14,22 +14,44 @@ const STORAGE_KEYS = {
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
+// Trois types de repas disponibles sur chaque créneau (semaine & week-end) :
+// - 'balanced' (Équilibré) : menus sains, simples et rapides à réaliser
+// - 'pleasure' (Plaisir)   : menus pour se faire plaisir même si moins équilibrés, simples et rapides à réaliser
+// - 'gourmet'  (Gourmet)   : ingrédients plus nobles et délicats, recette simple à réaliser + suggestion de vin
 const SLOTS_DEFINITION = [
-  { id: 'mon-lunch',  day: 'Lundi',    dayOffset: 0, mealLabel: 'Déjeuner', isWeekend: false, defaultPleasure: false },
-  { id: 'mon-dinner', day: 'Lundi',    dayOffset: 0, mealLabel: 'Dîner',    isWeekend: false, defaultPleasure: false },
-  { id: 'tue-lunch',  day: 'Mardi',    dayOffset: 1, mealLabel: 'Déjeuner', isWeekend: false, defaultPleasure: false },
-  { id: 'tue-dinner', day: 'Mardi',    dayOffset: 1, mealLabel: 'Dîner',    isWeekend: false, defaultPleasure: false },
-  { id: 'wed-lunch',  day: 'Mercredi', dayOffset: 2, mealLabel: 'Déjeuner', isWeekend: false, defaultPleasure: false },
-  { id: 'wed-dinner', day: 'Mercredi', dayOffset: 2, mealLabel: 'Dîner',    isWeekend: false, defaultPleasure: false },
-  { id: 'thu-lunch',  day: 'Jeudi',    dayOffset: 3, mealLabel: 'Déjeuner', isWeekend: false, defaultPleasure: false },
-  { id: 'thu-dinner', day: 'Jeudi',    dayOffset: 3, mealLabel: 'Dîner',    isWeekend: false, defaultPleasure: false },
-  { id: 'fri-lunch',  day: 'Vendredi', dayOffset: 4, mealLabel: 'Déjeuner', isWeekend: false, defaultPleasure: false },
-  { id: 'fri-dinner', day: 'Vendredi', dayOffset: 4, mealLabel: 'Dîner',    isWeekend: false, defaultPleasure: false },
-  { id: 'sat-lunch',  day: 'Samedi',   dayOffset: 5, mealLabel: 'Déjeuner', isWeekend: true,  defaultPleasure: false },
-  { id: 'sat-dinner', day: 'Samedi',   dayOffset: 5, mealLabel: 'Dîner',    isWeekend: true,  defaultPleasure: true  },
-  { id: 'sun-lunch',  day: 'Dimanche', dayOffset: 6, mealLabel: 'Déjeuner', isWeekend: true,  defaultPleasure: true  },
-  { id: 'sun-dinner', day: 'Dimanche', dayOffset: 6, mealLabel: 'Dîner',    isWeekend: true,  defaultPleasure: false }
+  { id: 'mon-lunch',  day: 'Lundi',    dayOffset: 0, mealLabel: 'Déjeuner', isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'mon-dinner', day: 'Lundi',    dayOffset: 0, mealLabel: 'Dîner',    isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'tue-lunch',  day: 'Mardi',    dayOffset: 1, mealLabel: 'Déjeuner', isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'tue-dinner', day: 'Mardi',    dayOffset: 1, mealLabel: 'Dîner',    isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'wed-lunch',  day: 'Mercredi', dayOffset: 2, mealLabel: 'Déjeuner', isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'wed-dinner', day: 'Mercredi', dayOffset: 2, mealLabel: 'Dîner',    isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'thu-lunch',  day: 'Jeudi',    dayOffset: 3, mealLabel: 'Déjeuner', isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'thu-dinner', day: 'Jeudi',    dayOffset: 3, mealLabel: 'Dîner',    isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'fri-lunch',  day: 'Vendredi', dayOffset: 4, mealLabel: 'Déjeuner', isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'fri-dinner', day: 'Vendredi', dayOffset: 4, mealLabel: 'Dîner',    isWeekend: false, defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'sat-lunch',  day: 'Samedi',   dayOffset: 5, mealLabel: 'Déjeuner', isWeekend: true,  defaultStyle: 'balanced', defaultPleasure: false },
+  { id: 'sat-dinner', day: 'Samedi',   dayOffset: 5, mealLabel: 'Dîner',    isWeekend: true,  defaultStyle: 'gourmet',  defaultPleasure: false },
+  { id: 'sun-lunch',  day: 'Dimanche', dayOffset: 6, mealLabel: 'Déjeuner', isWeekend: true,  defaultStyle: 'pleasure', defaultPleasure: true  },
+  { id: 'sun-dinner', day: 'Dimanche', dayOffset: 6, mealLabel: 'Dîner',    isWeekend: true,  defaultStyle: 'balanced', defaultPleasure: false }
 ];
+
+function getSlotStyle(slot) {
+  if (!slot) return 'balanced';
+  if (slot.mealStyle === 'balanced' || slot.mealStyle === 'pleasure' || slot.mealStyle === 'gourmet') {
+    return slot.mealStyle;
+  }
+  if (slot.isGourmet) return 'gourmet';
+  if (slot.isPleasure) return 'pleasure';
+  return 'balanced';
+}
+
+function syncSlotStyleFlags(slot, styleOverride) {
+  if (!slot) return;
+  const style = styleOverride || getSlotStyle(slot);
+  slot.mealStyle = style;
+  slot.isPleasure = style === 'pleasure';
+  slot.isGourmet = style === 'gourmet';
+}
 
 let state = {
   weekStartDate: '',      // Format YYYY-MM-DD (toujours calé sur un Lundi)
@@ -37,7 +59,7 @@ let state = {
   plannerViewMode: 'day', // 'day' (1 page par journée : Déjeuner + Dîner) ou 'week' (toute la semaine)
   slots: [],              // Les 14 créneaux de la semaine (avec active: true/false pour comptabiliser ou supprimer)
   inStockKeys: {},        // { "nom_ingredient|unite": true } si décoché (déjà en stock)
-  customItems: [],        // [{ id, name, qty, inStock }]
+  customItems: [],        // [{ id, name, qty, aisle, inStock }]
   favorites: [],          // [recipeId, ...]
   history: [],            // [{ id, dateLabel, weekStartDate, slots }]
   customRecipes: []       // Recettes ajoutées via IA ou manuellement
@@ -158,6 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (typeof slot.active !== 'boolean') {
         slot.active = true;
+      }
+      const recipe = findRecipeById(slot.recipeId);
+      if (!slot.mealStyle) {
+        if (recipe && recipe.type === 'gourmet') {
+          syncSlotStyleFlags(slot, 'gourmet');
+        } else if (slot.isPleasure || (recipe && recipe.type === 'weekend-pleasure')) {
+          syncSlotStyleFlags(slot, 'pleasure');
+        } else {
+          syncSlotStyleFlags(slot, 'balanced');
+        }
+      } else {
+        syncSlotStyleFlags(slot, slot.mealStyle);
       }
     });
   }
@@ -317,16 +351,21 @@ function mergeCustomRecipesIntoCatalog() {
 }
 
 function getCatalogListByType(type) {
-  if (type === 'weekend-pleasure') return window.RECIPES_DB.weekendPleasureMeals;
+  if (type === 'gourmet' || type === 'weekend-gourmet') {
+    if (!window.RECIPES_DB.gourmetMeals) window.RECIPES_DB.gourmetMeals = [];
+    return window.RECIPES_DB.gourmetMeals;
+  }
+  if (type === 'weekend-pleasure' || type === 'pleasure') return window.RECIPES_DB.weekendPleasureMeals;
   if (type === 'weekend-balanced') return window.RECIPES_DB.weekendBalancedMeals;
   return window.RECIPES_DB.weekdayDinners;
 }
 
 function findRecipeById(recipeId) {
   const all = [
-    ...window.RECIPES_DB.weekdayDinners,
-    ...window.RECIPES_DB.weekendBalancedMeals,
-    ...window.RECIPES_DB.weekendPleasureMeals
+    ...(window.RECIPES_DB.weekdayDinners || []),
+    ...(window.RECIPES_DB.weekendBalancedMeals || []),
+    ...(window.RECIPES_DB.weekendPleasureMeals || []),
+    ...(window.RECIPES_DB.gourmetMeals || [])
   ];
   return all.find((r) => r.id === recipeId) || all[0];
 }
@@ -352,10 +391,12 @@ function evaluateSlotCost(slot) {
   }
 
   const recipe = findRecipeById(slot.recipeId);
+  const style = getSlotStyle(slot);
   const baseServings = recipe.baseServings || 2;
+  const fallbackCost = style === 'gourmet' ? 12.50 : style === 'pleasure' ? 8.00 : 4.50;
   const baseDishCost = typeof recipe.costFor2 === 'number'
     ? recipe.costFor2
-    : (slot.isPleasure ? 8.50 : 4.50);
+    : fallbackCost;
 
   const dishCost = baseDishCost * (slot.servings / baseServings);
 
@@ -403,14 +444,34 @@ function formatEuro(amount) {
 // ============================================================================
 // GÉNÉRATION, REMPLACEMENT & SUPPRESSION / COMPTABILISATION DES REPAS
 // ============================================================================
+const recentSeenIds = new Set();
+
 function pickRandomAvoiding(list, usedIds) {
-  const available = list.filter((item) => !usedIds.has(item.id));
+  // 1. Essayer de piocher parmi les recettes ni présentes dans la semaine ni vues récemment
+  let available = list.filter((item) => !usedIds.has(item.id) && !recentSeenIds.has(item.id));
+
+  // 2. Si toutes les recettes de cette catégorie ont déjà été vues, réinitialiser la mémoire de rotation pour cette liste
+  if (available.length === 0) {
+    list.forEach((item) => recentSeenIds.delete(item.id));
+    available = list.filter((item) => !usedIds.has(item.id));
+  }
+
   const pool = available.length > 0 ? available : list;
-  return pool[Math.floor(Math.random() * pool.length)];
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  if (picked && picked.id) {
+    recentSeenIds.add(picked.id);
+  }
+  return picked;
 }
 
 function getPoolForSlot(slot) {
-  if (slot.isPleasure) {
+  const style = getSlotStyle(slot);
+  if (style === 'gourmet') {
+    return window.RECIPES_DB.gourmetMeals && window.RECIPES_DB.gourmetMeals.length
+      ? window.RECIPES_DB.gourmetMeals
+      : window.RECIPES_DB.weekendPleasureMeals;
+  }
+  if (style === 'pleasure') {
     return window.RECIPES_DB.weekendPleasureMeals;
   }
   if (slot.isWeekend) {
@@ -424,8 +485,11 @@ function generateFullWeekPlan() {
   const usedDesserts = new Set();
 
   state.slots = SLOTS_DEFINITION.map((def) => {
+    const style = def.defaultStyle || (def.defaultPleasure ? 'pleasure' : 'balanced');
     let recipePool = window.RECIPES_DB.weekdayDinners;
-    if (def.defaultPleasure) {
+    if (style === 'gourmet' && window.RECIPES_DB.gourmetMeals && window.RECIPES_DB.gourmetMeals.length) {
+      recipePool = window.RECIPES_DB.gourmetMeals;
+    } else if (style === 'pleasure') {
       recipePool = window.RECIPES_DB.weekendPleasureMeals;
     } else if (def.isWeekend) {
       recipePool = window.RECIPES_DB.weekendBalancedMeals;
@@ -435,10 +499,9 @@ function generateFullWeekPlan() {
     usedRecipes.add(pickedRecipe.id);
 
     let pickedDessertId = null;
-    if (def.isWeekend || def.defaultPleasure) {
-      const preferredStyle = def.defaultPleasure ? 'pleasure' : 'balanced';
+    if (def.isWeekend || style === 'pleasure' || style === 'gourmet') {
       const styleDesserts = window.RECIPES_DB.weekendDesserts.filter(
-        (d) => d.style === preferredStyle
+        (d) => d.style === style
       );
       const pickedDessert = pickRandomAvoiding(
         styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts,
@@ -454,7 +517,9 @@ function generateFullWeekPlan() {
       dayOffset: def.dayOffset,
       mealLabel: def.mealLabel,
       isWeekend: def.isWeekend,
-      isPleasure: def.defaultPleasure,
+      mealStyle: style,
+      isPleasure: style === 'pleasure',
+      isGourmet: style === 'gourmet',
       recipeId: pickedRecipe.id,
       dessertId: pickedDessertId,
       servings: 2, // Par défaut : 2 adultes sur chaque journée
@@ -1099,9 +1164,14 @@ function createMealCardHTML(slot) {
           <div class="dessert-box" style="margin-top: 10px;">
             <div class="dessert-header">
               <span class="dessert-tag">🍰 Note sucrée du repas</span>
-              <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem;" onclick="replaceDessertInSlot('${slot.slotId}')">
-                🎲 Autre dessert
-              </button>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem;" onclick="openCatalogModal('${slot.slotId}', 'dessert')" title="Choisir un dessert dans le catalogue">
+                  📚 Choisir
+                </button>
+                <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 0.74rem;" onclick="replaceDessertInSlot('${slot.slotId}')">
+                  🎲 Autre dessert
+                </button>
+              </div>
             </div>
             <div class="dessert-title">${dessert.title}</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">
@@ -1138,10 +1208,13 @@ function createMealCardHTML(slot) {
           </div>
         </div>
 
-        <!-- Boutons Recette / Autre idée / Valider -->
+        <!-- Boutons Recette / Catalogue / Autre idée / Valider -->
         <div class="meal-card-actions">
           <button class="btn btn-outline btn-sm" onclick="openRecipeModal('${slot.slotId}')">
             📖 Fiche cuisine
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="openCatalogModal('${slot.slotId}')" title="Parcourir tout le catalogue de menus">
+            📚 Catalogue
           </button>
           <button class="btn btn-outline btn-sm" onclick="replaceMealInSlot('${slot.slotId}', event)">
             🎲 Autre idée
@@ -1583,6 +1656,244 @@ function openRecipeModal(slotId) {
 
 function closeRecipeModal() {
   document.getElementById('recipe-modal').classList.remove('open');
+}
+
+// ============================================================================
+// MODALE CATALOGUE COMPLET & RECHERCHE DE MENUS / DESSERTS
+// ============================================================================
+let catalogState = {
+  slotId: null,
+  category: 'all', // 'all' | 'weekday' | 'weekend-balanced' | 'weekend-pleasure' | 'dessert' | 'favorites'
+  searchQuery: ''
+};
+
+function openCatalogModal(slotId, initialCategory) {
+  const slot = state.slots.find((s) => s.slotId === slotId);
+  if (!slot) return;
+
+  catalogState.slotId = slotId;
+  catalogState.searchQuery = '';
+
+  if (initialCategory) {
+    catalogState.category = initialCategory;
+  } else if (slot.isPleasure) {
+    catalogState.category = 'weekend-pleasure';
+  } else if (slot.isWeekend) {
+    catalogState.category = 'weekend-balanced';
+  } else {
+    catalogState.category = 'weekday';
+  }
+
+  const modalBody = document.getElementById('recipe-modal-body');
+  if (!modalBody) return;
+
+  const db = window.RECIPES_DB;
+  const wdCount = db.weekdayDinners.length;
+  const wbCount = db.weekendBalancedMeals.length;
+  const wpCount = db.weekendPleasureMeals.length;
+  const desCount = db.weekendDesserts.length;
+  const totalDishes = wdCount + wbCount + wpCount;
+
+  modalBody.innerHTML = `
+    <span class="slot-label">📚 Grand Livre des Menus • ${formatSlotDayHeader(slot)} (${slot.mealLabel})</span>
+    <h2 style="font-size: 1.25rem; font-weight: 800; margin-top: 8px;">
+      Choisir dans le catalogue (${totalDishes} plats &amp; ${desCount} desserts)
+    </h2>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+      Filtrez par catégorie ou recherchez un ingrédient (ex : <em>poulet, saumon, courgette, chèvre, curry...</em>)
+    </p>
+
+    <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+      <input
+        type="search"
+        id="catalog-search-input"
+        class="input-field"
+        placeholder="🔍 Rechercher un plat ou un ingrédient..."
+        oninput="updateCatalogSearch(this.value)"
+      />
+
+      <div id="catalog-filter-tabs" style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-sm" data-cat="weekday" onclick="setCatalogCategory('weekday')">
+          🥗 Semaine Healthy (${wdCount})
+        </button>
+        <button type="button" class="btn btn-sm" data-cat="weekend-balanced" onclick="setCatalogCategory('weekend-balanced')">
+          🍽️ Week-end Équilibré (${wbCount})
+        </button>
+        <button type="button" class="btn btn-sm" data-cat="weekend-pleasure" onclick="setCatalogCategory('weekend-pleasure')">
+          🌟 Menus Plaisir (${wpCount})
+        </button>
+        <button type="button" class="btn btn-sm" data-cat="all" onclick="setCatalogCategory('all')">
+          📚 Tous les plats (${totalDishes})
+        </button>
+        <button type="button" class="btn btn-sm" data-cat="favorites" onclick="setCatalogCategory('favorites')">
+          ❤️ Favoris (${state.favorites.length})
+        </button>
+        <button type="button" class="btn btn-sm" data-cat="dessert" onclick="setCatalogCategory('dessert')">
+          🍰 Desserts (${desCount})
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="catalog-results-list"
+      style="margin-top: 14px; max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;"
+    ></div>
+
+    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+      <button class="btn btn-outline" onclick="closeRecipeModal()">Fermer</button>
+    </div>
+  `;
+
+  renderCatalogModalResults();
+  document.getElementById('recipe-modal').classList.add('open');
+}
+
+function setCatalogCategory(cat) {
+  catalogState.category = cat;
+  renderCatalogModalResults();
+}
+
+function updateCatalogSearch(val) {
+  catalogState.searchQuery = (val || '').trim().toLowerCase();
+  renderCatalogModalResults();
+}
+
+function renderCatalogModalResults() {
+  const container = document.getElementById('catalog-results-list');
+  if (!container) return;
+
+  const slot = state.slots.find((s) => s.slotId === catalogState.slotId);
+  const db = window.RECIPES_DB;
+
+  // Mettre à jour l'état visuel des boutons d'onglets
+  document.querySelectorAll('#catalog-filter-tabs button').forEach((btn) => {
+    const isAct = btn.getAttribute('data-cat') === catalogState.category;
+    btn.className = `btn btn-sm ${isAct ? 'btn-primary' : 'btn-outline'}`;
+  });
+
+  const q = catalogState.searchQuery;
+
+  if (catalogState.category === 'dessert') {
+    const desserts = db.weekendDesserts.filter((d) => {
+      if (!q) return true;
+      const inTitle = d.title.toLowerCase().includes(q);
+      const inIng = (d.ingredients || []).some((i) => i.name.toLowerCase().includes(q));
+      return inTitle || inIng;
+    });
+
+    if (desserts.length === 0) {
+      container.innerHTML = `<p style="padding: 16px; text-align: center; color: var(--text-muted);">Aucun dessert ne correspond à votre recherche.</p>`;
+      return;
+    }
+
+    container.innerHTML = desserts
+      .map((d) => {
+        const isCurrent = slot && slot.dessertId === d.id;
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'var(--primary-soft)' : '#fff'}; border-radius: 10px;">
+            <div>
+              <div style="font-weight: 800; font-size: 0.92rem;">🍰 ${d.title}</div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+                ⏱️ Prépa ${d.prepTime} ${d.cookTime && d.cookTime !== '0 min' ? `• Cuisson ${d.cookTime}` : ''} • 💶 ${formatEuro(d.costFor2 || 2.3)} (2 parts)
+              </div>
+            </div>
+            <button class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'} btn-sm" onclick="selectDessertFromCatalog('${d.id}')">
+              ${isCurrent ? '✓ Sélectionné' : 'Choisir'}
+            </button>
+          </div>
+        `;
+      })
+      .join('');
+    return;
+  }
+
+  let list = [];
+  if (catalogState.category === 'weekday') {
+    list = db.weekdayDinners;
+  } else if (catalogState.category === 'weekend-balanced') {
+    list = db.weekendBalancedMeals;
+  } else if (catalogState.category === 'weekend-pleasure') {
+    list = db.weekendPleasureMeals;
+  } else if (catalogState.category === 'favorites') {
+    const all = [...db.weekdayDinners, ...db.weekendBalancedMeals, ...db.weekendPleasureMeals];
+    list = all.filter((r) => state.favorites.includes(r.id));
+  } else {
+    list = [...db.weekdayDinners, ...db.weekendBalancedMeals, ...db.weekendPleasureMeals];
+  }
+
+  const filtered = list.filter((r) => {
+    if (!q) return true;
+    const inTitle = r.title.toLowerCase().includes(q);
+    const inDesc = (r.description || '').toLowerCase().includes(q);
+    const inTags = (r.tags || []).some((t) => t.toLowerCase().includes(q));
+    const inIng = (r.ingredients || []).some((i) => i.name.toLowerCase().includes(q));
+    return inTitle || inDesc || inTags || inIng;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p style="padding: 16px; text-align: center; color: var(--text-muted);">Aucune recette trouvée pour cette recherche.</p>`;
+    return;
+  }
+
+  container.innerHTML = filtered
+    .map((r) => {
+      const isCurrent = slot && slot.recipeId === r.id;
+      const emoji = getDishEmoji(r, slot);
+      const ingPreview = (r.ingredients || []).slice(0, 4).map((i) => i.name).join(', ');
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'var(--primary-soft)' : '#fff'}; border-radius: 10px;">
+          <div style="flex: 1;">
+            <div style="font-weight: 800; font-size: 0.93rem;">${emoji} ${r.title}</div>
+            <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">
+              ⏱️ Prépa ${r.prepTime} • Feu ${r.cookTime} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2p)
+            </div>
+            <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">
+              🛒 ${ingPreview}...
+            </div>
+          </div>
+          <button class="btn ${isCurrent ? 'btn-outline' : 'btn-primary'} btn-sm" onclick="selectRecipeFromCatalog('${r.id}')">
+            ${isCurrent ? '✓ Actuel' : 'Choisir'}
+          </button>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function selectRecipeFromCatalog(recipeId) {
+  const slot = state.slots.find((s) => s.slotId === catalogState.slotId);
+  if (!slot) return;
+
+  const recipe = findRecipeById(recipeId);
+  slot.recipeId = recipe.id;
+  slot.isPleasure = recipe.type === 'weekend-pleasure';
+  slot.active = true;
+  slot.validated = false;
+
+  if (slot.isPleasure && !slot.dessertId) {
+    slot.dessertId = window.RECIPES_DB.weekendDesserts[0].id;
+  }
+
+  recentSeenIds.add(recipe.id);
+  saveStateToStorage();
+  closeRecipeModal();
+  renderAll();
+  animateCardElement(slot.slotId, 'anim-shuffle');
+  showToast(`🍽️ "${recipe.title}" choisi pour ${slot.day} (${slot.mealLabel}) !`);
+}
+
+function selectDessertFromCatalog(dessertId) {
+  const slot = state.slots.find((s) => s.slotId === catalogState.slotId);
+  if (!slot) return;
+
+  const dessert = findDessertById(dessertId);
+  slot.dessertId = dessert.id;
+  recentSeenIds.add(dessert.id);
+  saveStateToStorage();
+  closeRecipeModal();
+  renderAll();
+  animateCardElement(slot.slotId, 'anim-shuffle');
+  showToast(`🍰 Dessert "${dessert.title}" choisi pour ${slot.day} (${slot.mealLabel}) !`);
 }
 
 // ============================================================================
