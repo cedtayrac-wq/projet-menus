@@ -1232,6 +1232,38 @@ body {
   border: 1px solid #fecdd3;
 }
 
+.wine-pairing-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  padding: 7px 9px;
+  margin-top: 2px;
+}
+
+.wine-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wine-spec-label {
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #881337;
+}
+
+.wine-spec-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4c0519;
+  line-height: 1.25;
+}
+
 .wine-pairing-name {
   font-family: var(--font-display);
   font-size: 0.95rem;
@@ -2082,3 +2114,180 @@ body {
     padding: 12px;
   }
 }
+
+/* ==========================================================================
+   INDICATEURS SAISONNALITÉ (%) & ÉQUILIBRE ALIMENTAIRE (NUTRI-SCORE A-E)
+   ========================================================================== */
+.nutrition-season-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 7px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+}
+
+.nutrition-season-row.compact {
+  margin-top: 4px;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.season-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.season-badge small {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.season-pill-high {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.season-pill-mid {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.season-pill-low {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+
+.nutri-badge-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nutri-badge-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.nutri-title-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.nutri-scale,
+.nutri-mini-scale {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  overflow: hidden;
+  padding: 1px;
+  gap: 1px;
+}
+
+.nutri-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 18px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.82);
+  border-radius: 3px;
+  opacity: 0.42;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.nutri-mini-scale .nutri-letter {
+  width: 14px;
+  height: 16px;
+  font-size: 0.6rem;
+}
+
+.nutri-letter.nutri-a { background: #038141; }
+.nutri-letter.nutri-b { background: #85bb2f; }
+.nutri-letter.nutri-c { background: #fecb02; color: #1e293b; }
+.nutri-letter.nutri-d { background: #ee8100; }
+.nutri-letter.nutri-e { background: #e63e11; }
+
+.nutri-letter.nutri-active {
+  opacity: 1;
+  color: #ffffff;
+  width: 21px;
+  height: 22px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  border: 1.5px solid #ffffff;
+  z-index: 1;
+}
+
+.nutri-letter.nutri-c.nutri-active {
+  color: #0f172a;
+}
+
+.nutri-mini-scale .nutri-letter.nutri-active {
+  width: 18px;
+  height: 19px;
+  font-size: 0.7rem;
+}
+
+.nutri-grade-caption {
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.ing-season-chips-wrap {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.ing-season-chip {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.ing-season-chip.is-in-season {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.ing-season-chip.is-out-season {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+
