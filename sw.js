@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-semaine-v226';
+const CACHE_NAME = 'menu-semaine-v231';
 const ASSETS = [
   './',
   './index.html',
@@ -49,6 +49,14 @@ self.addEventListener('activate', (event) => {
 // Stratégie Network-First avec repli hors-ligne (supermarché sans réseau)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const reqUrl = event.request.url || '';
+  if (
+    !reqUrl.startsWith(self.location.origin) ||
+    reqUrl.includes('/api/') ||
+    event.request.headers.has('range')
+  ) {
+    return;
+  }
   event.respondWith(
     fetch(event.request, { cache: 'no-cache' })
       .then((networkResponse) => {
