@@ -6252,15 +6252,16 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 }
 
 // ============================================================================
-// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 8 MODÈLES HAUTE FIDÉLITÉ VÉRIFIÉS)
+// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 6 MODÈLES 100% SOLO AUDITÉS & VALIDÉS)
+// IMPORTANT : Ne jamais remplacer ces 6 IDs par d'anciens modèles contenant des voix de journalistes/animateurs !
 // ============================================================================
 const FISH_AUDIO_CLONE_MODEL_IDS = {
-  maite: '8c120f8b266641859cbe9f327efbe85b',
-  lignac: '47a917c325db403191defbb608921d52',
-  bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
+  maite: 'cae9259cec4343e1b1c837c525f9d268',
+  lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
+  bocuse: '35bdc7c82ae24edb91bbb24507b5c1f3',
   marx: '6df60779e006417f8ca9a300cc66f772',
-  etchebest: '4dcd8140eef74deba70641d390817cbc',
-  coffe: '6ac42e88a8ae4648adb6654d77fc5415',
+  etchebest: '6e01eb6afdc24c97983bdf3841651857',
+  coffe: '7ab65404e01d4eb5a4e644948a7b31e5',
   ia_homme: '60c049cfece141809edba5a5ec11d8bc',
   ia_femme: 'da57db7f34244092b9d058e1f0e2aa65'
 };
@@ -6276,6 +6277,7 @@ function getEffectiveFishAudioApiKey() {
 
 function tryFetchFishAudioCloneBlob(cleanText, persona) {
   const runTask = async () => {
+    // Toujours prioriser les modèles 100% solo validés dans FISH_AUDIO_CLONE_MODEL_IDS
     const refId =
       FISH_AUDIO_CLONE_MODEL_IDS[persona.id] ||
       (window.APP_CONFIG &&
@@ -6285,19 +6287,29 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
     if (!refId || !fishKey) return null;
 
     const tempVal =
-      persona.id === 'etchebest' || persona.id === 'coffe' || persona.id === 'maite'
-        ? 0.66
-        : 0.64;
+      persona.id === 'maite' ||
+      persona.id === 'lignac' ||
+      persona.id === 'etchebest' ||
+      persona.id === 'coffe'
+        ? 0.72
+        : 0.70;
+    const topPVal =
+      persona.id === 'maite' ||
+      persona.id === 'lignac' ||
+      persona.id === 'bocuse' ||
+      persona.id === 'marx'
+        ? 0.76
+        : 0.75;
 
     const bodyJson = JSON.stringify({
       text: cleanText,
       reference_id: refId,
       format: 'mp3',
-      mp3_bitrate: 128,
+      mp3_bitrate: 192,
       normalize: true,
       latency: 'normal',
       temperature: tempVal,
-      top_p: 0.72
+      top_p: topPVal
     });
 
     const fishTargetUrl = 'https://api.fish.audio/v1/tts';
@@ -6349,7 +6361,7 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v231::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v235::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -6494,7 +6506,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = Boolean(options.isSamplePreview) || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=230`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=235`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
