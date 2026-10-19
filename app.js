@@ -5446,6 +5446,7 @@ function selectVoicePersona(personaId, playSample = false) {
     state.voiceSettings.persona = personaId;
     state.voiceSettings.voiceURI = 'auto';
   }
+  voiceGuideSession.lockedPersonaId = personaId;
   saveStateToStorage();
   renderVoiceGuideSettings();
 
@@ -6176,13 +6177,15 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 // 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 6 VRAIS EXTRAITS STUDIO/INA/RADIO 100% SOLO VÉRIFIÉS DES CHEFS)
 // ============================================================================
 const FISH_AUDIO_CLONE_MODEL_IDS = {
-  maite: 'cae9259cec4343e1b1c837c525f9d268',
-  lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
-  bocuse: '35bdc7c82ae24edb91bbb24507b5c1f3',
+  maite: '8c120f8b266641859cbe9f327efbe85b',
+  lignac: '47a917c325db403191defbb608921d52',
+  bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
   marx: '6df60779e006417f8ca9a300cc66f772',
-  etchebest: '6e01eb6afdc24c97983bdf3841651857',
-  coffe: '7ab65404e01d4eb5a4e644948a7b31e5'
+  etchebest: '4dcd8140eef74deba70641d390817cbc',
+  coffe: '6ac42e88a8ae4648adb6654d77fc5415'
 };
+
+let currentWarmupSeq = 0;
 
 function getEffectiveFishAudioApiKey() {
   const cfg = window.APP_CONFIG || {};
@@ -6201,43 +6204,46 @@ async function tryFetchFishAudioCloneBlob(cleanText, persona) {
   if (!refId || !fishKey) return null;
 
   const tempVal =
-    persona.id === 'etchebest' || persona.id === 'coffe'
-      ? 0.76
-      : persona.id === 'bocuse' || persona.id === 'marx'
-      ? 0.72
-      : 0.74;
+    persona.id === 'etchebest' || persona.id === 'coffe' || persona.id === 'maite'
+      ? 0.66
+      : 0.64;
 
-  try {
-    const resp = await fetch('https://api.fish.audio/v1/tts', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${fishKey}`,
-        'Content-Type': 'application/json',
-        model: 's2.1-pro-free'
-      },
-      body: JSON.stringify({
-        text: cleanText,
-        reference_id: refId,
-        format: 'mp3',
-        mp3_bitrate: 192,
-        normalize: true,
-        latency: 'normal',
-        temperature: tempVal,
-        top_p: 0.76
-      })
-    });
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    if (blob && blob.size >= 200) return blob;
-  } catch (e) {}
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 450 * attempt));
+    }
+    try {
+      const resp = await fetch('https://api.fish.audio/v1/tts', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${fishKey}`,
+          'Content-Type': 'application/json',
+          model: 's2.1-pro-free'
+        },
+        body: JSON.stringify({
+          text: cleanText,
+          reference_id: refId,
+          format: 'mp3',
+          mp3_bitrate: 128,
+          normalize: true,
+          latency: 'normal',
+          temperature: tempVal,
+          top_p: 0.72
+        })
+      });
+      if (!resp.ok) continue;
+      const blob = await resp.blob();
+      if (blob && blob.size >= 500) return blob;
+    } catch (e) {}
+  }
   return null;
 }
 
-// Récupérer (avec cache RAM + déduplication des requêtes en cours) l'audio cloné depuis /api/tts ou Fish Audio S2.1 Pro
+// Récupérer (avec cache RAM + déduplication des requêtes en cours + retry) l'audio cloné depuis /api/tts ou Fish Audio S2.1 Pro
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v212::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v230::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -6258,51 +6264,56 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
       endpoints.push('http://127.0.0.1:8080/api/tts');
     }
 
-    for (const url of endpoints) {
-      // 1. Essayer en POST avec Content-Type text/plain (requête CORS simple sans blocage preflight inutile)
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 26000);
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+    for (let retry = 0; retry < 2; retry++) {
+      if (retry > 0) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      for (const url of endpoints) {
+        // 1. Essayer en POST avec Content-Type text/plain (requête CORS simple sans blocage preflight inutile)
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
-        if (resp.ok) {
-          const ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
-          if (ctype.includes('audio')) {
-            const blob = await resp.blob();
-            if (blob && blob.size >= 200) {
-              return blob;
+          if (resp.ok) {
+            const ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
+            if (ctype.includes('audio')) {
+              const blob = await resp.blob();
+              if (blob && blob.size >= 500) {
+                return blob;
+              }
             }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
 
-      // 2. Repli en GET /api/tts?... si le POST a été filtré
-      try {
-        const qs = `text=${encodeURIComponent(cleanText)}&persona=${encodeURIComponent(persona.id)}&rate=${encodeURIComponent(userRate)}`;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 26000);
-        const respGet = await fetch(`${url}?${qs}`, {
-          method: 'GET',
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+        // 2. Repli en GET /api/tts?... si le POST a été filtré
+        try {
+          const qs = `text=${encodeURIComponent(cleanText)}&persona=${encodeURIComponent(persona.id)}&rate=${encodeURIComponent(userRate)}`;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+          const respGet = await fetch(`${url}?${qs}`, {
+            method: 'GET',
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
-        if (respGet.ok) {
-          const ctype = (respGet.headers.get('Content-Type') || '').toLowerCase();
-          if (ctype.includes('audio')) {
-            const blob = await respGet.blob();
-            if (blob && blob.size >= 200) {
-              return blob;
+          if (respGet.ok) {
+            const ctype = (respGet.headers.get('Content-Type') || '').toLowerCase();
+            if (ctype.includes('audio')) {
+              const blob = await respGet.blob();
+              if (blob && blob.size >= 500) {
+                return blob;
+              }
             }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
     }
 
     // Repli direct sur Fish Audio S2.1 Pro si le serveur local /api/tts n'est pas joignable
@@ -6315,7 +6326,7 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
     return null;
   })();
 
-  if (clientTtsBlobCache.size > 80) {
+  if (clientTtsBlobCache.size > 100) {
     const firstKey = clientTtsBlobCache.keys().next().value;
     if (firstKey) clientTtsBlobCache.delete(firstKey);
   }
@@ -6328,25 +6339,33 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   const reqId = options.reqId;
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
 
-  const blob = await fetchClonedTtsAudioBlob(cleanText, persona);
+  let blob = await fetchClonedTtsAudioBlob(cleanText, persona);
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
-  if (!blob || blob.size < 200) return { ok: false, serverHadBlob: false };
+  if (!blob || blob.size < 500) {
+    await new Promise((r) => setTimeout(r, 400));
+    if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
+    blob = await fetchClonedTtsAudioBlob(cleanText, persona);
+  }
+  if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
+  if (!blob || blob.size < 500) return { ok: false, serverHadBlob: false };
 
   const audioUrl = URL.createObjectURL(blob);
   const played = await playAudioBlobOrUrl(audioUrl, true, persona, options);
   return { ok: played, serverHadBlob: true };
 }
 
-// Pré-charger en arrière-plan les 3 prochaines étapes de la fiche cuisine sur /api/tts (cache Fish Audio S2.1 Pro instantané)
+// Pré-charger séquentiellement en arrière-plan les 2 prochaines étapes avec la personnalité verrouillée
 function warmUpNextVoiceGuideSteps() {
   if (!voiceGuideSession.active || !Array.isArray(voiceGuideSession.sequence)) return;
-  const persona = getActiveVoicePersona();
+  const lockedId = voiceGuideSession.lockedPersonaId || getActiveVoicePersona().id;
+  const persona = VOICE_PERSONAS[lockedId] || getActiveVoicePersona();
   const curIdx = voiceGuideSession.currentIndex || 0;
-  const nextIndices = [curIdx + 1, curIdx + 2, curIdx + 3];
+  const nextIndices = [curIdx + 1, curIdx + 2];
+  const myWarmupSeq = ++currentWarmupSeq;
 
   (async () => {
     for (const idx of nextIndices) {
-      if (!voiceGuideSession.active) break;
+      if (!voiceGuideSession.active || myWarmupSeq !== currentWarmupSeq) break;
       const item = voiceGuideSession.sequence[idx];
       if (!item || !item.spokenText) continue;
       try {
@@ -6356,44 +6375,49 @@ function warmUpNextVoiceGuideSteps() {
   })();
 }
 
-// Pré-chauffer dès l'ouverture de la Fiche Cuisine l'introduction et les 2 premières étapes de la recette
+// Pré-chauffer dès l'ouverture de la Fiche Cuisine uniquement la 1ère étape pour ne jamais saturer l'API
 function warmUpRecipeVoiceGuideOnOpen() {
   if (!activeModalVoiceContext || !areClonedVoicesActive()) return;
   try {
     const persona = getActiveVoicePersona();
     const seq = buildStepByStepVoiceSequence(activeModalVoiceContext);
+    const myWarmupSeq = ++currentWarmupSeq;
     (async () => {
-      for (const idx of [0, 1, 2]) {
-        if (seq[idx] && seq[idx].spokenText) {
-          try {
-            await fetchClonedTtsAudioBlob(seq[idx].spokenText, persona);
-          } catch (e) {}
-        }
+      if (myWarmupSeq !== currentWarmupSeq) return;
+      if (seq[0] && seq[0].spokenText) {
+        try {
+          await fetchClonedTtsAudioBlob(seq[0].spokenText, persona);
+        } catch (e) {}
       }
     })();
   } catch (e) {}
 }
 
-// 2. Lecture de l'extrait vocal cloné Fish Audio S2.1 Pro pré-généré embarqué (assets/voices/<persona>.mp3) — fonctionne 100% hors-ligne et sur PaaS/GitHub Pages
+// 2. Lecture de l'extrait vocal cloné Fish Audio S2.1 Pro pré-généré embarqué (assets/voices/<persona>.mp3)
+// UNIQUEMENT pour le bouton "🔊 Écouter" dans les Paramètres (jamais à la place d'une étape de recette !)
 async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) {
   if (options.reqId && options.reqId !== currentVoiceRequestSeq) return true;
   const sampleQuoteClean = (persona.sampleQuote || '').replace(/[«»]/g, '').trim();
-  const isSample = options.isSamplePreview || options.isIntroStep || cleanText === sampleQuoteClean;
+  const isSample = Boolean(options.isSamplePreview) || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=220`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=230`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
   });
 }
 
-// 3. Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2) si clé ElevenLabs externe renseignée
+// 3. Synthèse Vocale par Clonage Neuronal ElevenLabs (eleven_multilingual_v2) uniquement si un Voice ID personnalisé utilisateur a été défini
 async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = {}) {
   const reqId = options.reqId;
   if (reqId && reqId !== currentVoiceRequestSeq) return true;
+  const userCustomVoiceId = (state.voiceSettings?.clonedVoiceIds?.[persona.id] || '').trim();
+  if (!userCustomVoiceId || userCustomVoiceId.startsWith('neural_clone_')) {
+    return false;
+  }
   try {
-    const voiceId = getResolvedElevenLabsVoiceId(persona.id);
+    const voiceId = userCustomVoiceId;
     const voiceSettings = persona.elevenLabsSettings || {
       stability: 0.45,
       similarity_boost: 0.85,
@@ -6494,7 +6518,6 @@ async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options =
 async function speakWithVoiceGuide(textToSpeak, options = {}) {
   const xiKey = getEffectiveElevenLabsApiKey();
   const isCloneEngine = areClonedVoicesActive() && state.voiceSettings?.engine !== 'system';
-  const voiceApiKey = getEffectiveAiApiKey('voice');
   const hasBrowserSpeech = 'speechSynthesis' in window;
 
   // Toujours couper et invalider toute lecture vocale précédente pour empêcher toute superposition
@@ -6510,7 +6533,14 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
     return;
   }
 
-  let persona = getActiveVoicePersona();
+  // Verrouiller strictement la personnalité sélectionnée dans les paramètres pour toute la durée de la fiche de cuisine
+  let persona =
+    options.persona ||
+    (voiceGuideSession.active &&
+      voiceGuideSession.lockedPersonaId &&
+      VOICE_PERSONAS[voiceGuideSession.lockedPersonaId]) ||
+    getActiveVoicePersona();
+
   if (options.isSamplePreview) {
     activePreviewPersonaId = persona.id;
   }
@@ -6521,33 +6551,21 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
 
   // En Mode Voix Clonée & Imitation Réaliste (par défaut) :
   if (isCloneEngine) {
-    // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter"), lire immédiatement l'échantillon cloné Fish Audio S2.1 Pro embarqué (assets/voices/<persona>.mp3)
+    // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter" dans les Paramètres), lire immédiatement l'échantillon cloné Fish Audio S2.1 Pro embarqué
     if (options.isSamplePreview) {
       const playedFastSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
       if (playedFastSample || reqId !== currentVoiceRequestSeq) return;
     }
 
-    // 2. Utiliser en priorité le serveur local (/api/tts) ou Fish Audio S2.1 Pro qui interroge directement les vrais clones !
+    // 2. Utiliser le serveur de clonage (/api/tts -> Fish Audio S2.1 Pro) pour que 100% de la fiche cuisine soit lue par la même voix clonée !
     const localResult = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
     if (localResult.ok || reqId !== currentVoiceRequestSeq) return;
 
-    // 3. Repli sur l'échantillon Fish Audio S2.1 Pro embarqué si c'est l'étape d'accueil hors-ligne
-    const playedBundledSample = await trySpeakWithBundledSampleAudio(cleanText, persona, reqOptions);
-    if (playedBundledSample || reqId !== currentVoiceRequestSeq) return;
-
-    // 4. Si une clé ElevenLabs externe est configurée, l'utiliser en relais
+    // 3. Si l'utilisateur a défini un clone ElevenLabs personnel pour cette personnalité
     if (xiKey) {
       const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, reqOptions);
       if (playedXi || reqId !== currentVoiceRequestSeq) return;
     }
-
-    // 5. Si une clé Cloud IA est configurée, essayer Cloud Neural TTS
-    if (voiceApiKey) {
-      const playedCloud = await trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, reqOptions);
-      if (playedCloud || reqId !== currentVoiceRequestSeq) return;
-    }
-
-    // IMPORTANT : Ne jamais désactiver ni faire disparaître les personnalités en cours d'utilisation !
   } else {
     // En Mode Voix Système Standard / Repli IA :
     const localResult = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
@@ -6556,7 +6574,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
 
   if (reqId !== currentVoiceRequestSeq) return;
 
-  // 6. Repli sur la synthèse vocale du navigateur (en conservant strictement la personnalité choisie !)
+  // Repli ultime sur la synthèse vocale du navigateur (en conservant strictement la personnalité choisie !)
   if (hasBrowserSpeech) {
     speakWithBrowserSynthesis(cleanText, persona, reqOptions);
   } else {
@@ -7279,6 +7297,8 @@ async function startInteractiveVoiceGuide() {
   // Déverrouiller immédiatement l'élément Audio dans le geste clic de l'utilisateur
   unlockSharedVoiceAudioElement();
 
+  const chosenPersona = getActiveVoicePersona();
+  voiceGuideSession.lockedPersonaId = chosenPersona.id;
   voiceGuideSession.active = true;
   voiceGuideSession.isPaused = false;
   voiceGuideSession.finished = false;
@@ -7309,7 +7329,9 @@ function renderActiveVoiceStageUI() {
   const wrapper = document.getElementById('modal-voice-guide-wrapper');
   if (!wrapper || !voiceGuideSession.active) return;
 
-  const persona = getActiveVoicePersona();
+  const persona =
+    (voiceGuideSession.lockedPersonaId && VOICE_PERSONAS[voiceGuideSession.lockedPersonaId]) ||
+    getActiveVoicePersona();
   const seq = voiceGuideSession.sequence || [];
   const idx = voiceGuideSession.currentIndex || 0;
   const item = seq[idx] || seq[0];
@@ -7371,7 +7393,9 @@ function updateCharacterStageAnimationState() {
   const stage = document.getElementById('voice-character-stage');
   if (!stage) return;
 
-  const persona = getActiveVoicePersona();
+  const persona =
+    (voiceGuideSession.lockedPersonaId && VOICE_PERSONAS[voiceGuideSession.lockedPersonaId]) ||
+    getActiveVoicePersona();
   stage.classList.toggle('is-speaking', !!voiceGuideSession.isSpeaking);
   stage.classList.toggle('is-listening', !voiceGuideSession.isSpeaking && !!voiceGuideSession.isListening);
 
@@ -7437,12 +7461,14 @@ function speakCurrentStepInGuide(isRepeat = false) {
 
   renderActiveVoiceStageUI();
 
+  const persona =
+    (voiceGuideSession.lockedPersonaId && VOICE_PERSONAS[voiceGuideSession.lockedPersonaId]) ||
+    getActiveVoicePersona();
   const textToRead = isRepeat ? item.repeatSpokenText : item.spokenText;
   const isFinalOutro = item.type === 'outro';
 
   if (isFinalOutro) {
     voiceGuideSession.finished = true;
-    const persona = getActiveVoicePersona();
     spawnCulinaryConfetti({
       count: 26,
       spread: 220,
@@ -7451,10 +7477,10 @@ function speakCurrentStepInGuide(isRepeat = false) {
   }
 
   speakWithVoiceGuide(textToRead, {
+    persona,
     statusLabel: `${item.badge}`,
-    isIntroStep: item.type === 'intro' && !isRepeat,
     onPlayStart: () => {
-      // Pré-générer en arrière-plan les étapes suivantes dès que l'étape courante démarre
+      // Pré-générer séquentiellement en arrière-plan les étapes suivantes dès que l'étape courante démarre
       warmUpNextVoiceGuideSteps();
     },
     onEnd: () => {
@@ -7531,6 +7557,7 @@ function speakRecipeIngredientByIndex(ingIndex) {
   if (!activeModalVoiceContext) return;
   unlockSharedVoiceAudioElement();
   if (!voiceGuideSession.active) {
+    voiceGuideSession.lockedPersonaId = getActiveVoicePersona().id;
     voiceGuideSession.active = true;
     voiceGuideSession.isPaused = false;
     voiceGuideSession.finished = false;
@@ -7552,6 +7579,7 @@ function speakRecipeStepByIndex(stepIndex) {
   if (!activeModalVoiceContext) return;
   unlockSharedVoiceAudioElement();
   if (!voiceGuideSession.active) {
+    voiceGuideSession.lockedPersonaId = getActiveVoicePersona().id;
     voiceGuideSession.active = true;
     voiceGuideSession.isPaused = false;
     voiceGuideSession.finished = false;
