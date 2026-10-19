@@ -2647,6 +2647,11 @@ function openRecipeModal(slotId) {
   const wineModalHTML = buildWinePairingBoxHTML(recipe, slot, true);
   const nutritionAndSeasonModalHTML = buildNutritionAndSeasonHTML(recipe, slot, false);
 
+  if (voiceGuideSession.active && typeof stopVoiceGuide === 'function') {
+    stopVoiceGuide();
+  }
+  voiceGuideSession.lockedPersonaId = getActiveVoicePersona().id;
+
   activeModalVoiceContext = {
     title: recipe.title,
     servings: slot.servings,
@@ -4224,6 +4229,16 @@ function getAvailableVoicePersonas() {
 }
 
 function getActiveVoicePersona() {
+  try {
+    const rawSaved = localStorage.getItem(STORAGE_KEYS.VOICE_SETTINGS);
+    if (rawSaved) {
+      const parsed = JSON.parse(rawSaved);
+      if (parsed && parsed.persona && VOICE_PERSONAS[parsed.persona]) {
+        if (!state.voiceSettings) state.voiceSettings = {};
+        state.voiceSettings.persona = parsed.persona;
+      }
+    }
+  } catch (e) {}
   const personaId = state.voiceSettings?.persona || 'lignac';
   const rawPersona = VOICE_PERSONAS[personaId] || VOICE_PERSONAS.lignac;
   if (!areClonedVoicesActive() && rawPersona.id !== 'ia_femme' && rawPersona.id !== 'ia_homme') {
@@ -5978,12 +5993,15 @@ function updateVoiceStatusIndicators(isSpeaking, labelText) {
 // & RECONNAISSANCE VOCALE CONTINUE (« SUIVANT », « RÉPÉTER », « PAUSE », « REPRENDRE »)
 // ============================================================================
 let activeCloudVoiceAudio = null;
+let activeCloudVoiceBufferSource = null;
 let activeCloudVoiceObjectUrl = null;
 let sharedVoiceGuideAudio = null;
 let sharedVoiceGuideAudioUnlocked = false;
+let sharedVoiceAudioCtx = null;
 let currentVoiceRequestSeq = 0;
 let activeTtsFetchController = null;
 let activePreviewPersonaId = null;
+let fishClientFetchQueue = Promise.resolve();
 const clientTtsBlobCache = new Map();
 window._activeVoiceUtterance = null; // Référence globale pour empêcher le Garbage Collector Chrome/Android de supprimer onend !
 
@@ -5995,10 +6013,27 @@ function getOrCreateSharedVoiceAudio() {
   return sharedVoiceGuideAudio;
 }
 
-// Déverrouiller l'élément Audio partagé lors d'un geste utilisateur (clic/toucher)
-// pour que la lecture asynchrone (/api/tts) et les commandes vocales (« Suivant ») ne soient jamais bloquées par l'autoplay navigateur
+function getOrCreateSharedVoiceAudioCtx() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!sharedVoiceAudioCtx) {
+      sharedVoiceAudioCtx = new AudioCtx();
+    }
+    if (sharedVoiceAudioCtx.state === 'suspended') {
+      sharedVoiceAudioCtx.resume().catch(() => {});
+    }
+    return sharedVoiceAudioCtx;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Déverrouiller l'élément Audio partagé ET le Web AudioContext lors d'un geste utilisateur (clic/toucher)
+// pour que la lecture asynchrone (Fish Audio / /api/tts) et les commandes vocales (« Suivant ») ne soient jamais bloquées sur smartphone
 function unlockSharedVoiceAudioElement() {
   try {
+    getOrCreateSharedVoiceAudioCtx();
     const audio = getOrCreateSharedVoiceAudio();
     if (sharedVoiceGuideAudioUnlocked || activeCloudVoiceAudio === audio || voiceGuideSession.isSpeaking) {
       return;
@@ -6024,6 +6059,14 @@ function unlockSharedVoiceAudioElement() {
 }
 
 function stopActiveCloudVoiceAudio() {
+  if (activeCloudVoiceBufferSource) {
+    try {
+      activeCloudVoiceBufferSource.onended = null;
+      activeCloudVoiceBufferSource.stop(0);
+      activeCloudVoiceBufferSource.disconnect();
+    } catch (e) {}
+    activeCloudVoiceBufferSource = null;
+  }
   if (activeCloudVoiceAudio) {
     try {
       activeCloudVoiceAudio.onended = null;
@@ -6090,8 +6133,6 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
       const userRate = state.voiceSettings?.rate || 1.0;
       const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id];
 
-      // Si un profil cloné personnalisé a ajusté la hauteur (pitchHzDelta) et qu'on lit un extrait pré-généré,
-      // on peut moduler légèrement le timbre si demandé
       let effectiveRate = Math.max(0.75, Math.min(1.38, userRate));
       if (options.applyClonePitchOnClient && cloneProf && cloneProf.pitchHzDelta) {
         const pitchFactor = Math.max(0.86, Math.min(1.16, 1 + cloneProf.pitchHzDelta / 160));
@@ -6135,12 +6176,12 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
         resolve(ok);
       };
 
-      audio.onplay = () => {
+      const markPlayStarted = () => {
         sharedVoiceGuideAudioUnlocked = true;
         if (reqId && reqId !== currentVoiceRequestSeq) {
-          try { audio.pause(); } catch (e) {}
+          stopActiveCloudVoiceAudio();
           finish(true);
-          return;
+          return false;
         }
         voiceGuideSession.isSpeaking = true;
         updateVoiceStatusIndicators(true, options.statusLabel || `🧬 ${persona.name} vous parle...`);
@@ -6149,10 +6190,47 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
         if (typeof options.onPlayStart === 'function') {
           options.onPlayStart();
         }
+        return true;
+      };
+
+      audio.onplay = () => {
+        markPlayStarted();
       };
 
       audio.onended = () => finish(true);
       audio.onerror = () => finish(false);
+
+      // Repli Web Audio API (AudioContext) si HTMLAudioElement.play() est bloqué sur mobile après un appel réseau asynchrone
+      const tryWebAudioFallback = async () => {
+        try {
+          if (!options.audioBlob) return finish(false);
+          const ctx = getOrCreateSharedVoiceAudioCtx();
+          if (!ctx) return finish(false);
+          if (ctx.state === 'suspended') {
+            await ctx.resume().catch(() => {});
+          }
+          const arrBuf = await options.audioBlob.arrayBuffer();
+          if (reqId && reqId !== currentVoiceRequestSeq) return finish(true);
+          const decoded = await ctx.decodeAudioData(arrBuf.slice(0));
+          if (reqId && reqId !== currentVoiceRequestSeq) return finish(true);
+          const srcNode = ctx.createBufferSource();
+          srcNode.buffer = decoded;
+          srcNode.playbackRate.value = effectiveRate;
+          srcNode.connect(ctx.destination);
+          activeCloudVoiceBufferSource = srcNode;
+          srcNode.onended = () => {
+            if (activeCloudVoiceBufferSource === srcNode) {
+              activeCloudVoiceBufferSource = null;
+            }
+            finish(true);
+          };
+          if (markPlayStarted()) {
+            srcNode.start(0);
+          }
+        } catch (err) {
+          finish(false);
+        }
+      };
 
       audio.play().catch(() => {
         try {
@@ -6161,10 +6239,10 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
           activeCloudVoiceAudio = fallbackAudio;
           fallbackAudio.onplay = audio.onplay;
           fallbackAudio.onended = () => finish(true);
-          fallbackAudio.onerror = () => finish(false);
-          fallbackAudio.play().catch(() => finish(false));
+          fallbackAudio.onerror = () => tryWebAudioFallback();
+          fallbackAudio.play().catch(() => tryWebAudioFallback());
         } catch (err) {
-          finish(false);
+          tryWebAudioFallback();
         }
       });
     } catch (e) {
@@ -6174,7 +6252,7 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 }
 
 // ============================================================================
-// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 6 VRAIS EXTRAITS STUDIO/INA/RADIO 100% SOLO VÉRIFIÉS DES CHEFS)
+// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 8 MODÈLES HAUTE FIDÉLITÉ VÉRIFIÉS)
 // ============================================================================
 const FISH_AUDIO_CLONE_MODEL_IDS = {
   maite: '8c120f8b266641859cbe9f327efbe85b',
@@ -6182,7 +6260,9 @@ const FISH_AUDIO_CLONE_MODEL_IDS = {
   bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
   marx: '6df60779e006417f8ca9a300cc66f772',
   etchebest: '4dcd8140eef74deba70641d390817cbc',
-  coffe: '6ac42e88a8ae4648adb6654d77fc5415'
+  coffe: '6ac42e88a8ae4648adb6654d77fc5415',
+  ia_homme: '60c049cfece141809edba5a5ec11d8bc',
+  ia_femme: 'da57db7f34244092b9d058e1f0e2aa65'
 };
 
 let currentWarmupSeq = 0;
@@ -6194,86 +6274,118 @@ function getEffectiveFishAudioApiKey() {
   return 'sk-fish--dbfxx4hOXWqWQhe3Wi4aROmki6FOuNtUm5sEz7YbmQ';
 }
 
-async function tryFetchFishAudioCloneBlob(cleanText, persona) {
-  const refId =
-    FISH_AUDIO_CLONE_MODEL_IDS[persona.id] ||
-    (window.APP_CONFIG &&
-      window.APP_CONFIG.fishClonedVoiceIds &&
-      window.APP_CONFIG.fishClonedVoiceIds[persona.id]);
-  const fishKey = getEffectiveFishAudioApiKey();
-  if (!refId || !fishKey) return null;
+function tryFetchFishAudioCloneBlob(cleanText, persona) {
+  const runTask = async () => {
+    const refId =
+      FISH_AUDIO_CLONE_MODEL_IDS[persona.id] ||
+      (window.APP_CONFIG &&
+        window.APP_CONFIG.fishClonedVoiceIds &&
+        window.APP_CONFIG.fishClonedVoiceIds[persona.id]);
+    const fishKey = getEffectiveFishAudioApiKey();
+    if (!refId || !fishKey) return null;
 
-  const tempVal =
-    persona.id === 'etchebest' || persona.id === 'coffe' || persona.id === 'maite'
-      ? 0.66
-      : 0.64;
+    const tempVal =
+      persona.id === 'etchebest' || persona.id === 'coffe' || persona.id === 'maite'
+        ? 0.66
+        : 0.64;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 450 * attempt));
+    const bodyJson = JSON.stringify({
+      text: cleanText,
+      reference_id: refId,
+      format: 'mp3',
+      mp3_bitrate: 128,
+      normalize: true,
+      latency: 'normal',
+      temperature: tempVal,
+      top_p: 0.72
+    });
+
+    const fishTargetUrl = 'https://api.fish.audio/v1/tts';
+    // Sur navigateur (smartphone GitHub Pages ou PC), api.fish.audio bloque le preflight CORS direct.
+    // On passe en priorité par la passerelle HTTPS CORS vérifiée (proxy.corsfix.com), avec repli direct.
+    const candidateUrls = [
+      `https://proxy.corsfix.com/?sdk=1&url=${encodeURIComponent(fishTargetUrl)}`,
+      fishTargetUrl
+    ];
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+      for (const endpointUrl of candidateUrls) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          const resp = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${fishKey}`,
+              'Content-Type': 'application/json',
+              model: 's2.1-pro-free'
+            },
+            body: bodyJson,
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (!resp.ok) continue;
+          const blob = await resp.blob();
+          if (blob && blob.size >= 500) return blob;
+        } catch (e) {}
+      }
     }
-    try {
-      const resp = await fetch('https://api.fish.audio/v1/tts', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${fishKey}`,
-          'Content-Type': 'application/json',
-          model: 's2.1-pro-free'
-        },
-        body: JSON.stringify({
-          text: cleanText,
-          reference_id: refId,
-          format: 'mp3',
-          mp3_bitrate: 128,
-          normalize: true,
-          latency: 'normal',
-          temperature: tempVal,
-          top_p: 0.72
-        })
-      });
-      if (!resp.ok) continue;
-      const blob = await resp.blob();
-      if (blob && blob.size >= 500) return blob;
-    } catch (e) {}
-  }
-  return null;
+    return null;
+  };
+
+  // Sérialiser les appels Fish Audio côté client pour ne jamais dépasser la limite de requêtes simultanées (HTTP 429)
+  const queuedPromise = fishClientFetchQueue.then(runTask, runTask);
+  fishClientFetchQueue = queuedPromise.then(
+    () => {},
+    () => {}
+  );
+  return queuedPromise;
 }
 
-// Récupérer (avec cache RAM + déduplication des requêtes en cours + retry) l'audio cloné depuis /api/tts ou Fish Audio S2.1 Pro
+// Récupérer (avec cache RAM + déduplication des requêtes en cours + retry) l'audio cloné depuis Fish Audio S2.1 Pro ou /api/tts
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v230::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v231::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
   }
 
   const fetchPromise = (async () => {
-    const payload = {
-      text: cleanText,
-      persona: persona.id,
-      rate: userRate,
-      pitchHz: cloneProf.pitchHzDelta || 0,
-      ratePct: cloneProf.ratePctDelta || 0
-    };
+    const isLocalHost =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    const endpoints = ['/api/tts'];
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      endpoints.push('http://localhost:8080/api/tts');
-      endpoints.push('http://127.0.0.1:8080/api/tts');
+    // 1. Sur Smartphone / GitHub Pages (hébergement statique sans serveur Python local),
+    // appeler IMMÉDIATEMENT Fish Audio S2.1 Pro via la passerelle HTTPS CORS sans perdre de temps sur /api/tts (404) !
+    if (!isLocalHost) {
+      const directFishBlob = await tryFetchFishAudioCloneBlob(cleanText, persona);
+      if (directFishBlob && directFishBlob.size >= 500) {
+        return directFishBlob;
+      }
     }
 
-    for (let retry = 0; retry < 2; retry++) {
-      if (retry > 0) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-      for (const url of endpoints) {
-        // 1. Essayer en POST avec Content-Type text/plain (requête CORS simple sans blocage preflight inutile)
+    // 2. Sur PC local (localhost:8080), interroger d'abord le serveur local /api/tts (qui bénéficie du cache disque tts_cache/)
+    if (isLocalHost) {
+      const payload = {
+        text: cleanText,
+        persona: persona.id,
+        rate: userRate,
+        pitchHz: cloneProf.pitchHzDelta || 0,
+        ratePct: cloneProf.ratePctDelta || 0
+      };
+
+      for (let retry = 0; retry < 2; retry++) {
+        if (retry > 0) {
+          await new Promise((r) => setTimeout(r, 400));
+        }
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 45000);
-          const resp = await fetch(url, {
+          const timeoutId = setTimeout(() => controller.abort(), 35000);
+          const resp = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
             body: JSON.stringify(payload),
@@ -6291,42 +6403,20 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
             }
           }
         } catch (e) {}
-
-        // 2. Repli en GET /api/tts?... si le POST a été filtré
-        try {
-          const qs = `text=${encodeURIComponent(cleanText)}&persona=${encodeURIComponent(persona.id)}&rate=${encodeURIComponent(userRate)}`;
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 45000);
-          const respGet = await fetch(`${url}?${qs}`, {
-            method: 'GET',
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-
-          if (respGet.ok) {
-            const ctype = (respGet.headers.get('Content-Type') || '').toLowerCase();
-            if (ctype.includes('audio')) {
-              const blob = await respGet.blob();
-              if (blob && blob.size >= 500) {
-                return blob;
-              }
-            }
-          }
-        } catch (e) {}
       }
-    }
 
-    // Repli direct sur Fish Audio S2.1 Pro si le serveur local /api/tts n'est pas joignable
-    const directFishBlob = await tryFetchFishAudioCloneBlob(cleanText, persona);
-    if (directFishBlob) {
-      return directFishBlob;
+      // Repli sur Fish Audio S2.1 Pro côté client si le serveur local /api/tts n'a pas répondu
+      const fallbackFishBlob = await tryFetchFishAudioCloneBlob(cleanText, persona);
+      if (fallbackFishBlob && fallbackFishBlob.size >= 500) {
+        return fallbackFishBlob;
+      }
     }
 
     clientTtsBlobCache.delete(cacheKey);
     return null;
   })();
 
-  if (clientTtsBlobCache.size > 100) {
+  if (clientTtsBlobCache.size > 120) {
     const firstKey = clientTtsBlobCache.keys().next().value;
     if (firstKey) clientTtsBlobCache.delete(firstKey);
   }
@@ -6334,7 +6424,7 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
   return fetchPromise;
 }
 
-// 1. Synthèse Vocale via le Moteur de Voix Clonées & Neuronales Local (/api/tts : Fish Audio S2.1 Pro + Edge Neural + Windows OneCore)
+// 1. Synthèse Vocale via le Moteur de Voix Clonées & Neuronales (Fish Audio S2.1 Pro + /api/tts)
 async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   const reqId = options.reqId;
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
@@ -6342,7 +6432,7 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   let blob = await fetchClonedTtsAudioBlob(cleanText, persona);
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
   if (!blob || blob.size < 500) {
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 350));
     if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
     blob = await fetchClonedTtsAudioBlob(cleanText, persona);
   }
@@ -6350,7 +6440,10 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   if (!blob || blob.size < 500) return { ok: false, serverHadBlob: false };
 
   const audioUrl = URL.createObjectURL(blob);
-  const played = await playAudioBlobOrUrl(audioUrl, true, persona, options);
+  const played = await playAudioBlobOrUrl(audioUrl, true, persona, {
+    ...options,
+    audioBlob: blob
+  });
   return { ok: played, serverHadBlob: true };
 }
 
@@ -7294,7 +7387,7 @@ function buildModalVoiceToolbarHTML() {
 async function startInteractiveVoiceGuide() {
   if (!activeModalVoiceContext) return;
 
-  // Déverrouiller immédiatement l'élément Audio dans le geste clic de l'utilisateur
+  // Déverrouiller immédiatement l'élément Audio et l'AudioContext dans le geste clic de l'utilisateur
   unlockSharedVoiceAudioElement();
 
   const chosenPersona = getActiveVoicePersona();
@@ -7311,14 +7404,9 @@ async function startInteractiveVoiceGuide() {
   // Afficher le guide vocal pas-à-pas dans la Fiche Cuisine dès le clic
   renderActiveVoiceStageUI();
 
-  // Sur smartphone, demander d'abord l'autorisation micro dans le geste tactile AVANT de lancer le haut-parleur
-  if (isMobilePhoneDevice() && appDevicePermissionsState.mic !== 'granted') {
-    await requestAppMicrophonePermission();
-  }
-
   startVoiceSessionWatchdog();
 
-  // Lancer la lecture de la 1ère étape (le micro s'activera dès la fin de la phrase d'accueil pour éviter un bip inutile au départ)
+  // Lancer IMMÉDIATEMENT la lecture de la 1ère étape dans le geste tactile (le micro s'activera dès la fin de la phrase d'accueil)
   speakCurrentStepInGuide(false);
 
   // Activer le maintien de l'écran du smartphone allumé
@@ -9210,6 +9298,11 @@ function openPantryRecipeModal(recipeId, servings) {
       </li>`
     )
     .join('');
+
+  if (voiceGuideSession.active && typeof stopVoiceGuide === 'function') {
+    stopVoiceGuide();
+  }
+  voiceGuideSession.lockedPersonaId = getActiveVoicePersona().id;
 
   activeModalVoiceContext = {
     title: recipe.title,
