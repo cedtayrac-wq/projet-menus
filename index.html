@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=288" />
+  <link rel="stylesheet" href="styles.css?v=291" />
 </head>
 <body>
 
@@ -526,6 +526,26 @@
           </span>
         </div>
 
+        <!-- Bouton Mode Végétarien (ne proposer que des plats veggie) -->
+        <div class="veggie-mode-bar">
+          <div class="veggie-mode-info">
+            <span class="veggie-mode-icon">🌱</span>
+            <div>
+              <strong>Option Végétarien (100% Veggie)</strong>
+              <p>Activez ce bouton pour écarter automatiquement toutes les viandes, volailles, charcuteries, poissons et fruits de mer des menus proposés.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            id="btn-toggle-vegetarian-mode"
+            class="btn btn-veggie-toggle"
+            onclick="toggleVegetarianMode(event)"
+            aria-pressed="false"
+          >
+            🌱 Végétarien : Désactivé
+          </button>
+        </div>
+
         <!-- Champ d'ajout d'ingrédient(s) à éviter -->
         <div class="avoided-add-row">
           <input
@@ -748,8 +768,8 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <!-- SCRIPTS -->
-  <script src="data/config.js?v=288"></script>
-  <script src="data/recipes.js?v=288"></script>
-  <script src="app.js?v=288"></script>
+  <script src="data/config.js?v=291"></script>
+  <script src="data/recipes.js?v=291"></script>
+  <script src="app.js?v=291"></script>
 </body>
 </html>
