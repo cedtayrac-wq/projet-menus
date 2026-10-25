@@ -4194,25 +4194,57 @@ const VOICE_PERSONAS = {
     themeBg: '#fef2f2',
     themeBorder: '#fca5a5',
     particles: ['🦆', '🍲', '🧄', '🍷', '❤️', '🌿'],
-    description: 'Son accent gascon chantant (« Macarel ! », « Té ! »), sa générosité landaise et son franc-parler légendaire !',
+    description: 'Son accent gascon chantant (« Té ! », « Mes petits ! »), sa générosité landaise et son franc-parler légendaire !',
     sampleQuote: '« Bonjour mes petits ! Attachez bien votre tablier, aujourd\'hui ça va chanter dans la cocotte, macarel ! Et surtout ne me plaignez pas la graisse de canard ni le bon beurre, on n\'est pas là pour faire la diète ! Quand vous êtes prêt, dites Suivant ! »',
-    buildIntro: (dish, servings) =>
-      `Bonjour mes petits ! Attachez bien votre tablier, macarel : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, té ! On n'est pas là pour faire la diète, je vous garantis qu'on va se régaler !`,
-    buildIngredients: (servings, ingListSpeech) =>
-      `Allez mes petits, macarel ! Commençons par les bons produits du marché pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : préparez d'abord ${ingListSpeech}, té !`,
-    buildOvenAlert: (temp) =>
-      `Attention mes petits, macarel : allumez votre four tout de suite et lancez le préchauffage à ${temp}, té !`,
+    buildIntro: (dish, servings, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Bonjour mes petits ! Attachez bien votre tablier : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${pLabel}. On n'est pas là pour faire la diète, je vous garantis qu'on va se régaler !`,
+        `Allez, approchez dans ma cuisine les drôles ! Aujourd'hui on prépare un bon « ${dish} » bien généreux pour ${servings} ${pLabel}, té ! Ça va chanter dans la cocotte !`,
+        `Bonjour à tous ! Sortez les casseroles, mes petits : au menu du jour, « ${dish} » pour ${servings} ${pLabel}. De la vraie cuisine du cœur comme à Rion-des-Landes !`,
+        `Té, quelle bonne idée de cuisiner ensemble ! Aujourd'hui, je vous montre comment réussir un fameux « ${dish} » pour ${servings} ${pLabel}, macarel !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildIngredients: (servings, ingListSpeech, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Allez mes petits, commençons par les bons produits du marché pour ${servings} ${pLabel} : préparez d'abord ${ingListSpeech}.`,
+        `Pour ${servings} ${pLabel}, il nous faut de la belle marchandise bien fraîche : sortez d'abord ${ingListSpeech}, té !`,
+        `Commençons notre mise en place de bon cœur pour ${servings} ${pLabel} : mettez sur la table ${ingListSpeech}.`,
+        `Voyons voir notre panier pour ${servings} ${pLabel}, les drôles : prenez pour commencer ${ingListSpeech}.`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildOvenAlert: (temp, seed = 0) => {
+      const variants = [
+        `Attention mes petits : allumez votre four tout de suite et lancez le préchauffage à ${temp} !`,
+        `Té, avant d'aller plus loin, mettez donc votre four à chauffer à ${temp}, il doit être bien chaud !`,
+        `N'oubliez pas d'allumer le four à ${temp} dès maintenant, les drôles, comme ça il sera fin prêt !`
+      ];
+      return variants[seed % variants.length];
+    },
     stepIntros: [
       'Allez mes petits, première étape :',
-      'Ensuite, té, regardez-moi ça :',
-      'Macarel, on continue de bon cœur :',
+      'Ensuite, regardez-moi ça :',
+      'On continue de bon cœur :',
       'Attention les drôles, étape suivante :',
+      'Maintenant, écoutez bien le tour de main :',
+      'Té, passons à la suite sans traîner :',
+      'Allez, on avance tranquillement :',
       'Et pour finir en beauté, mes petits :'
     ],
-    repeatIntro: 'Té, écoutez bien mes petits, je répète :',
+    repeatIntro: 'Té, écoutez bien mes petits, je vous le redis :',
     promptNext: '',
-    buildOutro: (dish) =>
-      `Et voilà le travail, macarel ! Notre plat « ${dish} » sent drôlement bon dans toute la cuisine ! À table mes petits, servez bien chaud et très bon appétit !`
+    buildOutro: (dish, seed = 0) => {
+      const variants = [
+        `Et voilà le travail ! Notre plat « ${dish} » sent drôlement bon dans toute la cuisine ! À table mes petits, servez bien chaud et très bon appétit !`,
+        `Té, regardez-moi cette merveille : votre « ${dish} » est prêt à régaler toute la tablée ! Servez généreusement et bon appétit à tous !`,
+        `Ah, ça embaume jusque dehors ! Le « ${dish} » est fin prêt, les drôles : régalez-vous bien et ne laissez rien dans l'assiette !`,
+        `Et voilà une belle cuisine de terroir comme je l'aime ! Bon appétit mes petits avec ce délicieux « ${dish} » !`
+      ];
+      return variants[seed % variants.length];
+    }
   },
 
   lignac: {
@@ -4231,23 +4263,55 @@ const VOICE_PERSONAS = {
     particles: ['✨', '👨‍🍳', '🍋', '🥘', '🌟', '🍴'],
     description: 'Son accent chantant de l\'Aveyron, son tutoiement chaleureux et son fameux « Gourmand et croquant ! ».',
     sampleQuote: '« Salut à tous ! Aujourd\'hui en cuisine, on se fait super plaisir avec une recette ultra gourmande et bien croquante ! On met du peps, une belle noisette de beurre qui chante, et quand vous êtes prêt, dites Suivant ! »',
-    buildIntro: (dish, servings) =>
-      `Salut à tous ! Aujourd'hui en cuisine, on se fait super plaisir : nous allons préparer un « ${dish} » bien gourmand et croquant, pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} !`,
-    buildIngredients: (servings, ingListSpeech) =>
-      `Allez c'est parti pour notre mise en place bien gourmande pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : commence par sortir ${ingListSpeech} !`,
-    buildOvenAlert: (temp) =>
-      `Hop, petit réflexe de chef : préchauffe tout de suite ton four à ${temp} pour qu'il soit bien chaud !`,
+    buildIntro: (dish, servings, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Salut à tous ! Aujourd'hui en cuisine, on se fait super plaisir : nous allons préparer un « ${dish} » bien gourmand et croquant, pour ${servings} ${pLabel} !`,
+        `Bonjour tout le monde ! Ravi de vous retrouver derrière les fourneaux pour cuisiner ensemble « ${dish} », pour ${servings} ${pLabel}. Vous allez voir, c'est simple et plein de peps !`,
+        `Allez, c'est parti en cuisine ! Aujourd'hui on se régale avec « ${dish} » pour ${servings} ${pLabel}, une vraie recette plaisir comme on les aime !`,
+        `Salut ! Prêt à cuisiner un super plat fait maison ? On attaque « ${dish} » pour ${servings} ${pLabel}, ça va être top !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildIngredients: (servings, ingListSpeech, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Allez c'est parti pour notre mise en place pour ${servings} ${pLabel} : commence par sortir ${ingListSpeech} !`,
+        `Pour ${servings} ${pLabel}, on prépare tranquillement tous nos éléments sur le plan de travail : prends d'abord ${ingListSpeech} !`,
+        `Regarde, c'est tout simple pour ${servings} ${pLabel} : on commence par préparer ${ingListSpeech} !`,
+        `On attaque avec les ingrédients pour ${servings} ${pLabel} : dispose devant toi ${ingListSpeech} !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildOvenAlert: (temp, seed = 0) => {
+      const variants = [
+        `Hop, petit réflexe de chef : préchauffe tout de suite ton four à ${temp} pour qu'il soit bien chaud !`,
+        `Avant de continuer, pense à allumer ton four à ${temp}, comme ça il sera à la bonne température !`,
+        `Allez, on lance dès maintenant le préchauffage du four à ${temp} !`
+      ];
+      return variants[seed % variants.length];
+    },
     stepIntros: [
       'Allez c\'est parti, première étape :',
       'Ensuite, regarde comme c\'est simple :',
-      'Maintenant, pour le côté super gourmand :',
-      'On continue avec du peps et du croquant :',
+      'Maintenant, on passe à la suite :',
+      'On continue avec du peps :',
+      'Allez, le petit geste qui fait la différence :',
+      'Ensuite, écoute bien cette étape :',
+      'On poursuit tranquillement :',
       'Et la touche finale du chef :'
     ],
     repeatIntro: 'Pas de souci, je te répète l\'étape :',
     promptNext: '',
-    buildOutro: (dish) =>
-      `Et voilà, notre « ${dish} » bien gourmand et croquant est prêt ! Régalez-vous bien en famille et très bon appétit à tous !`
+    buildOutro: (dish, seed = 0) => {
+      const variants = [
+        `Et voilà, notre « ${dish} » bien gourmand et croquant est prêt ! Régalez-vous bien en famille et très bon appétit à tous !`,
+        `Regarde-moi ce beau dressage : ton « ${dish} » est magnifique ! Il ne reste plus qu'à passer à table, bon appétit !`,
+        `Et c'est prêt ! Un super « ${dish} » fait maison avec du peps et de la générosité, régale-toi bien !`,
+        `Bravo, tu as assuré comme un chef ! Savoure bien ce « ${dish} » tout chaud et très bon appétit !`
+      ];
+      return variants[seed % variants.length];
+    }
   },
 
   bocuse: {
@@ -4266,23 +4330,55 @@ const VOICE_PERSONAS = {
     particles: ['👑', '🍷', '🐓', '🧈', '🏅', '🍽️'],
     description: 'Voix grave de patriarche lyonnais, malicieux et solennel : « Les trois secrets ? Le beurre, le beurre et le beurre ! ».',
     sampleQuote: '« Bonjour mes chers amis ! Comme je le dis toujours à Collonges : les trois secrets de la grande cuisine française, c\'est le beurre, le beurre, et encore le beurre ! Quand vous êtes prêt, dites Suivant ! »',
-    buildIntro: (dish, servings) =>
-      `Bonjour mes chers amis, bienvenue à Collonges ! Aujourd'hui, nous allons honorer la grande cuisine française avec « ${dish} », pour ${servings} ${servings > 1 ? 'convives' : 'convive'} !`,
-    buildIngredients: (servings, ingListSpeech) =>
-      `Bonne cuisine et bon vin, c'est le paradis sur terre, mes chers amis ! Pour ${servings} ${servings > 1 ? 'convives' : 'convive'}, disposez d'abord devant vous ${ingListSpeech}, comme à Collonges !`,
-    buildOvenAlert: (temp) =>
-      `La justesse du feu est primordiale, mes chers amis : mettez votre four à préchauffer à ${temp} !`,
+    buildIntro: (dish, servings, seed = 0) => {
+      const pLabel = servings > 1 ? 'convives' : 'convive';
+      const variants = [
+        `Bonjour mes chers amis, bienvenue à Collonges ! Aujourd'hui, nous allons honorer la grande cuisine française avec « ${dish} », pour ${servings} ${pLabel} !`,
+        `Bonjour Monsieur, bonjour Madame ! C'est un grand bonheur de cuisiner avec vous « ${dish} » pour ${servings} ${pLabel}, dans le respect du beau produit !`,
+        `Bienvenue au piano, mes amis ! Aujourd'hui nous préparons « ${dish} » pour ${servings} ${pLabel} : de la simplicité, du goût et de la générosité !`,
+        `Bonjour à tous ! Il n'y a qu'une seule cuisine, la bonne : réalisons ensemble un savoureux « ${dish} » pour ${servings} ${pLabel} !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildIngredients: (servings, ingListSpeech, seed = 0) => {
+      const pLabel = servings > 1 ? 'convives' : 'convive';
+      const variants = [
+        `Bonne cuisine et bon vin, c'est le paradis sur terre ! Pour ${servings} ${pLabel}, disposez d'abord devant vous ${ingListSpeech}.`,
+        `Tout commence par le choix de beaux produits du marché : pour ${servings} ${pLabel}, préparez tout d'abord ${ingListSpeech}.`,
+        `Commençons notre mise en place avec soin pour ${servings} ${pLabel} : rassemblez sur votre plan de travail ${ingListSpeech}.`,
+        `Pour régaler ${servings} ${pLabel}, prenons le temps de bien préparer nos ingrédients : sortez d'abord ${ingListSpeech}.`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildOvenAlert: (temp, seed = 0) => {
+      const variants = [
+        `La justesse du feu est primordiale : mettez dès maintenant votre four à préchauffer à ${temp} !`,
+        `Un bon rôtisseur prépare toujours son feu à l'avance : allumez votre four à ${temp} !`,
+        `Veuillez lancer le préchauffage de votre four à ${temp} afin que la chaleur soit parfaitement régulière.`
+      ];
+      return variants[seed % variants.length];
+    },
     stepIntros: [
       'Commençons dans les règles de l\'art :',
-      'Poursuivons avec soin, mes chers amis :',
-      'Maintenant, le geste de la tradition lyonnaise :',
+      'Poursuivons avec soin :',
+      'Maintenant, le geste de la tradition :',
       'Continuons avec générosité :',
+      'Prenons le temps de bien faire les choses :',
+      'Passons à l\'opération suivante :',
+      'Observons maintenant cette belle étape :',
       'Et pour couronner notre ouvrage :'
     ],
-    repeatIntro: 'Permettez-moi de vous répéter cette étape, mes chers amis :',
+    repeatIntro: 'Permettez-moi de vous répéter cette étape :',
     promptNext: '',
-    buildOutro: (dish) =>
-      `Monsieur, Madame, votre « ${dish} » est prêt à être servi à table ! Bonne cuisine et bon vin, très bon appétit mes chers amis !`
+    buildOutro: (dish, seed = 0) => {
+      const variants = [
+        `Monsieur, Madame, votre « ${dish} » est prêt à être servi à table ! Bonne cuisine et bon vin, très bon appétit mes chers amis !`,
+        `Voilà un « ${dish} » qui fait honneur à la gastronomie française ! Servez dans un beau plat chaud et régalez vos convives !`,
+        `Le bonheur est dans la cuisine, et maintenant dans vos assiettes avec ce superbe « ${dish} » ! Très bon appétit à tous !`,
+        `Notre ouvrage est achevé : dégustez ce « ${dish} » en bonne compagnie, je vous souhaite un excellent appétit !`
+      ];
+      return variants[seed % variants.length];
+    }
   },
 
   etchebest: {
@@ -4301,23 +4397,55 @@ const VOICE_PERSONAS = {
     particles: ['🔥', '💪', '🔪', '👨‍🍳', '⚡', '🍽️'],
     description: 'Explosif, cash et colérique par moments ! S\'il voit du laisser-aller, il pousse un vrai coup de gueule en plein service !',
     sampleQuote: '« Oh ! On se bouge le cul en cuisine, chef ! Putain, je veux une mise en place carrée et de la niaque, pas du bricolage d\'amateur, bordel ! Quand vous êtes prêt, dites Suivant, et que ça saute ! »',
-    buildIntro: (dish, servings) =>
-      `Oh ! Écoute-moi bien chef ! Aujourd'hui on envoie « ${dish} » pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Putain, je ne veux pas voir de laisser-aller sur le plan de travail, bordel : on se bouge le cul et on fait ça carré !`,
-    buildIngredients: (servings, ingListSpeech) =>
-      `Allez, mise en place immédiate pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Et ne me cherche pas tes ingrédients pendant dix ans, merde : sors tout de suite ${ingListSpeech} !`,
-    buildOvenAlert: (temp) =>
-      `Oh ! Et le four bordel, il va chauffer tout seul ?! Allume-moi ce putain de four à ${temp} tout de suite, que ça saute !`,
+    buildIntro: (dish, servings, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Oh ! Écoute-moi bien chef ! Aujourd'hui on envoie « ${dish} » pour ${servings} ${pLabel} ! Je ne veux pas voir de laisser-aller sur le plan de travail : on se bouge et on fait ça carré !`,
+        `Allez en place en cuisine ! Aujourd'hui au menu : « ${dish} » pour ${servings} ${pLabel}. Je veux de la rigueur, de la niaque et du goût dans l'assiette !`,
+        `Salut chef ! Le coup de feu est lancé : on attaque « ${dish} » pour ${servings} ${pLabel}. Concentre-toi bien, on va sortir une assiette impeccable !`,
+        `Attention la brigade ! Aujourd'hui on cuisine « ${dish} » pour ${servings} ${pLabel}, alors on retrousse ses manches et on envoie du lourd !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildIngredients: (servings, ingListSpeech, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Allez, mise en place immédiate pour ${servings} ${pLabel} ! Ne cherche pas tes ingrédients pendant dix ans : sors tout de suite ${ingListSpeech} !`,
+        `Un bon service commence par une mise en place irréprochable pour ${servings} ${pLabel} : prépare devant toi ${ingListSpeech} !`,
+        `On s'organise proprement sur la planche pour ${servings} ${pLabel}, chef : commence par peser ${ingListSpeech} !`,
+        `Allez, efficacité maximale pour ${servings} ${pLabel} : sors d'abord ${ingListSpeech} !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildOvenAlert: (temp, seed = 0) => {
+      const variants = [
+        `Oh ! Et le four, il va chauffer tout seul ?! Allume-moi ce four à ${temp} tout de suite, que ça saute !`,
+        `Anticipation chef ! Lance immédiatement le préchauffage de ton four à ${temp}, on ne perd pas une minute !`,
+        `N'attends pas le dernier moment : préchauffe ton four à ${temp} dès maintenant !`
+      ];
+      return variants[seed % variants.length];
+    },
     stepIntros: [
       'Allez, on attaque fort, première étape :',
-      'Attention, là je t\'ai à l\'œil bordel, ne t\'endors pas :',
-      'Putain chef, concentre-toi bien sur ce geste :',
-      'Oh ! On garde le rythme, pas de relâchement en plein coup de feu :',
+      'Attention, là je t\'ai à l\'œil, ne t\'endors pas :',
+      'Concentre-toi bien sur ce geste, chef :',
+      'On garde le rythme, pas de relâchement en plein coup de feu :',
+      'Allez, précis et efficace sur cette étape :',
+      'On enchaîne proprement, écoute bien :',
+      'Ne lâche rien, on arrive au moment clé :',
       'Dernière ligne droite avant d\'envoyer au passe, applique-toi :'
     ],
-    repeatIntro: 'Oh ! Écoute bien quand je parle bordel, je répète :',
+    repeatIntro: 'Écoute bien quand je donne les consignes chef, je répète :',
     promptNext: '',
-    buildOutro: (dish) =>
-      `Eh ben voilà putain, quand tu te bouges le cul, ça sort un super « ${dish} » ! Je suis fier de toi chef, envoie au passe et bon appétit !`
+    buildOutro: (dish, seed = 0) => {
+      const variants = [
+        `Eh ben voilà, quand tu te donnes à fond, ça sort un super « ${dish} » ! Je suis fier de toi chef, envoie au passe et bon appétit !`,
+        `Service terminé ! Ton « ${dish} » est net, propre et gourmand. Beau boulot chef, régale-toi bien !`,
+        `Ça c'est du travail de pro ! Le « ${dish} » est prêt à partir en salle, très bon appétit à toute la table !`,
+        `Bravo chef, tu n'as rien lâché pendant le coup de feu et ce « ${dish} » a une super gueule ! Bon appétit !`
+      ];
+      return variants[seed % variants.length];
+    }
   },
 
   coffe: {
@@ -4336,23 +4464,55 @@ const VOICE_PERSONAS = {
     particles: ['👓', '🍅', '🥕', '🥖', '🧀', '🌿'],
     description: 'Théâtral, volcanique et colérique par moments ! Ses coups de gueule contre la malbouffe (« Mais c\'est de la merde ! ») sont légendaires.',
     sampleQuote: '« Ah non mes amis ! Foutez-moi ces saloperies sous plastique à la poubelle : ça, c\'est de la merde ! Ici, nom de Dieu, on fait de la vraie cuisine de terroir ! Quand vous êtes prêt, dites Suivant ! »',
-    buildIntro: (dish, servings) =>
-      `Ah bonjour mes amis ! Aujourd'hui nous cuisinons un vrai « ${dish} » pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} ! Et par pitié, foutez-moi les barquettes industrielles à la poubelle : ça, c'est de la merde ! Ici, nom de Dieu, on cuisine du vrai !`,
-    buildIngredients: (servings, ingListSpeech) =>
-      `Exigeons de vrais produits du marché pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, pas des saloperies sous cellophane ! Commencez par préparer : ${ingListSpeech}.`,
-    buildOvenAlert: (temp) =>
-      `Nom de Dieu mes amis, n'enfournez jamais à froid, c'est un massacre ! Préchauffez votre four tout de suite à ${temp} !`,
+    buildIntro: (dish, servings, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Ah bonjour mes amis ! Aujourd'hui nous cuisinons un vrai « ${dish} » pour ${servings} ${pLabel} ! Et par pitié, foutez-moi les barquettes industrielles à la poubelle : ici, on cuisine du vrai !`,
+        `Quel bonheur de se retrouver autour de vrais produits ! Aujourd'hui, préparons ensemble « ${dish} » pour ${servings} ${pLabel}, une recette franche et sincère !`,
+        `Bonjour à tous ! Vous allez voir qu'avec de bons ingrédients de saison, préparer « ${dish} » pour ${servings} ${pLabel} est une fête et ça coûte bien moins cher que les cochonneries toutes prêtes !`,
+        `Mes chers amis, à vos fourneaux ! Aujourd'hui nous faisons honneur au bon goût avec « ${dish} » pour ${servings} ${pLabel} !`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildIngredients: (servings, ingListSpeech, seed = 0) => {
+      const pLabel = servings > 1 ? 'personnes' : 'personne';
+      const variants = [
+        `Exigeons de vrais produits du marché pour ${servings} ${pLabel}, pas des tristes sachets sous cellophane ! Commencez par préparer : ${ingListSpeech}.`,
+        `Regardez la beauté des produits bruts pour ${servings} ${pLabel} : mettez d'abord sur votre table ${ingListSpeech}.`,
+        `Pour ${servings} ${pLabel}, faisons honneur à nos maraîchers et à nos artisans : sortez tout d'abord ${ingListSpeech}.`,
+        `Commençons notre marché en cuisine pour ${servings} ${pLabel} : préparez devant vous ${ingListSpeech}.`
+      ];
+      return variants[seed % variants.length];
+    },
+    buildOvenAlert: (temp, seed = 0) => {
+      const variants = [
+        `Surtout mes amis, n'enfournez jamais à froid, ce serait un massacre ! Préchauffez votre four tout de suite à ${temp} !`,
+        `Mettez dès à présent votre four à chauffer à ${temp}, un bon plat demande une chaleur franche dès le départ !`,
+        `Allumez votre four à ${temp} sans attendre, mes amis, pour qu'il soit parfaitement chaud au moment d'enfourner !`
+      ];
+      return variants[seed % variants.length];
+    },
     stepIntros: [
       'Allons-y franchement mes amis, première étape :',
-      'Mais attention nom de Dieu, respectez bien le produit :',
-      'Sacrebleu, ne me bâclez surtout pas cette étape :',
-      'Regardez comme la vraie cuisine est simple quand ce n\'est pas de la merde :',
+      'Mais attention, respectez bien le produit :',
+      'Sacrebleu, prenez bien soin de cette étape :',
+      'Regardez comme la vraie cuisine est simple et joyeuse :',
+      'Poursuivons avec amour du métier :',
+      'Maintenant, écoutez ce beau geste de cuisinier :',
+      'On continue sans brusquer les saveurs :',
       'Et voici la touche finale d\'un vrai plat de terroir :'
     ],
-    repeatIntro: 'Mais écoutez donc nom de Dieu, je répète :',
+    repeatIntro: 'Écoutez bien mes amis, je vous le répète volontiers :',
     promptNext: '',
-    buildOutro: (dish) =>
-      `Et voilà un authentique « ${dish} » fait maison ! Ça a une autre gueule que les cochonneries industrielles, non ?! Un formidable bon appétit mes amis !`
+    buildOutro: (dish, seed = 0) => {
+      const variants = [
+        `Et voilà un authentique « ${dish} » fait maison ! Ça a tout de même une autre allure que les plats industriels, non ?! Un formidable bon appétit mes amis !`,
+        `Respirez-moi ce parfum ! Votre « ${dish} » est une pure merveille de sincérité. Partagez-le avec ceux que vous aimez et très bon appétit !`,
+        `Bravo mes amis ! Vous voyez qu'il est simple de bien manger : régalez-vous avec ce magnifique « ${dish} » !`,
+        `À table ! Ce « ${dish} » fait maison chante le vrai goût des bonnes choses, excellent appétit à tous !`
+      ];
+      return variants[seed % variants.length];
+    }
   },
 
   ia_homme: {
@@ -4821,81 +4981,183 @@ function analyzeRecipeOvenRequirements(title, steps) {
   };
 }
 
-// Transitions fluides et typées pour les ingrédients suivants (avec le caractère de chaque chef)
-function buildPersonaIngredientFollowup(personaId, ingNum, totalIngs, singleIngSpeech) {
-  const connectors = ['Ensuite,', 'Puis,', 'Préparez aussi', 'Ajoutez sur le plan de travail'];
-  const conn = connectors[(ingNum - 2) % connectors.length] || 'Ensuite,';
+// Empreinte déterministe par recette pour varier les interventions d'un plat à l'autre tout en préservant le cache audio
+function computeVoiceRecipeSeed(dish, servings) {
+  const str = `${String(dish || '').trim().toLowerCase()}|${servings || 2}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+// Transitions fluides et variées pour les ingrédients suivants (sans répéter le même tic à chaque ligne)
+function buildPersonaIngredientFollowup(personaId, ingNum, totalIngs, singleIngSpeech, seed = 0) {
+  const isLastIng = ingNum === totalIngs && totalIngs > 2;
+  const pickIdx = (seed + (ingNum - 2) * 3) % 8;
+
   switch (personaId) {
-    case 'maite':
-      return `${conn} préparez ${singleIngSpeech}, mes petits, macarel !`;
-    case 'lignac':
-      return `${conn} sors ${singleIngSpeech}, bien gourmand et croquant !`;
-    case 'bocuse':
-      return `${conn} disposez devant vous ${singleIngSpeech}, mes chers amis !`;
-    case 'etchebest':
-      return ingNum % 2 === 0
-        ? `Oh ! Allez, on ne traîne pas bordel : sors tout de suite ${singleIngSpeech}, chef !`
-        : `Allez chef, ${conn.toLowerCase()} ${singleIngSpeech}, et que ce soit carré bordel !`;
-    case 'coffe':
-      return ingNum % 2 === 0
-        ? `Nom de Dieu mes amis, préparez ${singleIngSpeech}, du vrai produit frais et pas de la merde !`
-        : `${conn} ${singleIngSpeech}, bien frais du marché mes amis !`;
-    default:
+    case 'maite': {
+      if (isLastIng) {
+        return `Et pour compléter notre panier, préparez ${singleIngSpeech}, mes petits.`;
+      }
+      const variants = [
+        `Ensuite, préparez ${singleIngSpeech}.`,
+        `Mettez aussi de côté ${singleIngSpeech}, mes petits.`,
+        `Puis, sortez ${singleIngSpeech} bien frais.`,
+        `Il nous faudra également ${singleIngSpeech}, les drôles.`,
+        `Ajoutez sur la table ${singleIngSpeech}.`,
+        `Té, prenez aussi ${singleIngSpeech}.`,
+        `À côté, disposez ${singleIngSpeech}.`,
+        `Préparez ensuite ${singleIngSpeech} pour la suite.`
+      ];
+      return variants[pickIdx];
+    }
+    case 'lignac': {
+      if (isLastIng) {
+        return `Et pour finir notre mise en place, sors ${singleIngSpeech} !`;
+      }
+      const variants = [
+        `Ensuite, sors ${singleIngSpeech}.`,
+        `Prépare aussi ${singleIngSpeech} sur ton plan de travail.`,
+        `Puis, on prend ${singleIngSpeech}.`,
+        `Mets également de côté ${singleIngSpeech}, bien frais !`,
+        `Ajoute à côté ${singleIngSpeech}.`,
+        `Il te faut aussi ${singleIngSpeech} pour la recette.`,
+        `Hop, on sort ensuite ${singleIngSpeech}.`,
+        `Prends aussi ${singleIngSpeech}, tout simplement !`
+      ];
+      return variants[pickIdx];
+    }
+    case 'bocuse': {
+      if (isLastIng) {
+        return `Enfin, pour parfaire notre mise en place, préparez ${singleIngSpeech}.`;
+      }
+      const variants = [
+        `Ensuite, disposez devant vous ${singleIngSpeech}.`,
+        `Préparez également ${singleIngSpeech} avec soin.`,
+        `Puis, rassemblez ${singleIngSpeech} sur le plan de travail.`,
+        `Il nous faudra aussi ${singleIngSpeech}, bien choisi.`,
+        `À côté, placez ${singleIngSpeech}.`,
+        `Sortez ensuite ${singleIngSpeech}, mes amis.`,
+        `Ajoutez à votre sélection ${singleIngSpeech}.`,
+        `Prenez également ${singleIngSpeech} pour accompagner l'ensemble.`
+      ];
+      return variants[pickIdx];
+    }
+    case 'etchebest': {
+      if (isLastIng) {
+        return `Et dernier élément de la mise en place : sors ${singleIngSpeech}, chef !`;
+      }
+      const variants = [
+        `Ensuite, sors tout de suite ${singleIngSpeech}, chef !`,
+        `Allez, on enchaîne : prépare ${singleIngSpeech} sur la planche.`,
+        `Puis, pèse proprement ${singleIngSpeech}, sans traîner !`,
+        `Mets aussi en place ${singleIngSpeech}, que ce soit bien organisé !`,
+        `À côté, dispose ${singleIngSpeech}, carré et précis.`,
+        `On continue la mise en place avec ${singleIngSpeech} !`,
+        `Sors également ${singleIngSpeech}, on garde le rythme !`,
+        `Prépare ensuite ${singleIngSpeech} devant toi, chef.`
+      ];
+      return variants[pickIdx];
+    }
+    case 'coffe': {
+      if (isLastIng) {
+        return `Et pour terminer ce beau panier du marché, préparez ${singleIngSpeech} !`;
+      }
+      const variants = [
+        `Ensuite, préparez ${singleIngSpeech}, bien frais du marché !`,
+        `Sortez également ${singleIngSpeech}, un vrai produit qui a du goût !`,
+        `Puis, disposez sur la table ${singleIngSpeech}, mes amis.`,
+        `Prenez aussi ${singleIngSpeech}, choisi avec soin.`,
+        `Ajoutez à côté ${singleIngSpeech}, sans emballage superflu !`,
+        `Il nous faut ensuite ${singleIngSpeech}, franc et naturel.`,
+        `Mettez aussi sous la main ${singleIngSpeech}.`,
+        `Préparez enfin à côté ${singleIngSpeech} pour notre recette.`
+      ];
+      return variants[pickIdx];
+    }
+    default: {
+      const connectors = ['Ensuite,', 'Puis,', 'Préparez aussi', 'Ajoutez sur le plan de travail'];
+      const conn = connectors[(ingNum - 2) % connectors.length] || 'Ensuite,';
       return `${conn} ${singleIngSpeech}.`;
+    }
   }
 }
 
-// Enrichissement des étapes avec les tics de langage des chefs et les coups de gueule colériques d'Etchebest et Coffe
-function enrichStepBodyWithPersonaTics(personaId, spokenStepBody, stepIdx, totalSteps) {
+// Enrichissement varié des étapes avec la personnalité de chaque chef (sans redondance d'une étape à l'autre)
+function enrichStepBodyWithPersonaTics(personaId, spokenStepBody, stepIdx, totalSteps, seed = 0) {
   if (personaId === 'ia_homme' || personaId === 'ia_femme') {
     return spokenStepBody;
   }
   const clean = (spokenStepBody || '').trim().replace(/\.$/, '');
+  const pickIdx = (seed + stepIdx * 3) % 8;
+
   switch (personaId) {
     case 'maite': {
       const suffixes = [
-        'Té, faites chanter tout ça dans la cocotte mes petits, macarel !',
+        'Té, faites chanter tout ça doucement dans la cocotte, mes petits !',
         'Et ne plaignez pas la gourmandise, on n\'est pas là pour faire la diète !',
-        'Regardez-moi cette belle couleur, ça sent le bon terroir de chez nous !',
-        'Allez mes petits, remuez-moi ça avec amour !'
+        'Regardez-moi cette belle couleur, ça sent déjà le bon terroir de chez nous !',
+        'Allez mes petits, remuez-moi ça avec amour et générosité !',
+        'C\'est ce tour de main tout simple qui donne le vrai goût d\'autrefois !',
+        'Écoutez comme ça mijote bien, les drôles, prenez votre temps !',
+        'Humez-moi ce parfum qui monte, c\'est un vrai bonheur en cuisine !',
+        'Voilà, sans chichis mais avec du cœur, comme à la maison !'
       ];
-      return `${clean}. ${suffixes[stepIdx % suffixes.length]}`;
+      return `${clean}. ${suffixes[pickIdx]}`;
     }
     case 'lignac': {
       const suffixes = [
         'Tu vois, c\'est ça qui va apporter tout le côté super gourmand et croquant !',
-        'On met du peps et de la générosité, ça va être une tuerie !',
+        'On met du peps et de la générosité, ça va être un vrai régal !',
         'Écoute comme ça chante bien dans la poêle, on se fait plaisir !',
-        'C\'est simple, gourmand et malin comme on aime !'
+        'C\'est simple, malin et plein de saveurs comme on aime !',
+        'Prends bien le temps de faire ce geste, ça change tout dans l\'assiette !',
+        'Regarde cette belle texture qui se forme, c\'est exactement ce qu\'on cherche !',
+        'Un petit tour de moulin et beaucoup d\'amour, c\'est le secret !',
+        'Franchement, ça sent déjà super bon dans la cuisine !'
       ];
-      return `${clean}. ${suffixes[stepIdx % suffixes.length]}`;
+      return `${clean}. ${suffixes[pickIdx]}`;
     }
     case 'bocuse': {
       const suffixes = [
-        'N\'oubliez jamais, mes chers amis : le secret d\'un grand plat, c\'est le beau beurre et l\'amour du produit !',
+        'N\'oubliez jamais : le secret d\'un grand plat, c\'est l\'amour du beau produit !',
         'Prenez le temps d\'écouter la cuisson, comme nous le faisons à Collonges !',
-        'La simplicité et la générosité font toute la noblesse de la cuisine française, mes amis !',
-        'Goûtez et rectifiez l\'assaisonnement avec justesse, mes chers amis !'
+        'La simplicité et la générosité font toute la noblesse de la cuisine française !',
+        'Goûtez et rectifiez l\'assaisonnement avec justesse, mes chers amis !',
+        'Respectez bien les sucs et les parfums, tout le goût est là !',
+        'Un geste calme et précis, voilà la clé de la grande tradition !',
+        'Voyez comme les saveurs se marient harmonieusement !',
+        'La patience au fourneau est toujours récompensée à table !'
       ];
-      return `${clean}. ${suffixes[stepIdx % suffixes.length]}`;
+      return `${clean}. ${suffixes[pickIdx]}`;
     }
     case 'etchebest': {
       const rants = [
-        'Et attention putain, je ne veux pas voir un plan de travail en bordel, tu nettoies au fur et à mesure chef !',
-        'Oh ! Surveille-moi cette cuisson nom de Dieu, si tu me crames ça je pète un plomb !',
-        'Allez, bouge-toi le cul chef, mets-y de la niaque, on n\'est pas là pour enfiler des perles bordel !',
-        'Putain, goûte-moi ça avant d\'envoyer ! Sans assaisonnement, ça ne vaut rien bordel !'
+        'Et attention, je veux un plan de travail toujours propre, tu nettoies au fur et à mesure chef !',
+        'Oh ! Surveille-moi cette cuisson de près, si tu me brûles ça je pète un plomb !',
+        'Allez, mets-y de la niaque chef, on garde du rythme et de la précision !',
+        'Surtout goûte bien avant d\'envoyer : sans un bon assaisonnement, ça ne vaut rien !',
+        'Sois précis sur le geste, pas de bricolage d\'amateur dans ma brigade !',
+        'Bien ! Tu vois, quand tu es concentré, ça avance tout seul !',
+        'Attention à la maîtrise du feu, c\'est là qu\'on reconnaît un vrai cuisinier !',
+        'Allez on tient bon le coup de feu, l\'assiette doit être impeccable !'
       ];
-      return `${clean} ! ${rants[stepIdx % rants.length]}`;
+      return `${clean} ! ${rants[pickIdx]}`;
     }
     case 'coffe': {
       const rants = [
-        'Et par pitié nom de Dieu, n\'allez pas foutre de la sauce industrielle là-dedans : ça, c\'est de la merde !',
-        'Sacrebleu mes amis, si vous surcuisez ces beaux produits frais, autant bouffer du carton bouilli !',
-        'Mais regardez-moi cette merveille quand on cuisine de vrais produits et pas leurs saloperies sous vide !',
-        'Nom de Dieu, goûtez avec amour : la vraie cuisine de terroir, c\'est sacré !'
+        'Et par pitié, n\'allez jamais mettre d\'arômes artificiels là-dedans : le vrai produit suffit !',
+        'Attention mes amis, ne surcuisez surtout pas ces beaux ingrédients frais !',
+        'Regardez-moi cette merveille quand on cuisine des produits bruts et sincères !',
+        'Goûtez avec amour : la vraie cuisine de terroir, c\'est sacré !',
+        'Vous sentez cette odeur franche ? Ça n\'a rien à voir avec les barquettes sous plastique !',
+        'Respectez le temps de cuisson, laissez les parfums naturels s\'exprimer !',
+        'Voilà la vraie cuisine familiale, généreuse et pleine de bon sens !',
+        'Quel plaisir de travailler de belles matières premières avec respect !'
       ];
-      return `${clean} ! ${rants[stepIdx % rants.length]}`;
+      return `${clean} ! ${rants[pickIdx]}`;
     }
     default:
       return spokenStepBody;
@@ -4906,13 +5168,13 @@ function enrichStepBodyWithPersonaTics(personaId, spokenStepBody, stepIdx, total
 function buildInitialVoiceCommandsInstruction(personaId) {
   switch (personaId) {
     case 'maite':
-      return 'Quand vous êtes prêt mes petits, dites Suivant, Répéter ou Pause, té !';
+      return 'Quand vous êtes prêt mes petits, dites Suivant, Répéter ou Pause !';
     case 'lignac':
       return 'Quand tu es prêt, dis Suivant, Répéter ou Pause !';
     case 'bocuse':
       return 'Dites Suivant, Répéter ou Pause pour avancer, mes chers amis !';
     case 'etchebest':
-      return 'Dis Suivant, Répéter ou Pause, et que ça saute bordel !';
+      return 'Dis Suivant, Répéter ou Pause, et que ça saute !';
     case 'coffe':
       return 'Dites Suivant, Répéter ou Pause pour avancer mes amis !';
     default:
@@ -4920,15 +5182,16 @@ function buildInitialVoiceCommandsInstruction(personaId) {
   }
 }
 
-// Construire la séquence complète pas-à-pas : consignes données uniquement au début, étapes fluides avec le caractère de chaque chef
+// Construire la séquence complète pas-à-pas : consignes données uniquement au début, étapes fluides et variées avec le caractère de chaque chef
 function buildStepByStepVoiceSequence(ctx) {
   const persona = getActiveVoicePersona();
   const dish = ctx.title || 'notre plat du jour';
   const servings = ctx.servings || 2;
+  const seed = computeVoiceRecipeSeed(dish, servings);
   const sequence = [];
 
   // 1. Présentation du plat + Consignes vocales complètes données UNE SEULE FOIS au début
-  const introMain = persona.buildIntro(dish, servings);
+  const introMain = persona.buildIntro(dish, servings, seed);
   const initialInstructions = buildInitialVoiceCommandsInstruction(persona.id);
   sequence.push({
     type: 'intro',
@@ -4942,7 +5205,7 @@ function buildStepByStepVoiceSequence(ctx) {
     recipeStepIdx: -1
   });
 
-  // 2. Préparation des ingrédients de façon fluide (sans redonner les consignes à chaque ingrédient)
+  // 2. Préparation des ingrédients de façon fluide et variée (sans redonner les consignes à chaque ingrédient)
   const ingredientsList = ctx.ingredients || [];
   if (ingredientsList.length > 0) {
     const totalIngs = ingredientsList.length;
@@ -4956,9 +5219,9 @@ function buildStepByStepVoiceSequence(ctx) {
 
       let ingSpokenBody = '';
       if (idx === 0) {
-        ingSpokenBody = `${persona.buildIngredients(servings, singleIngSpeech)}`;
+        ingSpokenBody = `${persona.buildIngredients(servings, singleIngSpeech, seed)}`;
       } else {
-        ingSpokenBody = buildPersonaIngredientFollowup(persona.id, ingNum, totalIngs, singleIngSpeech);
+        ingSpokenBody = buildPersonaIngredientFollowup(persona.id, ingNum, totalIngs, singleIngSpeech, seed);
       }
 
       sequence.push({
@@ -4974,7 +5237,7 @@ function buildStepByStepVoiceSequence(ctx) {
       });
     });
   } else {
-    const fallbackSpeech = persona.buildIngredients(servings, 'vos ingrédients sur le plan de travail');
+    const fallbackSpeech = persona.buildIngredients(servings, 'vos ingrédients sur le plan de travail', seed);
     sequence.push({
       type: 'ingredient',
       badge: '🛒 Préparation des ingrédients',
@@ -4988,12 +5251,13 @@ function buildStepByStepVoiceSequence(ctx) {
     });
   }
 
-  // 3. Étapes de la recette : fluides, avec les intonations, tics et coups de gueule de la personnalité choisie
+  // 3. Étapes de la recette : fluides, avec des transitions et interventions variées pour chaque chef
   const rawSteps = ctx.steps || [];
   const ovenInfo = analyzeRecipeOvenRequirements(dish, rawSteps);
   const personaStepIntros = Array.isArray(persona.stepIntros) && persona.stepIntros.length > 0
     ? persona.stepIntros
     : ['Première étape :', 'Ensuite :', 'Puis :', 'On continue :', 'Dernière étape :'];
+  const middleStepIntros = personaStepIntros.length > 2 ? personaStepIntros.slice(1, -1) : personaStepIntros;
 
   rawSteps.forEach((stepText, idx) => {
     const stepNum = idx + 1;
@@ -5003,7 +5267,7 @@ function buildStepByStepVoiceSequence(ctx) {
         ? personaStepIntros[0]
         : idx === totalSteps - 1 && totalSteps > 1
         ? personaStepIntros[personaStepIntros.length - 1]
-        : personaStepIntros[(idx % (personaStepIntros.length - 1)) || 1];
+        : middleStepIntros[(seed + idx * 2) % middleStepIntros.length];
     const isPreheatStep = ovenInfo.usesOven && ovenInfo.preheatStepIdx === idx;
     const isBakeStep = ovenInfo.usesOven && ovenInfo.bakeStepIdx === idx && idx !== ovenInfo.preheatStepIdx;
 
@@ -5015,9 +5279,9 @@ function buildStepByStepVoiceSequence(ctx) {
       ovenVisualCallout = `🔥 Préchauffage du four : ${ovenInfo.tempText}`;
       const spokenTemp = ovenInfo.tempText.replace('°C', ' degrés Celsius');
       if (!/préchauff|prechauff/i.test(stepText)) {
-        ovenPrefixSpeech = `${persona.buildOvenAlert ? persona.buildOvenAlert(spokenTemp) : `Préchauffez d'abord le four à ${spokenTemp}.`} `;
+        ovenPrefixSpeech = `${persona.buildOvenAlert ? persona.buildOvenAlert(spokenTemp, seed) : `Préchauffez d'abord le four à ${spokenTemp}.`} `;
       } else if (!/\d{3}/.test(stepText)) {
-        ovenPrefixSpeech = `${persona.buildOvenAlert ? persona.buildOvenAlert(spokenTemp) : `Préchauffez le four à ${spokenTemp}.`} `;
+        ovenPrefixSpeech = `${persona.buildOvenAlert ? persona.buildOvenAlert(spokenTemp, seed) : `Préchauffez le four à ${spokenTemp}.`} `;
       }
     } else if (isBakeStep) {
       ovenVisualCallout = `🔥 Cuisson au four : ${ovenInfo.tempText}`;
@@ -5026,7 +5290,7 @@ function buildStepByStepVoiceSequence(ctx) {
       }
     }
 
-    const enrichedBody = enrichStepBodyWithPersonaTics(persona.id, spokenStepBody, idx, totalSteps);
+    const enrichedBody = enrichStepBodyWithPersonaTics(persona.id, spokenStepBody, idx, totalSteps, seed);
     const fullStepSpeech = `${transitionPhrase} ${ovenPrefixSpeech}${enrichedBody}`;
 
     sequence.push({
@@ -5042,8 +5306,8 @@ function buildStepByStepVoiceSequence(ctx) {
     });
   });
 
-  // 4. Quand tout est terminé, souhaiter un bon appétit !
-  const outroMain = persona.buildOutro(dish);
+  // 4. Quand tout est terminé, souhaiter un bon appétit avec une conclusion variée !
+  const outroMain = persona.buildOutro(dish, seed);
   sequence.push({
     type: 'outro',
     badge: '🎉 Recette terminée • Bon appétit !',
@@ -6755,14 +7019,21 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   const reqId = options.reqId;
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
 
+  voiceGuideSession.isFetchingTts = true;
   let blob = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 350 * attempt));
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 350 * attempt));
+      }
+      if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
+      blob = await fetchClonedTtsAudioBlob(cleanText, persona);
+      if (blob && blob.size >= 500) break;
     }
-    if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
-    blob = await fetchClonedTtsAudioBlob(cleanText, persona);
-    if (blob && blob.size >= 500) break;
+  } finally {
+    if (!reqId || reqId === currentVoiceRequestSeq) {
+      voiceGuideSession.isFetchingTts = false;
+    }
   }
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
   if (!blob || blob.size < 500) return { ok: false, serverHadBlob: false };
@@ -6822,7 +7093,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = Boolean(options.isSamplePreview) || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=240`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=246`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
@@ -7055,7 +7326,6 @@ function speakWithBrowserSynthesis(cleanText, persona, options = {}) {
       ia_homme: 0.55,
       bocuse: 0.46,
       etchebest: 0.50,
-      marx: 0.53,
       coffe: 0.57,
       lignac: 0.60
     };
@@ -7160,6 +7430,8 @@ function executeNormalizedVoiceCommand(norm, firstTranscript = '') {
   if (now - (voiceGuideSession.lastCommandTime || 0) < 950) return false;
 
   const browserActuallySpeaking =
+    Boolean(voiceGuideSession.isFetchingTts) ||
+    Boolean(activeCloudVoiceBufferSource) ||
     ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) ||
     Boolean(activeCloudVoiceAudio && !activeCloudVoiceAudio.paused);
 
@@ -7325,6 +7597,8 @@ async function startFallbackWebAudioCommandListener() {
 
       const browserActuallySpeaking =
         voiceGuideSession.isSpeaking ||
+        Boolean(voiceGuideSession.isFetchingTts) ||
+        Boolean(activeCloudVoiceBufferSource) ||
         ('speechSynthesis' in window && window.speechSynthesis.speaking && !window.speechSynthesis.paused) ||
         Boolean(activeCloudVoiceAudio && !activeCloudVoiceAudio.paused);
 
@@ -7598,6 +7872,8 @@ function startVoiceSessionWatchdog() {
     }
     if (
       voiceGuideSession.isSpeaking &&
+      !voiceGuideSession.isFetchingTts &&
+      !activeCloudVoiceBufferSource &&
       !activeCloudVoiceAudio &&
       'speechSynthesis' in window &&
       !window.speechSynthesis.speaking
@@ -7605,7 +7881,7 @@ function startVoiceSessionWatchdog() {
       voiceGuideSession.isSpeaking = false;
       updateCharacterStageAnimationState();
     }
-    if (voiceGuideSession.isSpeaking && !voiceGuideSession.isPaused) return;
+    if ((voiceGuideSession.isSpeaking || voiceGuideSession.isFetchingTts || activeCloudVoiceBufferSource) && !voiceGuideSession.isPaused) return;
     if (isMobilePhoneDevice() && (voiceGuideSession.consecutiveSilentEnds || 0) > 1) return;
 
     const isCurrentlyStarting =
@@ -7887,6 +8163,22 @@ function speakCurrentStepInGuide(isRepeat = false) {
 
   voiceGuideSession.isPaused = false;
   voiceGuideSession.consecutiveSilentEnds = 0;
+
+  // Couper toute écoute micro active pendant que le chef lit l'introduction ou l'étape
+  // pour empêcher tout bip système de relance micro pendant la lecture !
+  clearTimeout(voiceGuideSession.restartRecTimer);
+  if (voiceGuideSession.recognition) {
+    try {
+      voiceGuideSession.recognition.onend = null;
+      voiceGuideSession.recognition.onerror = null;
+      voiceGuideSession.recognition.onresult = null;
+      voiceGuideSession.recognition.abort();
+    } catch (e) {}
+    voiceGuideSession.recognition = null;
+  }
+  voiceGuideSession.isStarting = false;
+  voiceGuideSession.isListening = false;
+
   const item = voiceGuideSession.sequence[voiceGuideSession.currentIndex];
   if (!item) return;
 
