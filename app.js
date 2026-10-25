@@ -16,7 +16,8 @@ const STORAGE_KEYS = {
   PANTRY_SERVINGS: 'menusemaine_pantry_servings_v1',
   PANTRY_DEDUCT_MODE: 'menusemaine_pantry_deduct_v1',
   VOICE_SETTINGS: 'menusemaine_voice_settings_v1',
-  ELEVENLABS_KEY: 'menusemaine_elevenlabs_api_key_v1'
+  ELEVENLABS_KEY: 'menusemaine_elevenlabs_api_key_v1',
+  DISH_PHOTOS: 'menusemaine_dish_photos_v1'
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
@@ -78,6 +79,7 @@ let state = {
   pantryCardOffsets: {},  // { cardIdx: extraOffset }
   pantryCardServings: {}, // { recipeId: servings }
   deductPantryFromShopping: true, // Ajuster automatiquement la liste des courses avec le stock frigo/placard
+  dishPhotos: {},         // { [recipeId]: { customDataUrl?: string, aiSeedOffset?: number } }
   voiceSettings: {
     persona: 'lignac',
     engine: 'elevenlabs',
@@ -257,41 +259,216 @@ function setupDaySwipeGestures() {
 
   let startX = 0;
   let startY = 0;
+  let lastX = 0;
+  let lastY = 0;
+  let isTracking = false;
+  let isHorizontalSwipe = false;
   let ignoreSwipe = false;
+  let suppressClickUntil = 0;
+  let lastWheelStepAt = 0;
 
+  const getStageEl = () => plannerEl.querySelector('.day-meal-single-stage');
+
+  const resetStageTransform = () => {
+    const stageEl = getStageEl();
+    if (stageEl) {
+      stageEl.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
+      stageEl.style.transform = '';
+      stageEl.style.opacity = '';
+      setTimeout(() => {
+        if (stageEl) stageEl.style.transition = '';
+      }, 200);
+    }
+  };
+
+  const applyLiveDragFeedback = (dx) => {
+    const stageEl = getStageEl();
+    if (!stageEl) return;
+    const clamped = Math.max(-110, Math.min(110, dx * 0.45));
+    const opacity = Math.max(0.72, 1 - Math.abs(clamped) / 320);
+    stageEl.style.transition = 'none';
+    stageEl.style.transform = `translateX(${clamped.toFixed(1)}px)`;
+    stageEl.style.opacity = opacity.toFixed(2);
+  };
+
+  const shouldIgnoreTarget = (target) => {
+    if (!target || !target.tagName) return false;
+    const tag = target.tagName.toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  };
+
+  const finishSwipeGesture = (endX, endY) => {
+    if (!isTracking || ignoreSwipe) {
+      isTracking = false;
+      isHorizontalSwipe = false;
+      resetStageTransform();
+      return;
+    }
+
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const wasHorizontal = isHorizontalSwipe;
+    isTracking = false;
+    isHorizontalSwipe = false;
+
+    // Glissement horizontal gauche / droite pour faire défiler les 14 repas de la semaine
+    if ((Math.abs(dx) > 32 && Math.abs(dx) > Math.abs(dy) * 1.05) || (wasHorizontal && Math.abs(dx) > 24)) {
+      suppressClickUntil = Date.now() + 380;
+      if (state.plannerViewMode !== 'day') {
+        state.plannerViewMode = 'day';
+      }
+      if (dx < 0) {
+        stepPlannerMeal(1);
+      } else if (dx > 0) {
+        stepPlannerMeal(-1);
+      }
+    } else {
+      resetStageTransform();
+    }
+  };
+
+  // Bloquer tout clic accidentel sur une carte/photo/bouton juste après un swipe horizontal
+  plannerEl.addEventListener(
+    'click',
+    (e) => {
+      if (Date.now() < suppressClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    },
+    true
+  );
+
+  // 1. Gestes tactiles (Smartphone & Tablette : touchstart / touchmove / touchend / touchcancel)
   plannerEl.addEventListener(
     'touchstart',
     (e) => {
-      if (state.plannerViewMode !== 'day') return;
-      const target = e.target;
-      if (target && (target.tagName === 'INPUT' || target.closest('.day-tabs-strip'))) {
+      if (!e.touches || e.touches.length !== 1) return;
+      if (shouldIgnoreTarget(e.target)) {
         ignoreSwipe = true;
+        isTracking = false;
         return;
       }
       ignoreSwipe = false;
-      startX = e.changedTouches[0].clientX;
-      startY = e.changedTouches[0].clientY;
+      isTracking = true;
+      isHorizontalSwipe = false;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      lastX = startX;
+      lastY = startY;
     },
     { passive: true }
+  );
+
+  plannerEl.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!isTracking || ignoreSwipe || !e.touches || e.touches.length !== 1) return;
+      lastX = e.touches[0].clientX;
+      lastY = e.touches[0].clientY;
+      const dx = lastX - startX;
+      const dy = lastY - startY;
+
+      if (!isHorizontalSwipe && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.1) {
+        isHorizontalSwipe = true;
+      }
+
+      if (isHorizontalSwipe) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        applyLiveDragFeedback(dx);
+      }
+    },
+    { passive: false }
   );
 
   plannerEl.addEventListener(
     'touchend',
     (e) => {
-      if (ignoreSwipe || state.plannerViewMode !== 'day') return;
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      // Glissement horizontal gauche / droite pour passer entre Déjeuner (Midi) et Dîner (Soir)
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.35) {
-        if (dx < 0) {
-          stepPlannerMeal(1);
-        } else if (dx > 0) {
-          stepPlannerMeal(-1);
+      if (!isTracking) return;
+      const touch = (e.changedTouches && e.changedTouches[0]) || { clientX: lastX, clientY: lastY };
+      finishSwipeGesture(touch.clientX, touch.clientY);
+    },
+    { passive: true }
+  );
+
+  plannerEl.addEventListener(
+    'touchcancel',
+    () => {
+      if (!isTracking) return;
+      finishSwipeGesture(lastX, lastY);
+    },
+    { passive: true }
+  );
+
+  // 2. Glisser-déposer à la souris (PC / Pavé tactile maintenu)
+  let isMouseDown = false;
+  plannerEl.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || shouldIgnoreTarget(e.target)) return;
+    isMouseDown = true;
+    ignoreSwipe = false;
+    isTracking = true;
+    isHorizontalSwipe = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    lastX = startX;
+    lastY = startY;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isMouseDown || !isTracking || ignoreSwipe) return;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    const dx = lastX - startX;
+    const dy = lastY - startY;
+    if (!isHorizontalSwipe && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      isHorizontalSwipe = true;
+    }
+    if (isHorizontalSwipe) {
+      applyLiveDragFeedback(dx);
+    }
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isMouseDown) return;
+    isMouseDown = false;
+    finishSwipeGesture(e.clientX, e.clientY);
+  });
+
+  // 3. Swipe horizontal à 2 doigts sur pavé tactile (Trackpad wheel deltaX)
+  plannerEl.addEventListener(
+    'wheel',
+    (e) => {
+      if (Math.abs(e.deltaX) > 28 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+        const now = Date.now();
+        if (now - lastWheelStepAt < 420) return;
+        lastWheelStepAt = now;
+        if (state.plannerViewMode !== 'day') {
+          state.plannerViewMode = 'day';
         }
+        stepPlannerMeal(e.deltaX > 0 ? 1 : -1);
       }
     },
     { passive: true }
   );
+
+  // 4. Flèches gauche / droite du clavier
+  window.addEventListener('keydown', (e) => {
+    if (!plannerEl.classList.contains('active')) return;
+    if (shouldIgnoreTarget(e.target)) return;
+    const modalOpen = document.querySelector('.modal-overlay.open');
+    if (modalOpen) return;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (state.plannerViewMode !== 'day') state.plannerViewMode = 'day';
+      stepPlannerMeal(-1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (state.plannerViewMode !== 'day') state.plannerViewMode = 'day';
+      stepPlannerMeal(1);
+    }
+  });
 }
 
 function isLocalAdminEnvironment() {
@@ -512,6 +689,14 @@ function loadStateFromStorage() {
       const elevenInput = document.getElementById('elevenlabs-api-key');
       if (elevenInput) elevenInput.value = savedElevenKey;
     }
+
+    const savedDishPhotos = localStorage.getItem(STORAGE_KEYS.DISH_PHOTOS);
+    if (savedDishPhotos) {
+      const parsedPhotos = JSON.parse(savedDishPhotos);
+      if (parsedPhotos && typeof parsedPhotos === 'object') {
+        state.dishPhotos = parsedPhotos;
+      }
+    }
   } catch (e) {
     console.error('Erreur chargement localStorage :', e);
   }
@@ -531,6 +716,7 @@ function saveStateToStorage() {
     localStorage.setItem(STORAGE_KEYS.PANTRY_DEDUCT_MODE, String(!!state.deductPantryFromShopping));
     localStorage.setItem(STORAGE_KEYS.SEEN_RECIPES, JSON.stringify(Array.from(recentSeenIds)));
     localStorage.setItem(STORAGE_KEYS.VOICE_SETTINGS, JSON.stringify(state.voiceSettings || {}));
+    localStorage.setItem(STORAGE_KEYS.DISH_PHOTOS, JSON.stringify(state.dishPhotos || {}));
   } catch (e) {
     console.error('Erreur sauvegarde localStorage :', e);
   }
@@ -872,6 +1058,343 @@ function getDishEmoji(recipe, slot) {
   const style = getSlotStyle(slot);
   if (style === 'gourmet') return '🍷';
   return style === 'pleasure' ? '🍽️' : '🥗';
+}
+
+// ============================================================================
+// PHOTOS D'ILLUSTRATION DES PLATS (GÉNÉRATION IA SUR-MESURE + PHOTO PERSO + FALLBACK)
+// ============================================================================
+const CURATED_DISH_FALLBACK_PHOTOS = {
+  shellfish: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=700&q=80',
+  salmon:    'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=700&q=80',
+  fish:      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=700&q=80',
+  shrimp:    'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=700&q=80',
+  duck:      'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80',
+  poultry:   'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=700&q=80',
+  beef:      'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+  pasta:     'https://images.unsplash.com/photo-1621996346565-e3d5d6281298?auto=format&fit=crop&w=700&q=80',
+  risotto:   'https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=700&q=80',
+  curry:     'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=700&q=80',
+  wok:       'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=700&q=80',
+  salad:     'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=80',
+  soup:      'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=700&q=80',
+  quiche:    'https://images.unsplash.com/photo-1608855238293-a8853e7f7c98?auto=format&fit=crop&w=700&q=80',
+  eggs:      'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=700&q=80',
+  burger:    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80',
+  gratin:    'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=700&q=80',
+  default:   'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80'
+};
+
+function computeRecipePhotoSeed(recipeId, offset = 0) {
+  const str = String(recipeId || 'dish');
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (Math.abs(hash) % 90000) + 1000 + (Number(offset) || 0) * 137;
+}
+
+function getDishCuratedFallbackUrl(recipe) {
+  const t = ((recipe && recipe.title) || '').toLowerCase();
+  if (t.includes('saint-jacques') || t.includes('homard') || t.includes('langoustine')) return CURATED_DISH_FALLBACK_PHOTOS.shellfish;
+  if (t.includes('saumon') || t.includes('truite')) return CURATED_DISH_FALLBACK_PHOTOS.salmon;
+  if (t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('bar') || t.includes('dorade')) return CURATED_DISH_FALLBACK_PHOTOS.fish;
+  if (t.includes('crevette') || t.includes('gambas')) return CURATED_DISH_FALLBACK_PHOTOS.shrimp;
+  if (t.includes('canard') || t.includes('magret')) return CURATED_DISH_FALLBACK_PHOTOS.duck;
+  if (t.includes('volaille') || t.includes('poulet') || t.includes('dinde')) return CURATED_DISH_FALLBACK_PHOTOS.poultry;
+  if (t.includes('tournedos') || t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('veau') || t.includes('agneau')) return CURATED_DISH_FALLBACK_PHOTOS.beef;
+  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('raviol')) return CURATED_DISH_FALLBACK_PHOTOS.pasta;
+  if (t.includes('risotto') || t.includes('paella')) return CURATED_DISH_FALLBACK_PHOTOS.risotto;
+  if (t.includes('curry') || t.includes('tikka') || t.includes('dahl') || t.includes('lentille')) return CURATED_DISH_FALLBACK_PHOTOS.curry;
+  if (t.includes('wok') || t.includes('nouilles') || t.includes('pad thaï') || t.includes('asiatique')) return CURATED_DISH_FALLBACK_PHOTOS.wok;
+  if (t.includes('salade') || t.includes('bowl') || t.includes('poke') || t.includes('buddha') || t.includes('taboulé')) return CURATED_DISH_FALLBACK_PHOTOS.salad;
+  if (t.includes('velouté') || t.includes('soupe') || t.includes('bouillon') || t.includes('minestrone')) return CURATED_DISH_FALLBACK_PHOTOS.soup;
+  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche') || t.includes('croque')) return CURATED_DISH_FALLBACK_PHOTOS.quiche;
+  if (t.includes('omelette') || t.includes('œuf') || t.includes('oeuf') || t.includes('frittata') || t.includes('chakchouka')) return CURATED_DISH_FALLBACK_PHOTOS.eggs;
+  if (t.includes('wrap') || t.includes('fajita') || t.includes('quesadilla') || t.includes('tacos') || t.includes('burger')) return CURATED_DISH_FALLBACK_PHOTOS.burger;
+  if (t.includes('gratin') || t.includes('parmentier') || t.includes('poêlée') || t.includes('mijoté') || t.includes('ratatouille') || t.includes('tartiflette')) return CURATED_DISH_FALLBACK_PHOTOS.gratin;
+  return CURATED_DISH_FALLBACK_PHOTOS.default;
+}
+
+function getDishOfflineSvgDataUri(recipe, slot) {
+  const emoji = getDishEmoji(recipe, slot);
+  const style = getSlotStyle(slot);
+  const bg1 = style === 'gourmet' ? '#4c0519' : style === 'pleasure' ? '#78350f' : '#064e3b';
+  const bg2 = style === 'gourmet' ? '#9f1239' : style === 'pleasure' ? '#d97706' : '#059669';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${bg1}"/>
+        <stop offset="100%" stop-color="${bg2}"/>
+      </linearGradient>
+    </defs>
+    <rect width="640" height="360" fill="url(#g)"/>
+    <circle cx="320" cy="180" r="88" fill="rgba(255,255,255,0.14)"/>
+    <text x="320" y="206" font-size="82" text-anchor="middle">${emoji}</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function getDishPhotoInfo(recipe, slot) {
+  if (!recipe) {
+    return { primaryUrl: CURATED_DISH_FALLBACK_PHOTOS.default, fallbackUrl: CURATED_DISH_FALLBACK_PHOTOS.default, offlineSvg: '', isCustom: false, seedOffset: 0 };
+  }
+  const entry = (state.dishPhotos && state.dishPhotos[recipe.id]) || {};
+  const fallbackUrl = getDishCuratedFallbackUrl(recipe);
+  const offlineSvg = getDishOfflineSvgDataUri(recipe, slot);
+
+  if (entry.customDataUrl) {
+    return {
+      primaryUrl: entry.customDataUrl,
+      fallbackUrl,
+      offlineSvg,
+      isCustom: true,
+      seedOffset: entry.aiSeedOffset || 0
+    };
+  }
+
+  if (recipe.imageUrl) {
+    return {
+      primaryUrl: recipe.imageUrl,
+      fallbackUrl,
+      offlineSvg,
+      isCustom: false,
+      seedOffset: entry.aiSeedOffset || 0
+    };
+  }
+
+  const seedOffset = entry.aiSeedOffset || 0;
+  const seed = computeRecipePhotoSeed(recipe.id, seedOffset);
+  const mainIngs = (recipe.ingredients || [])
+    .slice(0, 3)
+    .map((i) => i.name)
+    .join(', ');
+  const promptText = `Appetizing French culinary photography of "${recipe.title}"${mainIngs ? ` (${mainIngs})` : ''}, beautifully plated on a warm bistro table, natural daylight, shallow depth of field, high resolution food magazine style`;
+  const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=640&height=360&seed=${seed}&nologo=true`;
+
+  return {
+    primaryUrl: aiUrl,
+    fallbackUrl,
+    offlineSvg,
+    isCustom: false,
+    seedOffset
+  };
+}
+
+function handleDishPhotoLoad(imgEl) {
+  if (!imgEl) return;
+  imgEl.classList.add('is-loaded');
+  const wrap = imgEl.closest('.meal-photo-banner');
+  if (wrap) wrap.classList.remove('is-loading');
+}
+
+function handleDishPhotoError(imgEl) {
+  if (!imgEl) return;
+  const step = Number(imgEl.getAttribute('data-fallback-step') || '0');
+  if (step === 0) {
+    imgEl.setAttribute('data-fallback-step', '1');
+    const fb = imgEl.getAttribute('data-fallback-src');
+    if (fb && imgEl.src !== fb) {
+      imgEl.src = fb;
+      return;
+    }
+  }
+  if (step <= 1) {
+    imgEl.setAttribute('data-fallback-step', '2');
+    const svg = imgEl.getAttribute('data-offline-svg');
+    if (svg) {
+      imgEl.src = svg;
+    }
+  }
+  imgEl.classList.add('is-loaded');
+  const wrap = imgEl.closest('.meal-photo-banner');
+  if (wrap) wrap.classList.remove('is-loading');
+}
+
+function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
+  if (!recipe) return '';
+  const info = getDishPhotoInfo(recipe, slot);
+  const dishEmoji = getDishEmoji(recipe, slot);
+  const isModal = opts.context === 'modal';
+  const clickHandler =
+    opts.onClick ||
+    (opts.context === 'planner' && opts.slotId
+      ? `openRecipeModal('${opts.slotId}')`
+      : opts.context === 'pantry'
+      ? `openPantryRecipeModal('${recipe.id}', ${opts.servings || 2})`
+      : '');
+
+  const safeTitle = String(recipe.title || 'Plat').replace(/"/g, '&quot;');
+
+  return `
+    <div
+      class="meal-photo-banner ${isModal ? 'meal-photo-banner-modal' : ''} is-loading"
+      data-dish-photo-wrap="${recipe.id}"
+      style="background-image: url('${info.fallbackUrl}');"
+      ${clickHandler ? `onclick="${clickHandler}"` : ''}
+      title="${clickHandler ? 'Cliquer pour ouvrir la fiche cuisine détaillée' : safeTitle}"
+    >
+      <img
+        src="${info.primaryUrl}"
+        data-dish-photo-img="${recipe.id}"
+        data-fallback-src="${info.fallbackUrl}"
+        data-offline-svg="${info.offlineSvg}"
+        data-fallback-step="0"
+        alt="Illustration culinaire : ${safeTitle}"
+        class="meal-dish-photo"
+        draggable="false"
+        loading="${isModal ? 'eager' : 'lazy'}"
+        onload="handleDishPhotoLoad(this)"
+        onerror="handleDishPhotoError(this)"
+      />
+      <div class="meal-photo-top-badges">
+        <span class="meal-photo-emoji-pill" aria-hidden="true">${dishEmoji}</span>
+        <span class="meal-photo-source-badge" data-dish-photo-badge="${recipe.id}">
+          ${info.isCustom ? '📷 Ma photo' : '✨ Photo IA'}
+        </span>
+      </div>
+      <div class="meal-photo-actions" onclick="event.stopPropagation();">
+        <button
+          type="button"
+          class="meal-photo-action-btn"
+          onclick="regenerateDishAiPhoto('${recipe.id}', event)"
+          title="Générer une autre photo d'illustration IA pour ce plat"
+        >
+          ✨ Autre photo IA
+        </button>
+        <button
+          type="button"
+          class="meal-photo-action-btn"
+          onclick="triggerCustomDishPhotoUpload('${recipe.id}', event)"
+          title="Ajouter ou prendre ma propre photo pour ce plat"
+        >
+          📷 Ma photo
+        </button>
+        ${
+          info.isCustom
+            ? `
+          <button
+            type="button"
+            class="meal-photo-action-btn meal-photo-reset-btn"
+            onclick="resetDishPhoto('${recipe.id}', event)"
+            title="Revenir à l'illustration IA automatique"
+          >
+            ↺ IA
+          </button>
+        `
+            : ''
+        }
+      </div>
+    </div>
+  `;
+}
+
+function refreshDishPhotoElementsInDOM(recipeId) {
+  const recipe = findRecipeById(recipeId);
+  if (!recipe) return;
+  const info = getDishPhotoInfo(recipe, null);
+
+  document.querySelectorAll(`[data-dish-photo-wrap="${recipeId}"]`).forEach((wrap) => {
+    wrap.classList.add('is-loading');
+    const img = wrap.querySelector('img.meal-dish-photo');
+    if (img) {
+      img.classList.remove('is-loaded');
+      img.setAttribute('data-fallback-step', '0');
+      img.src = info.primaryUrl;
+    }
+    const badge = wrap.querySelector(`[data-dish-photo-badge="${recipeId}"]`);
+    if (badge) {
+      badge.textContent = info.isCustom ? '📷 Ma photo' : '✨ Photo IA';
+    }
+  });
+}
+
+function regenerateDishAiPhoto(recipeId, event) {
+  if (event) event.stopPropagation();
+  if (!recipeId) return;
+  if (!state.dishPhotos) state.dishPhotos = {};
+  const prev = state.dishPhotos[recipeId] || {};
+  state.dishPhotos[recipeId] = {
+    aiSeedOffset: (prev.aiSeedOffset || 0) + 1
+  };
+  saveStateToStorage();
+  refreshDishPhotoElementsInDOM(recipeId);
+  showToast('✨ Nouvelle photo IA en cours de génération pour ce plat...');
+}
+
+function resetDishPhoto(recipeId, event) {
+  if (event) event.stopPropagation();
+  if (!recipeId || !state.dishPhotos) return;
+  delete state.dishPhotos[recipeId];
+  saveStateToStorage();
+  renderAll();
+  showToast('↺ Photo IA automatique rétablie pour ce plat');
+}
+
+let pendingCustomPhotoRecipeId = null;
+
+function ensureCustomDishPhotoInput() {
+  let input = document.getElementById('dish-custom-photo-file-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'dish-custom-photo-file-input';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    input.addEventListener('change', handleCustomDishPhotoSelected);
+    document.body.appendChild(input);
+  }
+  return input;
+}
+
+function triggerCustomDishPhotoUpload(recipeId, event) {
+  if (event) event.stopPropagation();
+  if (!recipeId) return;
+  pendingCustomPhotoRecipeId = recipeId;
+  const input = ensureCustomDishPhotoInput();
+  input.value = '';
+  input.click();
+}
+
+function handleCustomDishPhotoSelected(e) {
+  const file = e.target && e.target.files && e.target.files[0];
+  const recipeId = pendingCustomPhotoRecipeId;
+  if (!file || !recipeId) return;
+
+  const reader = new FileReader();
+  reader.onload = (loadEvt) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 720;
+      const maxH = 440;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxW || h > maxH) {
+        const ratio = Math.min(maxW / w, maxH / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+      if (!state.dishPhotos) state.dishPhotos = {};
+      const prev = state.dishPhotos[recipeId] || {};
+      state.dishPhotos[recipeId] = {
+        ...prev,
+        customDataUrl: compressedDataUrl
+      };
+      saveStateToStorage();
+      renderAll();
+      refreshDishPhotoElementsInDOM(recipeId);
+      showToast('📷 Votre photo personnelle a été enregistrée pour ce plat !');
+    };
+    img.src = loadEvt.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 // Catalogue d'accords mets & vins du Sommelier classé par famille de plats gourmets
@@ -2051,12 +2574,17 @@ function createMealCardHTML(slot) {
   return `
     <article id="meal-card-${slot.slotId}" class="${cardClasses}">
       <div>
-        <!-- Bandeau Fort Contraste : MIDI (Solaire Clair) vs SOIR (Indigo Nuit) -->
+        <!-- Bandeau Fort Contraste : MIDI (Solaire Clair) vs SOIR (Indigo Nuit) + Navigation Swipe Rapide -->
         <div class="meal-time-banner ${isLunch ? 'lunch-banner' : 'dinner-banner'}">
           <div class="slot-label-group">
+            ${
+              state.plannerViewMode === 'day'
+                ? `<button type="button" class="card-inline-swipe-arrow" onclick="stepPlannerMeal(-1)" title="Repas précédent (Swipe droite)">◀</button>`
+                : ''
+            }
             <span class="meal-time-icon">${mealIcon}</span>
             <div>
-              <div class="meal-time-kicker">${isLunch ? '☀️ MIDI' : '🌙 SOIR'}</div>
+              <div class="meal-time-kicker">${isLunch ? '☀️ MIDI' : '🌙 SOIR'} • ${slot.day.toUpperCase()}</div>
               <div class="meal-time-title">${slot.mealLabel}</div>
             </div>
             ${slot.validated ? '<span class="chef-stamp-badge">✓ Validé</span>' : ''}
@@ -2072,6 +2600,11 @@ function createMealCardHTML(slot) {
             <button class="fav-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite('${recipe.id}', event)" title="Ajouter ou retirer de mon carnet de favoris">
               ${isFav ? '❤️' : '🤍'}
             </button>
+            ${
+              state.plannerViewMode === 'day'
+                ? `<button type="button" class="card-inline-swipe-arrow" onclick="stepPlannerMeal(1)" title="Repas suivant (Swipe gauche)">▶</button>`
+                : ''
+            }
           </div>
         </div>
 
@@ -2108,6 +2641,9 @@ function createMealCardHTML(slot) {
             <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus un convive">+</button>
           </div>
         </div>
+
+        <!-- Bandeau Photo d'illustration du plat (IA sur-mesure ou photo personnelle) -->
+        ${buildDishPhotoBannerHTML(recipe, slot, { context: 'planner', slotId: slot.slotId })}
 
         <div class="meal-title-row" style="margin-top: 8px;">
           <div class="meal-dish-avatar" onclick="openRecipeModal('${slot.slotId}')" style="cursor:pointer;" title="Voir la fiche recette">
@@ -2206,43 +2742,37 @@ function selectPlannerDay(dayOffset) {
 }
 
 function selectPlannerMealPeriod(period, slideDir = 0) {
+  if (state.plannerViewMode !== 'day') {
+    state.plannerViewMode = 'day';
+  }
   state.selectedMealPeriod = period === 'dinner' ? 'dinner' : 'lunch';
   state.lastMealSlideDir = slideDir;
   renderPlannerCards();
 }
 
 function stepPlannerMeal(delta) {
-  const curPeriod = state.selectedMealPeriod || 'lunch';
-  const curDay = state.selectedDayOffset || 0;
-
-  if (delta > 0) {
-    if (curPeriod === 'lunch') {
-      state.selectedMealPeriod = 'dinner';
-      state.lastMealSlideDir = 1;
-      renderPlannerCards();
-    } else if (curDay < 6) {
-      state.selectedDayOffset = curDay + 1;
-      state.selectedMealPeriod = 'lunch';
-      state.lastMealSlideDir = 1;
-      renderPlannerCards();
-    }
-  } else if (delta < 0) {
-    if (curPeriod === 'dinner') {
-      state.selectedMealPeriod = 'lunch';
-      state.lastMealSlideDir = -1;
-      renderPlannerCards();
-    } else if (curDay > 0) {
-      state.selectedDayOffset = curDay - 1;
-      state.selectedMealPeriod = 'dinner';
-      state.lastMealSlideDir = -1;
-      renderPlannerCards();
-    }
+  if (!delta) return;
+  if (state.plannerViewMode !== 'day') {
+    state.plannerViewMode = 'day';
   }
+  const curPeriod = state.selectedMealPeriod || 'lunch';
+  const curDay = Math.max(0, Math.min(6, Number(state.selectedDayOffset) || 0));
+  const curMealIdx = curDay * 2 + (curPeriod === 'dinner' ? 1 : 0);
+  const step = delta > 0 ? 1 : -1;
+  const nextMealIdx = (curMealIdx + step + 14) % 14;
+
+  state.selectedDayOffset = Math.floor(nextMealIdx / 2);
+  state.selectedMealPeriod = nextMealIdx % 2 === 1 ? 'dinner' : 'lunch';
+  state.lastMealSlideDir = step;
+  renderPlannerCards();
 }
 
 function stepPlannerDay(delta) {
-  const next = state.selectedDayOffset + delta;
-  if (next < 0 || next > 6) return;
+  if (state.plannerViewMode !== 'day') {
+    state.plannerViewMode = 'day';
+  }
+  const curDay = Math.max(0, Math.min(6, Number(state.selectedDayOffset) || 0));
+  const next = (curDay + delta + 7) % 7;
   state.selectedDayOffset = next;
   state.selectedMealPeriod = 'lunch';
   state.lastMealSlideDir = delta > 0 ? 1 : -1;
@@ -2320,8 +2850,13 @@ function renderDayPager() {
   const lunchBadge = !lunchSlot || lunchSlot.active === false ? '🚫' : lunchSlot.validated ? '✅' : '';
   const dinnerBadge = !dinnerSlot || dinnerSlot.active === false ? '🚫' : dinnerSlot.validated ? '✅' : '';
 
-  const isAtVeryStart = curOffset === 0 && curPeriod === 'lunch';
-  const isAtVeryEnd = curOffset === 6 && curPeriod === 'dinner';
+  const curMealIdx = curOffset * 2 + (curPeriod === 'dinner' ? 1 : 0);
+  const prevMealIdx = (curMealIdx - 1 + 14) % 14;
+  const nextMealIdx = (curMealIdx + 1) % 14;
+  const prevDayShort = DAY_SHORT_LIST[Math.floor(prevMealIdx / 2)];
+  const prevPeriodIcon = prevMealIdx % 2 === 1 ? '🌙' : '☀️';
+  const nextDayShort = DAY_SHORT_LIST[Math.floor(nextMealIdx / 2)];
+  const nextPeriodIcon = nextMealIdx % 2 === 1 ? '🌙' : '☀️';
 
   const tabsHTML = [0, 1, 2, 3, 4, 5, 6]
     .map((offset) => {
@@ -2382,51 +2917,55 @@ function renderDayPager() {
         ${tabsHTML}
       </div>
 
-      ${
-        isDayMode
-          ? `
-        <!-- Sélecteur Horizontal Déjeuner (Midi) <-> Dîner (Soir) avec Swipe Gauche / Droite -->
-        <div class="meal-period-swipe-bar">
+      <!-- Sélecteur Horizontal Déjeuner (Midi) <-> Dîner (Soir) avec Swipe Gauche / Droite -->
+      <div class="meal-period-swipe-bar">
+        <button
+          type="button"
+          class="btn btn-outline btn-sm meal-nav-arrow"
+          onclick="stepPlannerMeal(-1)"
+          title="Repas précédent : ${prevDayShort} ${prevPeriodIcon} (Glisser vers la droite)"
+        >
+          ◀
+        </button>
+
+        <div class="meal-period-tabs" role="tablist" aria-label="Choisir Déjeuner ou Dîner">
           <button
             type="button"
-            class="btn btn-outline btn-sm meal-nav-arrow"
-            onclick="stepPlannerMeal(-1)"
-            ${isAtVeryStart ? 'disabled style="opacity:0.35; pointer-events:none;"' : ''}
-            title="Repas précédent (Glisser vers la droite)"
+            class="meal-period-tab lunch-tab ${isDayMode && curPeriod === 'lunch' ? 'active' : ''}"
+            onclick="selectPlannerMealPeriod('lunch', -1)"
           >
-            ◀
+            ☀️ Déjeuner ${lunchBadge}
           </button>
-
-          <div class="meal-period-tabs" role="tablist" aria-label="Choisir Déjeuner ou Dîner">
-            <button
-              type="button"
-              class="meal-period-tab lunch-tab ${curPeriod === 'lunch' ? 'active' : ''}"
-              onclick="selectPlannerMealPeriod('lunch', -1)"
-            >
-              ☀️ Déjeuner ${lunchBadge}
-            </button>
-            <button
-              type="button"
-              class="meal-period-tab dinner-tab ${curPeriod === 'dinner' ? 'active' : ''}"
-              onclick="selectPlannerMealPeriod('dinner', 1)"
-            >
-              🌙 Dîner ${dinnerBadge}
-            </button>
-          </div>
-
           <button
             type="button"
-            class="btn btn-outline btn-sm meal-nav-arrow"
-            onclick="stepPlannerMeal(1)"
-            ${isAtVeryEnd ? 'disabled style="opacity:0.35; pointer-events:none;"' : ''}
-            title="Repas suivant (Glisser vers la gauche)"
+            class="meal-period-tab dinner-tab ${isDayMode && curPeriod === 'dinner' ? 'active' : ''}"
+            onclick="selectPlannerMealPeriod('dinner', 1)"
           >
-            ▶
+            🌙 Dîner ${dinnerBadge}
           </button>
         </div>
-      `
-          : ''
-      }
+
+        <button
+          type="button"
+          class="btn btn-outline btn-sm meal-nav-arrow"
+          onclick="stepPlannerMeal(1)"
+          title="Repas suivant : ${nextDayShort} ${nextPeriodIcon} (Glisser vers la gauche)"
+        >
+          ▶
+        </button>
+      </div>
+
+      <div class="swipe-gesture-hint-row">
+        <button type="button" class="swipe-hint-step-pill" onclick="stepPlannerMeal(-1)" title="Repas précédent">
+          ◀ ${prevDayShort} ${prevPeriodIcon}
+        </button>
+        <span class="swipe-hint-center-text">
+          👆 Glissez <strong>gauche / droite</strong> • Repas <strong>${curMealIdx + 1}/14</strong>
+        </span>
+        <button type="button" class="swipe-hint-step-pill" onclick="stepPlannerMeal(1)" title="Repas suivant">
+          ${nextDayShort} ${nextPeriodIcon} ▶
+        </button>
+      </div>
     </div>
   `;
 }
@@ -2455,8 +2994,19 @@ function createDayGroupHTML(dayOffset) {
         : '';
     state.lastMealSlideDir = 0;
 
-    const isAtVeryStart = dayOffset === 0 && curPeriod === 'lunch';
     const isAtVeryEnd = dayOffset === 6 && curPeriod === 'dinner';
+    const prevBtnLabel =
+      curPeriod === 'dinner'
+        ? '☀️ Midi'
+        : dayOffset > 0
+        ? `${DAY_SHORT_LIST[dayOffset - 1]} 🌙`
+        : 'Dim 🌙';
+    const nextBtnLabel =
+      curPeriod === 'lunch'
+        ? '🌙 Soir'
+        : dayOffset < 6
+        ? `${DAY_SHORT_LIST[dayOffset + 1]} ☀️`
+        : 'Lun ☀️';
 
     return `
       <div class="day-group day-group-compact ${allDayValidated ? 'day-fully-validated' : ''}">
@@ -2469,9 +3019,8 @@ function createDayGroupHTML(dayOffset) {
             type="button"
             class="btn btn-outline btn-sm"
             onclick="stepPlannerMeal(-1)"
-            ${isAtVeryStart ? 'disabled style="opacity:0.4; pointer-events:none;"' : ''}
           >
-            ◀ ${curPeriod === 'dinner' ? '☀️ Midi' : dayOffset > 0 ? DAY_SHORT_LIST[dayOffset - 1] : ''}
+            ◀ ${prevBtnLabel}
           </button>
 
           <button
@@ -2488,26 +3037,27 @@ function createDayGroupHTML(dayOffset) {
             }
           </button>
 
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            onclick="stepPlannerMeal(1)"
+          >
+            ${nextBtnLabel} ▶
+          </button>
+
           ${
-            !isAtVeryEnd
+            isAtVeryEnd
               ? `
             <button
               type="button"
-              class="btn btn-primary btn-sm"
-              onclick="stepPlannerMeal(1)"
-            >
-              ${curPeriod === 'lunch' ? '🌙 Soir' : DAY_SHORT_LIST[dayOffset + 1]} ▶
-            </button>
-          `
-              : `
-            <button
-              type="button"
               class="btn btn-keep btn-sm"
+              style="width: 100%; justify-content: center;"
               onclick="handleGenerateShoppingListClick()"
             >
-              🧺 Panier ▶
+              🧺 Voir mon panier de courses ▶
             </button>
           `
+              : ''
           }
         </div>
       </div>
@@ -2714,6 +3264,8 @@ function openRecipeModal(slotId) {
     </div>
     <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 8px;">${recipe.title}</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">${recipe.description || ''}</p>
+
+    ${buildDishPhotoBannerHTML(recipe, slot, { context: 'modal' })}
 
     <div class="meal-meta" style="margin: 12px 0 8px 0;">
       <span class="meta-pill">👥 Ajusté pour <strong>${slot.servings} ${slot.servings > 1 ? 'parts' : 'part'}</strong></span>
@@ -9952,6 +10504,9 @@ function renderPantryMenusGrid() {
               </button>
             </div>
 
+            <!-- Bandeau Photo d'illustration du plat -->
+            ${buildDishPhotoBannerHTML(recipe, { isGourmet, isPleasure }, { context: 'pantry', servings })}
+
             <div class="meal-title-row" style="margin-top: 10px;">
               <div class="meal-dish-avatar" onclick="openPantryRecipeModal('${recipe.id}', ${servings})" style="cursor: pointer;">
                 ${dishEmoji}
@@ -10065,6 +10620,8 @@ function openPantryRecipeModal(recipeId, servings) {
     <span class="meta-pill healthy-pill">🗄️ Menu du Garde-manger • Pour ${s} ${s > 1 ? 'parts' : 'part'}</span>
     <h2 style="font-size: 1.35rem; font-weight: 800; margin-top: 8px; margin-bottom: 6px;">${recipe.title}</h2>
     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 14px;">${recipe.description || ''}</p>
+
+    ${buildDishPhotoBannerHTML(recipe, null, { context: 'modal' })}
 
     <div class="meal-meta" style="margin-bottom: 14px;">
       <span class="meta-pill">⏱️ Préparation : ${recipe.prepTime}</span>
