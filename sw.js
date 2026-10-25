@@ -1,7 +1,8 @@
-const CACHE_NAME = 'menu-semaine-v236';
+const CACHE_NAME = 'menu-semaine-v241';
 const ASSETS = [
   './',
   './index.html',
+  './tts-relay.html',
   './styles.css',
   './data/config.js',
   './data/recipes.js',
