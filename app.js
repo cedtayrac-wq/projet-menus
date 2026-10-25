@@ -18,7 +18,8 @@ const STORAGE_KEYS = {
   VOICE_SETTINGS: 'menusemaine_voice_settings_v1',
   ELEVENLABS_KEY: 'menusemaine_elevenlabs_api_key_v1',
   DISH_PHOTOS: 'menusemaine_dish_photos_v1',
-  AVOIDED_INGREDIENTS: 'menusemaine_avoided_ingredients_v1'
+  AVOIDED_INGREDIENTS: 'menusemaine_avoided_ingredients_v1',
+  VEGETARIAN_MODE: 'menusemaine_vegetarian_mode_v1'
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
@@ -82,6 +83,7 @@ let state = {
   deductPantryFromShopping: true, // Ajuster automatiquement la liste des courses avec le stock frigo/placard
   dishPhotos: {},         // { [recipeId]: { customDataUrl?: string, aiSeedOffset?: number } }
   avoidedIngredients: [], // Liste des ingrédients à éviter dans les menus proposés
+  vegetarianOnly: false,  // Mode Végétarien (ne proposer que des plats veggie)
   voiceSettings: {
     persona: 'lignac',
     engine: 'elevenlabs',
@@ -724,6 +726,11 @@ function loadStateFromStorage() {
         state.avoidedIngredients = parsedAvoided.filter((x) => typeof x === 'string' && x.trim());
       }
     }
+
+    const savedVeggie = localStorage.getItem(STORAGE_KEYS.VEGETARIAN_MODE);
+    if (savedVeggie !== null) {
+      state.vegetarianOnly = savedVeggie === 'true';
+    }
   } catch (e) {
     console.error('Erreur chargement localStorage :', e);
   }
@@ -745,6 +752,7 @@ function saveStateToStorage() {
     localStorage.setItem(STORAGE_KEYS.VOICE_SETTINGS, JSON.stringify(state.voiceSettings || {}));
     localStorage.setItem(STORAGE_KEYS.DISH_PHOTOS, JSON.stringify(state.dishPhotos || {}));
     localStorage.setItem(STORAGE_KEYS.AVOIDED_INGREDIENTS, JSON.stringify(state.avoidedIngredients || []));
+    localStorage.setItem(STORAGE_KEYS.VEGETARIAN_MODE, String(!!state.vegetarianOnly));
   } catch (e) {
     console.error('Erreur sauvegarde localStorage :', e);
   }
@@ -4655,10 +4663,16 @@ async function generateRecipeWithAI() {
 
   const categoryDesc =
     mealType === 'gourmet'
-      ? 'Menu Gourmet avec des ingrédients nobles et délicats (Saint-Jacques, magret, filet de bœuf, truffe, bar sauvage, morilles...), recette simple à réaliser (Facile, 15-20 min) accompagnée d\'une suggestion de vin précise (couleur, région, appellation, cépage)'
+      ? state.vegetarianOnly
+        ? 'Menu Gourmet 100% VÉGÉTARIEN avec des ingrédients nobles et délicats (truffe, morilles, cèpes, girolles, burrata crémeuse, asperges vertes, vieux parmesan, risotto crémeux, ravioles...), recette simple à réaliser (Facile, 15-20 min) accompagnée d\'une suggestion de vin précise (couleur, région, appellation, cépage)'
+        : 'Menu Gourmet avec des ingrédients nobles et délicats (Saint-Jacques, magret, filet de bœuf, truffe, bar sauvage, morilles...), recette simple à réaliser (Facile, 15-20 min) accompagnée d\'une suggestion de vin précise (couleur, région, appellation, cépage)'
       : mealType === 'weekend-pleasure'
       ? 'Menu Plaisir gourmand pour se faire plaisir même si moins équilibré, simple et rapide à réaliser (10-15 min)'
       : 'Menu Équilibré sain, simple et rapide à réaliser (10-15 min)';
+
+  const veggieNote = state.vegetarianOnly
+    ? '\nRégime alimentaire obligatoire : Recette 100% VÉGÉTARIENNE (aucune viande, aucune volaille, aucune charcuterie, aucun poisson, aucun fruit de mer).'
+    : '';
 
   const avoidedNote =
     Array.isArray(state.avoidedIngredients) && state.avoidedIngredients.length > 0
@@ -4667,7 +4681,7 @@ async function generateRecipeWithAI() {
 
   const promptText = `Génère une recette en français au format JSON strict pour 2 adultes, réalisée avec un maximum d'ingrédients de saison.
 Catégorie : ${categoryDesc}.
-Indication supplémentaire : ${customPrompt || 'Aucune'}.${avoidedNote}
+Indication supplémentaire : ${customPrompt || 'Aucune'}.${veggieNote}${avoidedNote}
 Format JSON attendu uniquement (sans markdown) :
 {
   "title": "Nom du plat",
@@ -11215,11 +11229,14 @@ async function generatePantryRecipeWithAI() {
     .join(', ');
 
   const servings = state.pantryServings || 2;
+  const veggiePantryNote = state.vegetarianOnly
+    ? '\nRégime alimentaire obligatoire : Recette 100% VÉGÉTARIENNE (exclure strictement toute viande, volaille, charcuterie, poisson ou fruit de mer).'
+    : '';
   const avoidedPantryNote =
     Array.isArray(state.avoidedIngredients) && state.avoidedIngredients.length > 0
       ? `\nIngrédients strictement interdits (à exclure absolument de la recette) : ${state.avoidedIngredients.join(', ')}.`
       : '';
-  const promptText = `Tu es un chef cuisinier créatif. Crée une recette savoureuse, simple et rapide en français qui utilise prioritairement ces ingrédients disponibles dans le frigo et le placard : ${stockListText}.${avoidedPantryNote}
+  const promptText = `Tu es un chef cuisinier créatif. Crée une recette savoureuse, simple et rapide en français qui utilise prioritairement ces ingrédients disponibles dans le frigo et le placard : ${stockListText}.${veggiePantryNote}${avoidedPantryNote}
 Les quantités de base dans le JSON doivent être données pour 2 personnes (baseServings: 2).
 Réponds UNIQUEMENT au format JSON strict (sans markdown) :
 {
@@ -11407,9 +11424,81 @@ function doesTextMatchAvoidedTerm(targetText, avoidedRaw) {
   return false;
 }
 
+const NON_VEGETARIAN_SINGLE_WORDS = new Set([
+  // Viandes, volailles, gibiers & charcuteries
+  'poulet', 'volaille', 'dinde', 'canard', 'magret', 'gesier', 'caille', 'pintade', 'pigeon',
+  'lapin', 'boeuf', 'veau', 'porc', 'cochon', 'agneau', 'mouton', 'steak', 'entrecote',
+  'tournedo', 'tournedos', 'bavette', 'roti', 'cotelette', 'jarret', 'viande', 'lardon',
+  'jambon', 'bacon', 'chorizo', 'pancetta', 'guanciale', 'coppa', 'bresaola', 'prosciutto',
+  'serrano', 'saucisse', 'chipolata', 'merguez', 'diot', 'morteau', 'montbeliard', 'andouillette',
+  'boudin', 'salami', 'rillette', 'pate', 'rognon', 'tripe', 'charcuterie', 'gibier',
+  'chevreuil', 'sanglier', 'cerf', 'paupiette', 'blanquette', 'carbonade', 'bourguignon',
+  // Poissons, crustacés & fruits de mer
+  'poisson', 'saumon', 'cabillaud', 'thon', 'dorade', 'daurade', 'truite', 'merlu', 'colin',
+  'eglefin', 'haddock', 'hadoque', 'lotte', 'sole', 'turbot', 'sandre', 'sardine', 'maquereau',
+  'anchoi', 'anchois', 'hareng', 'espadon', 'rouget', 'raie', 'morue', 'surimi', 'crevette',
+  'gamba', 'gambas', 'petoncle', 'homard', 'langoustine', 'ecrevisse', 'crabe', 'tourteau',
+  'moule', 'palourde', 'huitre', 'bulot', 'encornet', 'calamar', 'seiche', 'poulpe', 'crustace'
+]);
+
+const NON_VEGETARIAN_PHRASES = [
+  'saint jacque', 'st jacque', 'fruits de mer', 'fruit de mer', 'foie gras', 'foie de veau',
+  'foie de volaille', 'ris de veau', 'filet mignon', 'souris d agneau', 'osso buco',
+  'bouillon de volaille', 'bouillon de boeuf', 'bouillon de poule', 'fond de veau',
+  'graisse de canard', 'confit de canard', 'filet de bar', 'bar sauvage', 'bar roti',
+  'dos de lieu', 'filet de lieu'
+];
+
+function isTextNonVegetarian(rawText) {
+  if (!rawText) return false;
+  let norm = normalizeAvoidedString(rawText);
+  if (!norm) return false;
+
+  // Exclure les faux positifs végétaux ("tomate coeur de boeuf", "coeur de boeuf", "steak végétal/soja/tofu", "bouillon de légumes")
+  norm = norm
+    .replace(/\btomate coeur de boeuf\b/g, 'tomate')
+    .replace(/\bcoeur de boeuf\b/g, 'tomate')
+    .replace(/\bsteak vegetal\b/g, 'vegetal')
+    .replace(/\bsteak de soja\b/g, 'soja')
+    .replace(/\bsteak de tofu\b/g, 'tofu')
+    .replace(/\bbouillon de legume\b/g, 'legume')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!norm) return false;
+
+  for (const phrase of NON_VEGETARIAN_PHRASES) {
+    if (norm.includes(phrase)) return true;
+  }
+
+  const words = norm.split(' ').filter(Boolean);
+  for (const w of words) {
+    if (NON_VEGETARIAN_SINGLE_WORDS.has(w)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isRecipeVegetarian(recipe) {
+  if (!recipe) return true;
+  if (isTextNonVegetarian(recipe.title || '')) return false;
+  const ings = recipe.ingredients || [];
+  for (const ing of ings) {
+    if (isTextNonVegetarian(ing.name || '')) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function isIngredientAvoided(ingName) {
+  if (!ingName) return false;
+  if (state.vegetarianOnly && isTextNonVegetarian(ingName)) {
+    return true;
+  }
   const list = state.avoidedIngredients || [];
-  if (!list.length || !ingName) return false;
+  if (!list.length) return false;
   return list.some((avoided) => doesTextMatchAvoidedTerm(ingName, avoided));
 }
 
@@ -11428,6 +11517,10 @@ function getRecipeAvoidedMatches(recipe) {
 }
 
 function recipeContainsAvoidedIngredient(recipe) {
+  if (!recipe) return false;
+  if (state.vegetarianOnly && !isRecipeVegetarian(recipe)) {
+    return true;
+  }
   return getRecipeAvoidedMatches(recipe).length > 0;
 }
 
@@ -11435,7 +11528,8 @@ function replaceUnvalidatedMealsWithAvoidedIngredients() {
   if (!Array.isArray(state.slots) || !state.slots.length) {
     return { replacedMealsCount: 0, replacedDessertsCount: 0 };
   }
-  if (!Array.isArray(state.avoidedIngredients) || state.avoidedIngredients.length === 0) {
+  const hasAvoidedList = Array.isArray(state.avoidedIngredients) && state.avoidedIngredients.length > 0;
+  if (!state.vegetarianOnly && !hasAvoidedList) {
     return { replacedMealsCount: 0, replacedDessertsCount: 0 };
   }
 
@@ -11580,8 +11674,43 @@ function toggleAvoidedPreset(presetLabel) {
   }
 }
 
+function toggleVegetarianMode(evt) {
+  state.vegetarianOnly = !state.vegetarianOnly;
+  saveStateToStorage();
+
+  let replacedMealsCount = 0;
+  if (state.vegetarianOnly) {
+    const res = replaceUnvalidatedMealsWithAvoidedIngredients();
+    replacedMealsCount = res.replacedMealsCount;
+  }
+
+  renderAll();
+
+  if (state.vegetarianOnly) {
+    if (evt && evt.clientX) {
+      spawnCulinaryConfetti({
+        x: evt.clientX,
+        y: evt.clientY,
+        count: 14,
+        spread: 130,
+        emojis: ['🌱', '🥦', '🥑', '🥕', '🍅', '🥗', '🌿']
+      });
+    }
+    showToast(
+      replacedMealsCount > 0
+        ? `🌱 Mode Végétarien activé — ${replacedMealsCount} repas non validé(s) remplacé(s) par des plats 100% veggie !`
+        : '🌱 Mode Végétarien activé — Seuls des plats 100% veggie vous seront proposés !'
+    );
+  } else {
+    showToast('🍽️ Mode Végétarien désactivé — Tous les plats (viandes, poissons et veggie) sont à nouveau proposés.');
+  }
+}
+
 function clearAllAvoidedIngredients() {
-  if (!Array.isArray(state.avoidedIngredients) || state.avoidedIngredients.length === 0) return;
+  const hadItems =
+    (Array.isArray(state.avoidedIngredients) && state.avoidedIngredients.length > 0) ||
+    state.vegetarianOnly;
+  if (!hadItems) return;
   state.avoidedIngredients = [];
   saveStateToStorage();
   renderAll();
@@ -11594,13 +11723,33 @@ function renderAvoidedIngredientsSettings() {
   const countPill = document.getElementById('avoided-ingredients-count-pill');
   const clearBtn = document.getElementById('btn-clear-avoided-ingredients');
   const impactBar = document.getElementById('avoided-ingredients-impact-bar');
+  const veggieBtn = document.getElementById('btn-toggle-vegetarian-mode');
+  const veggieBar = veggieBtn ? veggieBtn.closest('.veggie-mode-bar') : null;
 
   const avoided = Array.isArray(state.avoidedIngredients) ? state.avoidedIngredients : [];
+  const isVeggie = Boolean(state.vegetarianOnly);
+
+  if (veggieBtn) {
+    veggieBtn.classList.toggle('is-active', isVeggie);
+    veggieBtn.setAttribute('aria-pressed', isVeggie ? 'true' : 'false');
+    veggieBtn.textContent = isVeggie
+      ? '🌱 Végétarien : ACTIVÉ ✓ (Plats Veggie)'
+      : '🌱 Végétarien : Activer';
+  }
+  if (veggieBar) {
+    veggieBar.classList.toggle('is-active', isVeggie);
+  }
 
   if (countPill) {
-    if (avoided.length === 0) {
+    if (!isVeggie && avoided.length === 0) {
       countPill.textContent = '✅ Aucun ingrédient exclu';
       countPill.className = 'meta-pill healthy-pill';
+    } else if (isVeggie && avoided.length === 0) {
+      countPill.textContent = '🌱 Mode Végétarien actif';
+      countPill.className = 'meta-pill healthy-pill';
+    } else if (isVeggie && avoided.length > 0) {
+      countPill.textContent = `🌱 Végétarien + 🚫 ${avoided.length} exclu${avoided.length > 1 ? 's' : ''}`;
+      countPill.className = 'meta-pill pleasure-pill';
     } else {
       countPill.textContent = `🚫 ${avoided.length} ingrédient${avoided.length > 1 ? 's' : ''} à éviter`;
       countPill.className = 'meta-pill pleasure-pill';
@@ -11612,14 +11761,32 @@ function renderAvoidedIngredientsSettings() {
   }
 
   if (listEl) {
-    if (avoided.length === 0) {
+    if (avoided.length === 0 && !isVeggie) {
       listEl.innerHTML = `
         <span style="font-size: 0.85rem; color: var(--text-muted);">
-          ✅ <strong>Aucun ingrédient à éviter pour le moment.</strong> Ajoutez un aliment ci-dessus ou cliquez sur une suggestion rapide ci-dessous pour l'exclure automatiquement des menus proposés.
+          ✅ <strong>Aucun ingrédient à éviter pour le moment.</strong> Activez le bouton <strong>🌱 Végétarien</strong>, ajoutez un aliment ci-dessus ou cliquez sur une suggestion rapide ci-dessous.
         </span>
       `;
     } else {
-      listEl.innerHTML = avoided
+      const veggieBadgeHTML = isVeggie
+        ? `
+          <span class="avoided-ing-chip" style="background: #dcfce7; border-color: #22c55e; color: #14532d;">
+            <span>🌱 Mode Végétarien (Sans viande ni poisson)</span>
+            <button
+              type="button"
+              class="avoided-ing-remove-btn"
+              style="background: #bbf7d0; color: #14532d;"
+              onclick="toggleVegetarianMode(event)"
+              title="Désactiver le mode Végétarien"
+              aria-label="Désactiver le mode Végétarien"
+            >
+              ✕
+            </button>
+          </span>
+        `
+        : '';
+
+      const chipsHTML = avoided
         .map((item) => {
           const safeAttr = item.replace(/'/g, "\\'").replace(/"/g, '&quot;');
           return `
@@ -11638,6 +11805,8 @@ function renderAvoidedIngredientsSettings() {
           `;
         })
         .join('');
+
+      listEl.innerHTML = veggieBadgeHTML + chipsHTML;
     }
   }
 
@@ -11662,7 +11831,7 @@ function renderAvoidedIngredientsSettings() {
   }
 
   if (impactBar) {
-    if (avoided.length === 0) {
+    if (avoided.length === 0 && !isVeggie) {
       impactBar.style.display = 'none';
     } else {
       const db = window.RECIPES_DB || {};
@@ -11678,9 +11847,9 @@ function renderAvoidedIngredientsSettings() {
       impactBar.style.display = 'flex';
       impactBar.innerHTML = `
         <div>
-          🛡️ <strong>Filtre actif sur vos propositions :</strong>
-          <strong>${excludedCount} recette(s)</strong> contenant vos ingrédients à éviter sont écartées automatiquement
-          (<strong>${availableCount} plats compatibles</strong> disponibles).
+          ${isVeggie ? '🌱 <strong>Mode Végétarien actif</strong> • ' : '🛡️ <strong>Filtre actif :</strong> '}
+          <strong>${availableCount} plats ${isVeggie ? '100% veggie ' : ''}compatibles</strong> disponibles
+          (${excludedCount} recette(s) écartée(s) automatiquement).
         </div>
         <button type="button" class="btn btn-outline btn-sm" onclick="regenerateUnvalidatedMeals(); switchView('planner');">
           🎲 Renouveler les menus non validés
