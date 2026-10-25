@@ -1,5 +1,5 @@
-const CACHE_NAME = 'menu-semaine-v254';
-const CORE_ASSETS = [
+const CACHE_NAME = 'menu-semaine-v249';
+const ASSETS = [
   './',
   './index.html',
   './tts-relay.html',
@@ -10,14 +10,10 @@ const CORE_ASSETS = [
   './manifest.json',
   './assets/icon.svg',
   './assets/icon-192.png',
-  './assets/icon-512.png'
-];
-
-const MEDIA_ASSETS = [
+  './assets/icon-512.png',
   './assets/personas/maite.jpg',
   './assets/personas/lignac.jpg',
   './assets/personas/bocuse.jpg',
-  './assets/personas/marx.jpg',
   './assets/personas/etchebest.png',
   './assets/personas/coffe.jpg',
   './assets/personas/ia_homme.jpg',
@@ -25,7 +21,6 @@ const MEDIA_ASSETS = [
   './assets/voices/maite.mp3',
   './assets/voices/lignac.mp3',
   './assets/voices/bocuse.mp3',
-  './assets/voices/marx.mp3',
   './assets/voices/etchebest.mp3',
   './assets/voices/coffe.mp3',
   './assets/voices/ia_homme.mp3',
@@ -33,46 +28,24 @@ const MEDIA_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      // 1. Précharger immédiatement la coquille de l'application en contournant le cache HTTP
-      await Promise.all(
-        CORE_ASSETS.map(async (url) => {
-          try {
-            const resp = await fetch(url, { cache: 'reload' });
-            if (resp && resp.ok) {
-              await cache.put(url, resp);
-            }
-          } catch (e) {}
-        })
-      );
-      // 2. Précharger les médias en arrière-plan sans bloquer l'activation PWA
-      MEDIA_ASSETS.forEach((url) => {
-        fetch(url)
-          .then((resp) => {
-            if (resp && resp.ok) cache.put(url, resp);
-          })
-          .catch(() => {});
-      });
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-        )
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       )
-      .then(() => self.clients.claim())
+    )
   );
+  self.clients.claim();
 });
 
-// Stratégie Network-First sans erreur sur les requêtes de navigation (mode: 'navigate')
+// Stratégie Network-First avec repli hors-ligne (supermarché sans réseau)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const reqUrl = event.request.url || '';
@@ -83,17 +56,9 @@ self.addEventListener('fetch', (event) => {
   ) {
     return;
   }
-
   event.respondWith(
-    (async () => {
-      try {
-        // Pour les requêtes de navigation ou scripts/CSS, passer l'URL avec cache: 'no-cache'
-        // (ne jamais passer un objet Request avec mode: 'navigate' et un RequestInit non vide)
-        const networkResponse =
-          event.request.mode === 'navigate'
-            ? await fetch(event.request.url, { cache: 'no-cache' })
-            : await fetch(event.request);
-
+    fetch(event.request, { cache: 'no-cache' })
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -101,15 +66,14 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      } catch (err) {
-        const cachedResponse = await caches.match(event.request, { ignoreSearch: true });
-        if (cachedResponse) return cachedResponse;
-        if (event.request.mode === 'navigate') {
-          const fallback = await caches.match('./index.html', { ignoreSearch: true });
-          if (fallback) return fallback;
-        }
-        throw err;
-      }
-    })()
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+        });
+      })
   );
 });
