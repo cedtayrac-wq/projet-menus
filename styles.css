@@ -1894,11 +1894,12 @@ body {
 }
 
 #pwa-install-modal .modal-content {
-  max-width: 440px;
-  width: 100%;
+  max-width: 960px !important;
+  width: 96vw !important;
+  min-height: min(82dvh, 660px);
   max-height: calc(100vh - 20px);
   max-height: calc(100dvh - 20px);
-  padding: 14px 14px;
+  padding: 26px 24px;
   display: block;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1907,37 +1908,39 @@ body {
 
 #pwa-install-modal .modal-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 14px;
+  right: 14px;
   float: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin: 0;
-  width: 32px;
-  height: 32px;
-  font-size: 1rem;
+  width: 40px;
+  height: 40px;
+  font-size: 1.15rem;
 }
 
 @media (max-width: 640px) {
   .modal-overlay {
-    padding: max(8px, env(safe-area-inset-top, 8px))
-             max(8px, env(safe-area-inset-right, 8px))
-             max(12px, env(safe-area-inset-bottom, 12px))
-             max(8px, env(safe-area-inset-left, 8px));
+    padding: max(4px, env(safe-area-inset-top, 4px))
+             max(4px, env(safe-area-inset-right, 4px))
+             max(6px, env(safe-area-inset-bottom, 6px))
+             max(4px, env(safe-area-inset-left, 4px));
   }
 
   .modal-content {
-    padding: 16px 14px;
+    padding: 18px 16px;
     border-radius: 18px;
-    max-height: calc(100vh - 20px);
-    max-height: calc(100dvh - 20px);
+    max-height: calc(100vh - 12px);
+    max-height: calc(100dvh - 12px);
   }
 
   #pwa-install-modal .modal-content {
-    padding: 16px 14px;
-    max-height: calc(100vh - 16px);
-    max-height: calc(100dvh - 16px);
+    width: 98vw !important;
+    min-height: 92dvh;
+    padding: 20px 16px;
+    max-height: calc(100vh - 10px);
+    max-height: calc(100dvh - 10px);
   }
 }
 
