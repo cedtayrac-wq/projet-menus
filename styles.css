@@ -1268,6 +1268,132 @@ body {
   background: #ffe4e6;
 }
 
+/* ============================================================================
+   BANDEAU PHOTO D'ILLUSTRATION DU PLAT (IA SUR-MESURE + PHOTO PERSO)
+   ============================================================================ */
+.meal-photo-banner {
+  position: relative;
+  width: 100%;
+  height: 158px;
+  margin-top: 8px;
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: #f1f5f9;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.07);
+  cursor: pointer;
+}
+
+.meal-photo-banner.meal-photo-banner-modal {
+  height: 220px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  cursor: default;
+}
+
+.meal-photo-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.25) 0%,
+    rgba(15, 23, 42, 0) 40%,
+    rgba(15, 23, 42, 0.52) 100%
+  );
+  pointer-events: none;
+}
+
+.meal-dish-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 0.35s ease, transform 0.45s ease;
+}
+
+.meal-dish-photo.is-loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.meal-photo-banner:hover .meal-dish-photo.is-loaded {
+  transform: scale(1.03);
+}
+
+.meal-photo-top-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.meal-photo-emoji-pill {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(6px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
+}
+
+.meal-photo-source-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.68);
+  color: #ffffff;
+  backdrop-filter: blur(6px);
+  letter-spacing: 0.01em;
+}
+
+.meal-photo-actions {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
+}
+
+.meal-photo-action-btn {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.meal-photo-action-btn:hover {
+  background: rgba(5, 150, 105, 0.92);
+  transform: translateY(-1px);
+}
+
+.meal-photo-reset-btn:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
 .meal-title-row {
   display: flex;
   align-items: flex-start;
@@ -3847,6 +3973,102 @@ body {
 
 .day-meal-single-stage {
   overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.day-meal-single-stage:active {
+  cursor: grabbing;
+}
+
+#view-planner,
+.day-pager-card,
+.meal-period-swipe-bar {
+  touch-action: pan-y;
+}
+
+.meal-dish-photo {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.swipe-gesture-hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 5px 8px;
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  user-select: none;
+}
+
+.swipe-hint-center-text {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.swipe-hint-step-pill {
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.swipe-hint-step-pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.card-inline-swipe-arrow {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.45);
+  color: inherit;
+  width: 26px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.dinner-banner .card-inline-swipe-arrow {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.card-inline-swipe-arrow:hover {
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.dinner-banner .card-inline-swipe-arrow:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .anim-slide-from-right {
