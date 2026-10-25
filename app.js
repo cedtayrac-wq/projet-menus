@@ -4024,24 +4024,41 @@ async function triggerNativePwaInstallPrompt() {
   downloadAppLauncherFile();
 }
 
+async function handleAppIconDownloadClick() {
+  if (deferredPwaPrompt) {
+    await triggerNativePwaInstallPrompt();
+    return;
+  }
+
+  const ua = navigator.userAgent || '';
+  const isAndroid = /Android/i.test(ua);
+  if (isAndroid && isInAppWebView(ua)) {
+    openAppInExternalChrome();
+    return;
+  }
+
+  downloadAppLauncherFile();
+}
+
 function renderPwaInstallModalBody() {
   const modal = document.getElementById('pwa-install-modal');
   const body = document.getElementById('pwa-install-modal-body');
   if (!body) return;
 
-  // Forcer les styles de la modale en ligne pour éviter toute troncature même si un ancien CSS est en cache
+  // Ouvrir la fenêtre de téléchargement EN GRAND (plein écran sur mobile, grande fenêtre sur ordinateur)
   if (modal) {
-    modal.style.padding = '10px';
+    modal.style.padding = '12px';
     modal.style.alignItems = 'center';
     modal.style.justifyContent = 'center';
     modal.style.overflowY = 'auto';
     modal.style.zIndex = '2000';
     const contentBox = modal.querySelector('.modal-content');
     if (contentBox) {
-      contentBox.style.maxWidth = '430px';
-      contentBox.style.width = '100%';
-      contentBox.style.maxHeight = 'calc(100dvh - 20px)';
-      contentBox.style.padding = '14px';
+      contentBox.style.maxWidth = '960px';
+      contentBox.style.width = '96vw';
+      contentBox.style.minHeight = 'min(82dvh, 660px)';
+      contentBox.style.maxHeight = 'calc(100dvh - 24px)';
+      contentBox.style.padding = '26px 24px';
       contentBox.style.margin = 'auto';
       contentBox.style.overflowY = 'auto';
       contentBox.style.boxSizing = 'border-box';
@@ -4049,11 +4066,12 @@ function renderPwaInstallModalBody() {
     const closeBtn = modal.querySelector('.modal-close');
     if (closeBtn) {
       closeBtn.style.position = 'absolute';
-      closeBtn.style.top = '10px';
-      closeBtn.style.right = '10px';
+      closeBtn.style.top = '14px';
+      closeBtn.style.right = '14px';
       closeBtn.style.float = 'none';
-      closeBtn.style.width = '32px';
-      closeBtn.style.height = '32px';
+      closeBtn.style.width = '40px';
+      closeBtn.style.height = '40px';
+      closeBtn.style.fontSize = '1.15rem';
     }
   }
 
@@ -4064,88 +4082,95 @@ function renderPwaInstallModalBody() {
   const hasNativePrompt = !!deferredPwaPrompt;
 
   body.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-right: 36px;">
-      <img src="assets/icon-192.png" alt="MenuSemaine" style="width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.2);" />
-      <div style="min-width: 0;">
-        <h2 style="font-size: 1rem; font-weight: 800; margin: 0; line-height: 1.2; color: var(--text-main);">📲 Télécharger MenuSemaine</h2>
-        <p style="font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 0 0; line-height: 1.25;">Application mobile &amp; ordinateur gratuite</p>
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 16px 18px 16px; border-bottom: 2px dashed var(--border-color); margin-bottom: 18px;">
+      <div
+        onclick="handleAppIconDownloadClick()"
+        title="Cliquez sur l'icône pour lancer directement le téléchargement de l'application"
+        style="cursor: pointer; position: relative; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 28px; border-radius: 22px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 3px solid #059669; box-shadow: 0 10px 26px rgba(5,150,105,0.22); transition: transform 0.2s ease;"
+        onmouseover="this.style.transform='scale(1.04)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+        <div style="position: relative;">
+          <img src="assets/icon-512.png" alt="Télécharger MenuSemaine" style="width: 108px; height: 108px; border-radius: 24px; box-shadow: 0 6px 18px rgba(5,150,105,0.28); display: block;" />
+          <span style="position: absolute; bottom: -6px; right: -6px; background: #059669; color: #ffffff; width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 3px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.2);">⬇️</span>
+        </div>
+        <span style="font-size: 0.96rem; font-weight: 800; color: #065f46;">
+          👆 Cliquez sur l'icône pour télécharger directement l'application
+        </span>
       </div>
+
+      <h2 style="font-size: 1.45rem; font-weight: 800; margin: 14px 0 4px 0; color: var(--text-main);">
+        📲 Télécharger &amp; Installer MenuSemaine
+      </h2>
+      <p style="font-size: 0.92rem; color: var(--text-muted); margin: 0; max-width: 620px;">
+        Cliquez sur l'icône de l'application ci-dessus ou sur le bouton ci-dessous pour lancer immédiatement le téléchargement sur votre téléphone ou votre ordinateur.
+      </p>
     </div>
 
     ${
       hasNativePrompt
         ? `
-      <div style="padding: 10px 12px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; border: 2px solid #059669; margin-bottom: 10px; text-align: center;">
-        <div style="font-size: 0.8rem; font-weight: 700; color: #065f46; margin-bottom: 6px;">
-          ✅ Installation directe disponible en 1 clic :
-        </div>
-        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; font-weight: 800; justify-content: center;">
-          ⬇️ Installer l'application maintenant
+      <div style="padding: 16px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 14px; border: 2px solid #059669; margin-bottom: 18px; text-align: center;">
+        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; max-width: 520px; padding: 14px 20px; font-size: 1.05rem; font-weight: 800; justify-content: center; box-shadow: 0 6px 18px rgba(5,150,105,0.3);">
+          ⬇️ Installer l'application maintenant (1 clic)
         </button>
       </div>
       `
         : inApp && isAndroid
         ? `
-      <div style="padding: 10px 12px; background: #fffbeb; border-radius: 10px; border: 2px solid #f59e0b; margin-bottom: 10px;">
-        <div style="font-size: 0.79rem; font-weight: 700; color: #92400e; margin-bottom: 6px; line-height: 1.3;">
-          ⚠️ Lien ouvert depuis une messagerie. Appuyez ci-dessous pour l'ouvrir dans Chrome et l'installer :
+      <div style="padding: 16px; background: #fffbeb; border-radius: 14px; border: 2px solid #f59e0b; margin-bottom: 18px; text-align: center;">
+        <div style="font-size: 0.92rem; font-weight: 700; color: #92400e; margin-bottom: 10px;">
+          ⚠️ Lien ouvert depuis une messagerie. Ouvrez-le dans Chrome pour installer l'application :
         </div>
-        <button type="button" class="btn btn-primary" onclick="openAppInExternalChrome()" style="width: 100%; padding: 10px 12px; font-size: 0.88rem; font-weight: 800; justify-content: center;">
-          🚀 Ouvrir dans Chrome &amp; Installer
+        <button type="button" class="btn btn-primary" onclick="openAppInExternalChrome()" style="width: 100%; max-width: 520px; padding: 14px 20px; font-size: 1rem; font-weight: 800; justify-content: center;">
+          🚀 Ouvrir dans Chrome &amp; Télécharger l'application
         </button>
       </div>
       `
         : `
-      <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
-        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 10px 12px; font-size: 0.88rem; font-weight: 800; justify-content: center;">
-          ⬇️ Télécharger l'application sur cet appareil
+      <div style="margin-bottom: 18px; text-align: center;">
+        <button type="button" class="btn btn-primary" onclick="handleAppIconDownloadClick()" style="width: 100%; max-width: 520px; padding: 14px 20px; font-size: 1.05rem; font-weight: 800; justify-content: center; box-shadow: 0 6px 18px rgba(5,150,105,0.3);">
+          ⬇️ Télécharger directement l'application
         </button>
       </div>
       `
     }
 
-    <div id="pwa-install-steps-box" style="margin-bottom: 10px;">
-      ${
-        isIOS
-          ? `
-        <div style="padding: 10px 12px; background: #fffbeb; border-radius: 10px; border: 1.5px solid #f59e0b; font-size: 0.8rem; line-height: 1.35;">
-          <strong style="display: block; margin-bottom: 4px; color: #92400e;">🍎 Sur iPhone / iPad (Écran d'accueil) :</strong>
-          <ol style="margin-left: 16px; display: flex; flex-direction: column; gap: 4px;">
-            <li>Touchez <strong>Partager ⬆️</strong> dans la barre de Safari/Chrome.</li>
-            <li>Choisissez <strong>« Sur l'écran d'accueil » (➕)</strong> puis <strong>« Ajouter »</strong>.</li>
-          </ol>
-        </div>
-        `
-          : isAndroid
-          ? `
-        <div style="padding: 10px 12px; background: #ecfdf5; border-radius: 10px; border: 1.5px solid #059669; font-size: 0.8rem; line-height: 1.35;">
-          <strong style="display: block; margin-bottom: 4px; color: #065f46;">🤖 Sur Android (Écran d'accueil) :</strong>
-          <ol style="margin-left: 16px; display: flex; flex-direction: column; gap: 4px;">
-            <li>Touchez le menu <strong>⋮</strong> en haut à droite du navigateur.</li>
-            <li>Touchez <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
-          </ol>
-        </div>
-        `
-          : `
-        <div style="padding: 9px 11px; background: #ecfdf5; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 6px; font-size: 0.79rem; line-height: 1.35;">
-          <strong>💻 Sur PC / Mac :</strong> Cliquez sur le bouton <strong>⬇️ Télécharger</strong> ci-dessus ou sur l'icône <strong>📲</strong> à droite de la barre d'adresse.
-        </div>
-        <div style="padding: 8px 11px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.78rem; line-height: 1.32;">
-          <strong>📱 Sur Téléphone :</strong> Menu <strong>⋮ &rarr; Installer l'application</strong> (Android) ou <strong>Partager ⬆️ &rarr; Sur l'écran d'accueil</strong> (iPhone).
-        </div>
-        `
-      }
+    <div id="pwa-install-steps-box" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px;">
+      <div style="padding: 14px 16px; background: #ecfdf5; border-radius: 12px; border: 1.5px solid #059669; font-size: 0.88rem; line-height: 1.45;">
+        <strong style="display: block; margin-bottom: 6px; font-size: 0.95rem; color: #065f46;">🤖 Sur Smartphone Android :</strong>
+        <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 5px;">
+          <li>Cliquez sur l'<strong>icône de l'application</strong> ci-dessus pour lancer le téléchargement.</li>
+          <li>Ou touchez le menu <strong>⋮</strong> en haut à droite de Chrome &rarr; <strong>« Installer l'application »</strong> / <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+        </ol>
+      </div>
+
+      <div style="padding: 14px 16px; background: #fffbeb; border-radius: 12px; border: 1.5px solid #f59e0b; font-size: 0.88rem; line-height: 1.45;">
+        <strong style="display: block; margin-bottom: 6px; font-size: 0.95rem; color: #92400e;">🍎 Sur iPhone / iPad :</strong>
+        <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 5px;">
+          <li>Touchez le bouton <strong>Partager ⬆️</strong> dans la barre de Safari/Chrome.</li>
+          <li>Choisissez <strong>« Sur l'écran d'accueil » (➕)</strong> puis touchez <strong>« Ajouter »</strong> en haut à droite.</li>
+        </ol>
+      </div>
+
+      <div style="padding: 14px 16px; background: #f8fafc; border-radius: 12px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; line-height: 1.45;">
+        <strong style="display: block; margin-bottom: 6px; font-size: 0.95rem; color: #1e293b;">💻 Sur Ordinateur (PC / Mac) :</strong>
+        <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 5px;">
+          <li>Cliquez sur l'<strong>icône de l'application</strong> ci-dessus pour télécharger directement le lanceur.</li>
+          <li>Ou cliquez sur l'icône <strong>📲 Installer</strong> à droite dans la barre d'adresse d'Edge / Chrome.</li>
+        </ol>
+      </div>
     </div>
 
-    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="copyAppShareLink()" style="flex: 1 1 120px; justify-content: center; padding: 8px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+      <button type="button" class="btn btn-outline" onclick="copyAppShareLink()" style="flex: 1 1 180px; max-width: 260px; justify-content: center; padding: 11px 14px;">
         📋 Copier le lien
       </button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="shareAppLink()" style="flex: 1 1 120px; justify-content: center; padding: 8px;">
-        🔗 Partager
+      <button type="button" class="btn btn-outline" onclick="shareAppLink()" style="flex: 1 1 180px; max-width: 260px; justify-content: center; padding: 11px 14px;">
+        🔗 Partager l'application
       </button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="closeInstallModal()" style="flex: 1 1 90px; justify-content: center; padding: 8px; font-weight: 800;">
-        Fermer
+      <button type="button" class="btn btn-outline" onclick="closeInstallModal()" style="flex: 1 1 180px; max-width: 260px; justify-content: center; padding: 11px 14px; font-weight: 800;">
+        ✕ Fermer la fenêtre
       </button>
     </div>
   `;
@@ -4156,6 +4181,9 @@ async function handleInstallAppClick() {
     await triggerNativePwaInstallPrompt();
     return;
   }
+
+  // Lancer directement le téléchargement ET afficher la grande fenêtre d'installation
+  handleAppIconDownloadClick();
 
   const modal = document.getElementById('pwa-install-modal');
   if (!modal) return;
