@@ -3831,6 +3831,10 @@ function setupPwaSupport() {
     if (studioBanner && !isStandalone) {
       studioBanner.style.display = 'block';
     }
+    const modal = document.getElementById('pwa-install-modal');
+    if (modal && modal.classList.contains('open')) {
+      renderPwaInstallModalBody();
+    }
   });
 
   window.addEventListener('appinstalled', () => {
@@ -3842,78 +3846,218 @@ function setupPwaSupport() {
   });
 }
 
-async function handleInstallAppClick() {
-  if (deferredPwaPrompt) {
-    deferredPwaPrompt.prompt();
-    const choice = await deferredPwaPrompt.userChoice;
-    if (choice && choice.outcome === 'accepted') {
-      deferredPwaPrompt = null;
+function getCanonicalAppShareUrl() {
+  const cfg = window.APP_CONFIG || {};
+  if (cfg.publicUrl && /^https?:\/\//i.test(cfg.publicUrl.trim())) {
+    return cfg.publicUrl.trim();
+  }
+  return window.location.href.split('#')[0];
+}
+
+function isInAppWebView(ua) {
+  return /FBAN|FBAV|Instagram|Messenger|WhatsApp|Line\/|LinkedInApp|Snapchat|GSA\/|CriOS.*wv|; wv\)/i.test(ua || '');
+}
+
+function openAppInExternalChrome() {
+  const targetUrl = getCanonicalAppShareUrl();
+  const cleanNoProto = targetUrl.replace(/^https?:\/\//i, '');
+  const scheme = targetUrl.startsWith('https') ? 'https' : 'http';
+  const intentUrl = `intent://${cleanNoProto}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
+  window.location.href = intentUrl;
+}
+
+async function copyAppShareLink() {
+  const url = getCanonicalAppShareUrl();
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+      showToast('📋 Lien de l\'application copié ! Collez-le dans Chrome ou Safari.');
+      return;
     }
+  } catch (e) {}
+  const temp = document.createElement('input');
+  temp.value = url;
+  document.body.appendChild(temp);
+  temp.select();
+  try {
+    document.execCommand('copy');
+    showToast('📋 Lien de l\'application copié ! Collez-le dans Chrome ou Safari.');
+  } catch (err) {
+    showToast(`Lien : ${url}`);
+  }
+  document.body.removeChild(temp);
+}
+
+async function shareAppLink() {
+  const url = getCanonicalAppShareUrl();
+  const title = (window.APP_CONFIG && window.APP_CONFIG.appName) || 'MenuSemaine & Panier';
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title,
+        text: 'Découvre MenuSemaine : planificateur de repas de la semaine et panier de courses intelligent !',
+        url
+      });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  await copyAppShareLink();
+}
+
+async function triggerNativePwaInstallPrompt() {
+  if (!deferredPwaPrompt) {
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    if (isAndroid && isInAppWebView(ua)) {
+      openAppInExternalChrome();
+      return;
+    }
+    const stepsEl = document.getElementById('pwa-install-steps-box');
+    if (stepsEl) {
+      stepsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      stepsEl.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.35)';
+      setTimeout(() => {
+        stepsEl.style.boxShadow = '';
+      }, 1500);
+    }
+    showToast('📲 Suivez les 3 étapes ci-dessous dans le menu de votre navigateur pour terminer l\'installation.');
     return;
   }
 
-  // Si le navigateur ne déclenche pas la fenêtre native (ex: iPhone Safari, ou Chrome ayant déjà installé l'app),
-  // afficher la fenêtre d'aide visuelle adaptée à l'appareil :
-  const modal = document.getElementById('pwa-install-modal');
+  const promptEvent = deferredPwaPrompt;
+  deferredPwaPrompt = null;
+  try {
+    await promptEvent.prompt();
+    const choice = await promptEvent.userChoice;
+    if (choice && choice.outcome === 'accepted') {
+      closeInstallModal();
+      showToast('🎉 Téléchargement et installation de l\'application en cours...');
+    } else {
+      renderPwaInstallModalBody();
+    }
+  } catch (err) {
+    renderPwaInstallModalBody();
+  }
+}
+
+function renderPwaInstallModalBody() {
   const body = document.getElementById('pwa-install-modal-body');
-  if (!modal || !body) return;
+  if (!body) return;
 
   const ua = navigator.userAgent || '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /Android/i.test(ua);
+  const inApp = isInAppWebView(ua);
+  const hasNativePrompt = !!deferredPwaPrompt;
 
   body.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
-      <img src="assets/icon-192.png" alt="MenuSemaine" style="width: 48px; height: 48px; border-radius: 12px;" />
-      <div>
-        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0;">📲 Installer MenuSemaine</h2>
-        <p style="font-size: 0.84rem; color: var(--text-muted); margin: 2px 0 0 0;">Ajoutez l'icône sur l'écran d'accueil de votre téléphone</p>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-right: 40px;">
+      <img src="assets/icon-192.png" alt="MenuSemaine" style="width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(5,150,105,0.2);" />
+      <div style="min-width: 0;">
+        <h2 style="font-size: 1.05rem; font-weight: 800; margin: 0; line-height: 1.2; color: var(--text-main);">📲 Télécharger MenuSemaine</h2>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 2px 0 0 0; line-height: 1.3;">Installez l'application gratuite sur votre écran d'accueil</p>
       </div>
     </div>
 
     ${
-      isIOS
+      hasNativePrompt
         ? `
-      <div style="padding: 14px; background: #fffbeb; border-radius: 10px; border: 2px solid #f59e0b; margin-bottom: 14px; font-size: 0.92rem;">
-        <strong>🍎 Vous êtes sur iPhone / iPad :</strong>
-        <ol style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
-          <li>Appuyez sur le bouton <strong>Partager</strong> <span style="display:inline-block; padding:1px 6px; background:#e2e8f0; border-radius:4px; font-weight:700;">⬆️</span> tout en bas de Safari.</li>
-          <li>Faites défiler vers le bas et appuyez sur <strong>« Sur l'écran d'accueil »</strong> (➕).</li>
-          <li>Appuyez sur <strong>« Ajouter »</strong> en haut à droite.</li>
-        </ol>
+      <div style="padding: 12px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; border: 2px solid #059669; margin-bottom: 12px; text-align: center;">
+        <div style="font-size: 0.84rem; font-weight: 700; color: #065f46; margin-bottom: 8px;">
+          ✅ Votre appareil est prêt pour l'installation directe en 1 clic :
+        </div>
+        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 12px 14px; font-size: 0.94rem; font-weight: 800; justify-content: center; box-shadow: 0 4px 14px rgba(5,150,105,0.32);">
+          ⬇️ Télécharger &amp; Installer l'application
+        </button>
       </div>
       `
-        : isAndroid
+        : inApp && isAndroid
         ? `
-      <div style="padding: 14px; background: #ecfdf5; border-radius: 10px; border: 2px solid #059669; margin-bottom: 14px; font-size: 0.92rem;">
-        <strong>🤖 Vous êtes sur Android :</strong>
-        <ol style="margin-left: 20px; margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
-          <li>Appuyez sur les <strong>3 petits points ⋮</strong> tout en haut à droite de votre navigateur Chrome.</li>
-          <li>Appuyez sur <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
-          <li>Confirmez en appuyant sur <strong>« Installer »</strong>.</li>
-        </ol>
+      <div style="padding: 12px; background: #fffbeb; border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 12px;">
+        <div style="font-size: 0.83rem; font-weight: 700; color: #92400e; margin-bottom: 8px; line-height: 1.35;">
+          ⚠️ Vous avez ouvert le lien depuis une messagerie (WhatsApp / Messenger / SMS). Ouvrez-le dans Chrome pour télécharger l'application :
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openAppInExternalChrome()" style="width: 100%; padding: 11px 14px; font-size: 0.9rem; font-weight: 800; justify-content: center;">
+          🚀 Ouvrir dans Chrome pour télécharger l'App
+        </button>
       </div>
       `
-        : `
-      <div style="padding: 14px; background: #ecfdf5; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 14px; font-size: 0.9rem;">
-        <strong>💻 Sur Ordinateur (Chrome / Edge) :</strong>
-        <p style="margin-top: 6px;">Cliquez sur l'icône d'installation <strong>📲</strong> située à droite dans la barre d'adresse de votre navigateur (en haut), puis cliquez sur <strong>Installer</strong>.</p>
-      </div>
-      <div style="padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 14px; font-size: 0.86rem;">
-        <strong>📱 Sur Smartphone (Android &amp; iPhone) :</strong>
-        <ul style="margin-left: 18px; margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-          <li><strong>Android (Chrome) :</strong> Menu <strong>⋮</strong> en haut à droite &rarr; <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
-          <li><strong>iPhone (Safari) :</strong> Bouton <strong>Partager ⬆️</strong> en bas &rarr; <strong>« Sur l'écran d'accueil »</strong>.</li>
-        </ul>
+        : !isIOS
+        ? `
+      <div style="margin-bottom: 10px;">
+        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 11px 14px; font-size: 0.9rem; font-weight: 800; justify-content: center;">
+          📲 Télécharger &amp; Installer sur cet appareil
+        </button>
       </div>
       `
+        : ''
     }
 
-    <button class="btn btn-primary" onclick="closeInstallModal()" style="width: 100%; justify-content: center;">
-      J'ai compris
-    </button>
-  `;
+    <div id="pwa-install-steps-box" style="transition: box-shadow 0.25s ease; border-radius: 10px;">
+      ${
+        isIOS
+          ? `
+        <div style="padding: 12px; background: #fffbeb; border-radius: 10px; border: 1.5px solid #f59e0b; margin-bottom: 10px; font-size: 0.85rem; line-height: 1.4;">
+          <strong style="display: block; margin-bottom: 6px; color: #92400e;">🍎 Sur iPhone / iPad (Safari ou Chrome) :</strong>
+          <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 6px;">
+            <li>Touchez le bouton <strong>Partager</strong> <span style="display:inline-block; padding:1px 6px; background:#fde68a; border-radius:4px; font-weight:800;">⬆️</span> dans la barre du navigateur.</li>
+            <li>Faites défiler et touchez <strong>« Sur l'écran d'accueil » (➕)</strong>.</li>
+            <li>Touchez <strong>« Ajouter »</strong> en haut à droite : l'icône <strong>MenuSemaine</strong> est installée !</li>
+          </ol>
+        </div>
+        `
+          : isAndroid
+          ? `
+        <div style="padding: 12px; background: #ecfdf5; border-radius: 10px; border: 1.5px solid #059669; margin-bottom: 10px; font-size: 0.85rem; line-height: 1.4;">
+          <strong style="display: block; margin-bottom: 6px; color: #065f46;">🤖 Sur Android (Chrome / Samsung Internet) :</strong>
+          <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 6px;">
+            <li>Touchez les <strong>3 petits points ⋮</strong> tout en haut à droite du navigateur.</li>
+            <li>Touchez <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
+            <li>Confirmez avec <strong>« Installer »</strong> pour télécharger l'application.</li>
+          </ol>
+        </div>
+        `
+          : `
+        <div style="padding: 11px 12px; background: #ecfdf5; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 8px; font-size: 0.84rem; line-height: 1.4;">
+          <strong>💻 Sur Ordinateur (Chrome / Edge) :</strong>
+          <p style="margin-top: 4px;">Cliquez sur l'icône <strong>📲 Installer</strong> à droite dans la barre d'adresse en haut, puis sur <strong>Installer</strong>.</p>
+        </div>
+        <div style="padding: 10px 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 0.82rem; line-height: 1.38;">
+          <strong>📱 Sur Smartphone (Android &amp; iPhone) :</strong>
+          <ul style="margin-left: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 3px;">
+            <li><strong>Android (Chrome) :</strong> Menu <strong>⋮</strong> en haut à droite &rarr; <strong>« Installer l'application »</strong>.</li>
+            <li><strong>iPhone (Safari) :</strong> Bouton <strong>Partager ⬆️</strong> &rarr; <strong>« Sur l'écran d'accueil »</strong>.</li>
+          </ul>
+        </div>
+        `
+      }
+    </div>
 
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="copyAppShareLink()" style="flex: 1 1 135px; justify-content: center; padding: 9px 10px;">
+        📋 Copier le lien
+      </button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="shareAppLink()" style="flex: 1 1 135px; justify-content: center; padding: 9px 10px;">
+        🔗 Partager l'App
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="closeInstallModal()" style="flex: 1 1 100%; justify-content: center; padding: 10px 12px;">
+        Fermer
+      </button>
+    </div>
+  `;
+}
+
+async function handleInstallAppClick() {
+  if (deferredPwaPrompt) {
+    await triggerNativePwaInstallPrompt();
+    return;
+  }
+
+  const modal = document.getElementById('pwa-install-modal');
+  if (!modal) return;
+  renderPwaInstallModalBody();
   modal.classList.add('open');
 }
 
@@ -3953,7 +4097,7 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings) =>
       `Bonjour mes petits ! Attachez bien votre tablier, macarel : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, té ! On n'est pas là pour faire la diète, je vous garantis qu'on va se régaler !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Allez mes petits, commençons par les bons produits du marché pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : préparez d'abord ${ingListSpeech}.`,
+      `Allez mes petits, macarel ! Commençons par les bons produits du marché pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : préparez d'abord ${ingListSpeech}, té !`,
     buildOvenAlert: (temp) =>
       `Attention mes petits, macarel : allumez votre four tout de suite et lancez le préchauffage à ${temp}, té !`,
     stepIntros: [
@@ -3988,7 +4132,7 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings) =>
       `Salut à tous ! Aujourd'hui en cuisine, on se fait super plaisir : nous allons préparer un « ${dish} » bien gourmand et croquant, pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `C'est parti pour notre petite mise en place pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : commence par sortir ${ingListSpeech}.`,
+      `Allez c'est parti pour notre mise en place bien gourmande pour ${servings} ${servings > 1 ? 'personnes' : 'personne'} : commence par sortir ${ingListSpeech} !`,
     buildOvenAlert: (temp) =>
       `Hop, petit réflexe de chef : préchauffe tout de suite ton four à ${temp} pour qu'il soit bien chaud !`,
     stepIntros: [
@@ -4663,21 +4807,21 @@ function buildPersonaIngredientFollowup(personaId, ingNum, totalIngs, singleIngS
   const conn = connectors[(ingNum - 2) % connectors.length] || 'Ensuite,';
   switch (personaId) {
     case 'maite':
-      return `${conn} ${singleIngSpeech}, mes petits, té !`;
+      return `${conn} préparez ${singleIngSpeech}, mes petits, macarel !`;
     case 'lignac':
-      return `${conn} ${singleIngSpeech}, bien gourmand !`;
+      return `${conn} sors ${singleIngSpeech}, bien gourmand et croquant !`;
     case 'bocuse':
-      return `${conn} ${singleIngSpeech}, mes chers amis.`;
+      return `${conn} disposez devant vous ${singleIngSpeech}, mes chers amis !`;
     case 'marx':
-      return `${conn} ${singleIngSpeech}.`;
+      return `${conn} préparez avec rigueur ${singleIngSpeech}.`;
     case 'etchebest':
       return ingNum % 2 === 0
-        ? `Allez, on ne traîne pas bordel : sors ${singleIngSpeech}, chef !`
-        : `${conn} ${singleIngSpeech}, et que ce soit carré !`;
+        ? `Oh ! Allez, on ne traîne pas bordel : sors tout de suite ${singleIngSpeech}, chef !`
+        : `Allez chef, ${conn.toLowerCase()} ${singleIngSpeech}, et que ce soit carré bordel !`;
     case 'coffe':
       return ingNum % 2 === 0
-        ? `${conn} ${singleIngSpeech}, du vrai produit frais nom de Dieu, pas de la merde !`
-        : `${conn} ${singleIngSpeech}, bien frais du marché !`;
+        ? `Nom de Dieu mes amis, préparez ${singleIngSpeech}, du vrai produit frais et pas de la merde !`
+        : `${conn} ${singleIngSpeech}, bien frais du marché mes amis !`;
     default:
       return `${conn} ${singleIngSpeech}.`;
   }
@@ -4753,13 +4897,13 @@ function enrichStepBodyWithPersonaTics(personaId, spokenStepBody, stepIdx, total
 function buildInitialVoiceCommandsInstruction(personaId) {
   switch (personaId) {
     case 'maite':
-      return 'Dites Suivant, Répéter ou Pause pour avancer.';
+      return 'Quand vous êtes prêt mes petits, dites Suivant, Répéter ou Pause, té !';
     case 'lignac':
-      return 'Dis Suivant, Répéter ou Pause pour avancer.';
+      return 'Quand tu es prêt, dis Suivant, Répéter ou Pause !';
     case 'etchebest':
-      return 'Dis Suivant, Répéter ou Pause, et que ça saute !';
+      return 'Dis Suivant, Répéter ou Pause, et que ça saute bordel !';
     case 'coffe':
-      return 'Dites Suivant, Répéter ou Pause pour avancer !';
+      return 'Dites Suivant, Répéter ou Pause pour avancer mes amis !';
     default:
       return 'Dites Suivant, Répéter ou Pause pour avancer.';
   }
@@ -4987,16 +5131,34 @@ function setupVoiceGuide() {
   }
   if (!state.voiceSettings.clonedVoiceIds || typeof state.voiceSettings.clonedVoiceIds !== 'object') {
     state.voiceSettings.clonedVoiceIds = {};
+  } else {
+    // Nettoyer d'éventuels anciens IDs ElevenLabs génériques en cache pour ne jamais parasiter les voix Fish Audio S2.1 Pro
+    const legacyGenericIds = new Set([
+      'EXAVITQu4vr4xnSDxMaL',
+      'IKne3meq5aSn9XLyUdCD',
+      'pqHfZKP75CvOlQylNhV4',
+      'cjVigY5qzO86Huf0OWal',
+      'N2lVS1w4EtoT3dr4eOWO',
+      'JBFqnCBsd6RMkjVDRZzb',
+      'onwK4e9ZLuTAKqWW03F9',
+      'Xb7hH8MSUJpSbSDYk0k2'
+    ]);
+    let cleanedLegacy = false;
+    Object.keys(state.voiceSettings.clonedVoiceIds).forEach((k) => {
+      if (legacyGenericIds.has(state.voiceSettings.clonedVoiceIds[k])) {
+        delete state.voiceSettings.clonedVoiceIds[k];
+        cleanedLegacy = true;
+      }
+    });
+    if (cleanedLegacy) {
+      saveStateToStorage();
+    }
   }
   if (!state.voiceSettings.clonedVoiceProfiles || typeof state.voiceSettings.clonedVoiceProfiles !== 'object') {
     state.voiceSettings.clonedVoiceProfiles = {};
   }
 
   renderVoiceGuideSettings();
-
-  if (getEffectiveElevenLabsApiKey()) {
-    syncElevenLabsLibraryVoices(false);
-  }
 
   if ('speechSynthesis' in window) {
     if (typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
@@ -6073,6 +6235,8 @@ function stopActiveCloudVoiceAudio() {
       activeCloudVoiceAudio.onerror = null;
       activeCloudVoiceAudio.onplay = null;
       activeCloudVoiceAudio.pause();
+      activeCloudVoiceAudio.removeAttribute('src');
+      activeCloudVoiceAudio.load();
     } catch (e) {}
     activeCloudVoiceAudio = null;
   }
@@ -6123,12 +6287,6 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
       }
 
       stopActiveCloudVoiceAudio();
-      const audio = getOrCreateSharedVoiceAudio();
-      audio.muted = false;
-      audio.src = audioSrc;
-      if (isObjectUrl) {
-        activeCloudVoiceObjectUrl = audioSrc;
-      }
 
       const userRate = state.voiceSettings?.rate || 1.0;
       const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id];
@@ -6136,16 +6294,12 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
       let effectiveRate = Math.max(0.75, Math.min(1.38, userRate));
       if (options.applyClonePitchOnClient && cloneProf && cloneProf.pitchHzDelta) {
         const pitchFactor = Math.max(0.86, Math.min(1.16, 1 + cloneProf.pitchHzDelta / 160));
-        if ('preservesPitch' in audio) audio.preservesPitch = false;
-        else if ('mozPreservesPitch' in audio) audio.mozPreservesPitch = false;
-        else if ('webkitPreservesPitch' in audio) audio.webkitPreservesPitch = false;
         effectiveRate = Math.max(0.75, Math.min(1.38, userRate * pitchFactor));
       }
 
-      audio.playbackRate = effectiveRate;
-      activeCloudVoiceAudio = audio;
-
       let settled = false;
+      let localAudioEl = null;
+
       const finish = (ok) => {
         if (settled) return;
         settled = true;
@@ -6153,7 +6307,7 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
           try { URL.revokeObjectURL(audioSrc); } catch (e) {}
           activeCloudVoiceObjectUrl = null;
         }
-        if (activeCloudVoiceAudio === audio) {
+        if (localAudioEl && activeCloudVoiceAudio === localAudioEl) {
           activeCloudVoiceAudio = null;
         }
         if (reqId && reqId !== currentVoiceRequestSeq) {
@@ -6193,19 +6347,12 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
         return true;
       };
 
-      audio.onplay = () => {
-        markPlayStarted();
-      };
-
-      audio.onended = () => finish(true);
-      audio.onerror = () => finish(false);
-
-      // Repli Web Audio API (AudioContext) si HTMLAudioElement.play() est bloqué sur mobile après un appel réseau asynchrone
-      const tryWebAudioFallback = async () => {
+      // Lecture Web Audio API en mémoire (sans course d'état HTMLMediaElement ni révocation prématurée d'URL blob)
+      const tryWebAudioPlayback = async ( fallbackToHtmlAudio ) => {
         try {
-          if (!options.audioBlob) return finish(false);
+          if (!options.audioBlob) return fallbackToHtmlAudio ? startHtmlAudioPlayback() : finish(false);
           const ctx = getOrCreateSharedVoiceAudioCtx();
-          if (!ctx) return finish(false);
+          if (!ctx) return fallbackToHtmlAudio ? startHtmlAudioPlayback() : finish(false);
           if (ctx.state === 'suspended') {
             await ctx.resume().catch(() => {});
           }
@@ -6228,23 +6375,56 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
             srcNode.start(0);
           }
         } catch (err) {
+          if (fallbackToHtmlAudio) {
+            startHtmlAudioPlayback();
+          } else {
+            finish(false);
+          }
+        }
+      };
+
+      const startHtmlAudioPlayback = () => {
+        try {
+          const audio = new Audio(audioSrc);
+          localAudioEl = audio;
+          audio.muted = false;
+          if (isObjectUrl) {
+            activeCloudVoiceObjectUrl = audioSrc;
+          }
+          audio.playbackRate = effectiveRate;
+          activeCloudVoiceAudio = audio;
+
+          audio.onplay = () => {
+            markPlayStarted();
+          };
+          audio.onended = () => finish(true);
+          audio.onerror = () => {
+            if (options.audioBlob) {
+              tryWebAudioPlayback(false);
+            } else {
+              finish(false);
+            }
+          };
+
+          audio.play().catch(() => {
+            if (options.audioBlob) {
+              tryWebAudioPlayback(false);
+            } else {
+              finish(false);
+            }
+          });
+        } catch (err) {
           finish(false);
         }
       };
 
-      audio.play().catch(() => {
-        try {
-          const fallbackAudio = new Audio(audioSrc);
-          fallbackAudio.playbackRate = effectiveRate;
-          activeCloudVoiceAudio = fallbackAudio;
-          fallbackAudio.onplay = audio.onplay;
-          fallbackAudio.onended = () => finish(true);
-          fallbackAudio.onerror = () => tryWebAudioFallback();
-          fallbackAudio.play().catch(() => tryWebAudioFallback());
-        } catch (err) {
-          tryWebAudioFallback();
-        }
-      });
+      // Si nous avons le Blob audio en mémoire (toutes les étapes du Guide Vocal),
+      // utiliser Web Audio API en priorité pour une stabilité absolue d'une étape à l'autre !
+      if (options.audioBlob) {
+        tryWebAudioPlayback(true);
+      } else {
+        startHtmlAudioPlayback();
+      }
     } catch (e) {
       resolve(false);
     }
@@ -6258,8 +6438,8 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 const FISH_AUDIO_CLONE_MODEL_IDS = {
   maite: 'cae9259cec4343e1b1c837c525f9d268',
   lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
-  bocuse: '35bdc7c82ae24edb91bbb24507b5c1f3',
-  marx: '6df60779e006417f8ca9a300cc66f772',
+  bocuse: '011fb66309bb4ff08ef651fc22a896b3',
+  marx: '7d0fc461b48f45bcb7a464f698a681c4',
   etchebest: '6e01eb6afdc24c97983bdf3841651857',
   coffe: '7ab65404e01d4eb5a4e644948a7b31e5',
   ia_homme: '60c049cfece141809edba5a5ec11d8bc',
@@ -6275,6 +6455,125 @@ function getEffectiveFishAudioApiKey() {
   return 'sk-fish--dbfxx4hOXWqWQhe3Wi4aROmki6FOuNtUm5sEz7YbmQ';
 }
 
+// Passerelle multi-origines (Iframe Relay) pour contourner toute limite par domaine de proxy.corsfix.com sur GitHub Pages
+const _fishCrossOriginRelays = {};
+let _fishRelayReqSeq = 0;
+const _fishRelayPendingMap = new Map();
+
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'MENUSEMAINE_FISH_TTS_RESP') return;
+  const pending = _fishRelayPendingMap.get(data.id);
+  if (!pending) return;
+  _fishRelayPendingMap.delete(data.id);
+  clearTimeout(pending.timer);
+  if (data.ok && data.buffer && data.buffer.byteLength >= 500) {
+    pending.resolve(new Blob([data.buffer], { type: 'audio/mpeg' }));
+  } else {
+    pending.resolve(null);
+  }
+});
+
+function _getOrCreateCrossOriginRelayIframe(relayKey, relayUrl) {
+  if (_fishCrossOriginRelays[relayKey]) {
+    return _fishCrossOriginRelays[relayKey];
+  }
+  const entry = {
+    iframe: null,
+    readyPromise: null
+  };
+  entry.readyPromise = new Promise((resolve) => {
+    try {
+      const ifr = document.createElement('iframe');
+      ifr.style.display = 'none';
+      ifr.setAttribute('aria-hidden', 'true');
+      let settled = false;
+      const done = (ok) => {
+        if (settled) return;
+        settled = true;
+        resolve(ok ? ifr : null);
+      };
+      const readyListener = (ev) => {
+        if (ev.source === ifr.contentWindow && ev.data && ev.data.type === 'MENUSEMAINE_FISH_TTS_READY') {
+          window.removeEventListener('message', readyListener);
+          done(true);
+        }
+      };
+      window.addEventListener('message', readyListener);
+      ifr.onload = () => {
+        setTimeout(() => done(true), 250);
+      };
+      ifr.onerror = () => done(false);
+      setTimeout(() => done(false), 7000);
+      ifr.src = relayUrl;
+      document.body.appendChild(ifr);
+      entry.iframe = ifr;
+    } catch (e) {
+      resolve(null);
+    }
+  });
+  _fishCrossOriginRelays[relayKey] = entry;
+  return entry;
+}
+
+function _buildHtmlPreviewInlineRelayUrl() {
+  const inlineHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><script>
+window.addEventListener('message', async function(event) {
+  var d = event.data;
+  if (!d || d.type !== 'MENUSEMAINE_FISH_TTS_REQ') return;
+  try {
+    var r = await fetch(d.proxyUrl, { method: 'POST', headers: d.headers, body: d.bodyJson });
+    if (!r.ok) { event.source.postMessage({ type: 'MENUSEMAINE_FISH_TTS_RESP', id: d.id, ok: false, status: r.status }, '*'); return; }
+    var b = await r.arrayBuffer();
+    event.source.postMessage({ type: 'MENUSEMAINE_FISH_TTS_RESP', id: d.id, ok: b.byteLength >= 500, buffer: b }, '*', [b]);
+  } catch (e) {
+    event.source.postMessage({ type: 'MENUSEMAINE_FISH_TTS_RESP', id: d.id, ok: false }, '*');
+  }
+});
+if (window.parent) window.parent.postMessage({ type: 'MENUSEMAINE_FISH_TTS_READY' }, '*');
+</script></body></html>`;
+  return 'https://htmlpreview.github.io/?data:text/html;base64,' + btoa(inlineHtml);
+}
+
+async function requestFishAudioViaCrossOriginRelay(proxyUrl, headers, bodyJson) {
+  const relayCandidates = [
+    { key: 'githack_raw', url: 'https://raw.githack.com/cedtayrac-wq/projet-menus/main/tts-relay.html' },
+    { key: 'githack_cdn', url: 'https://rawcdn.githack.com/cedtayrac-wq/projet-menus/main/tts-relay.html' },
+    { key: 'htmlpreview_inline', url: _buildHtmlPreviewInlineRelayUrl() }
+  ];
+
+  for (const cand of relayCandidates) {
+    try {
+      const relayEntry = _getOrCreateCrossOriginRelayIframe(cand.key, cand.url);
+      const ifr = await relayEntry.readyPromise;
+      if (!ifr || !ifr.contentWindow) continue;
+
+      const reqId = `r_${++_fishRelayReqSeq}_${Date.now()}`;
+      const blob = await new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          _fishRelayPendingMap.delete(reqId);
+          resolve(null);
+        }, 22000);
+        _fishRelayPendingMap.set(reqId, { resolve, timer });
+        ifr.contentWindow.postMessage(
+          {
+            type: 'MENUSEMAINE_FISH_TTS_REQ',
+            id: reqId,
+            proxyUrl,
+            headers,
+            bodyJson
+          },
+          '*'
+        );
+      });
+      if (blob && blob.size >= 500) {
+        return blob;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
 function tryFetchFishAudioCloneBlob(cleanText, persona) {
   const runTask = async () => {
     // Toujours prioriser les modèles 100% solo validés dans FISH_AUDIO_CLONE_MODEL_IDS
@@ -6287,19 +6586,13 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
     if (!refId || !fishKey) return null;
 
     const tempVal =
-      persona.id === 'maite' ||
-      persona.id === 'lignac' ||
-      persona.id === 'etchebest' ||
-      persona.id === 'coffe'
+      persona.id === 'etchebest' || persona.id === 'coffe'
+        ? 0.65
+        : 0.62;
+    const topPVal =
+      persona.id === 'etchebest' || persona.id === 'coffe'
         ? 0.72
         : 0.70;
-    const topPVal =
-      persona.id === 'maite' ||
-      persona.id === 'lignac' ||
-      persona.id === 'bocuse' ||
-      persona.id === 'marx'
-        ? 0.76
-        : 0.75;
 
     const bodyJson = JSON.stringify({
       text: cleanText,
@@ -6313,28 +6606,35 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
     });
 
     const fishTargetUrl = 'https://api.fish.audio/v1/tts';
-    // Sur navigateur (smartphone GitHub Pages ou PC), api.fish.audio bloque le preflight CORS direct.
-    // On passe en priorité par la passerelle HTTPS CORS vérifiée (proxy.corsfix.com), avec repli direct.
-    const candidateUrls = [
-      `https://proxy.corsfix.com/?sdk=1&url=${encodeURIComponent(fishTargetUrl)}`,
-      fishTargetUrl
-    ];
+    const corsfixProxyUrl = `https://proxy.corsfix.com/?sdk=1&url=${encodeURIComponent(fishTargetUrl)}`;
+    const reqHeaders = {
+      Authorization: `Bearer ${fishKey}`,
+      'Content-Type': 'application/json',
+      model: 's2.1-pro-free'
+    };
+
+    const isGithubPages = /github\.io$/i.test(window.location.hostname || '');
 
     for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt > 0) {
         await new Promise((r) => setTimeout(r, 400 * attempt));
       }
-      for (const endpointUrl of candidateUrls) {
+
+      // 1. Sur GitHub Pages (smartphone), passer en priorité par le relais multi-origines (raw.githack / rawcdn / htmlpreview)
+      // pour ne jamais subir le blocage de quota par domaine (HTTP 403) de proxy.corsfix.com sur cedtayrac-wq.github.io !
+      if (isGithubPages) {
+        const relayedBlob = await requestFishAudioViaCrossOriginRelay(corsfixProxyUrl, reqHeaders, bodyJson);
+        if (relayedBlob && relayedBlob.size >= 500) return relayedBlob;
+      }
+
+      // 2. Appel direct via la passerelle CORS (fonctionne sur localhost et domaines non saturés)
+      for (const endpointUrl of [corsfixProxyUrl, fishTargetUrl]) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          const timeoutId = setTimeout(() => controller.abort(), 25000);
           const resp = await fetch(endpointUrl, {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${fishKey}`,
-              'Content-Type': 'application/json',
-              model: 's2.1-pro-free'
-            },
+            headers: reqHeaders,
             body: bodyJson,
             signal: controller.signal
           });
@@ -6343,6 +6643,12 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
           const blob = await resp.blob();
           if (blob && blob.size >= 500) return blob;
         } catch (e) {}
+      }
+
+      // 3. Si l'appel direct a échoué (ex: quota domaine atteint), utiliser le relais multi-origines
+      if (!isGithubPages) {
+        const fallbackRelayedBlob = await requestFishAudioViaCrossOriginRelay(corsfixProxyUrl, reqHeaders, bodyJson);
+        if (fallbackRelayedBlob && fallbackRelayedBlob.size >= 500) return fallbackRelayedBlob;
       }
     }
     return null;
@@ -6361,7 +6667,7 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v235::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v240::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -6441,12 +6747,14 @@ async function trySpeakWithLocalNeuralServer(cleanText, persona, options = {}) {
   const reqId = options.reqId;
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
 
-  let blob = await fetchClonedTtsAudioBlob(cleanText, persona);
-  if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
-  if (!blob || blob.size < 500) {
-    await new Promise((r) => setTimeout(r, 350));
+  let blob = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 350 * attempt));
+    }
     if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
     blob = await fetchClonedTtsAudioBlob(cleanText, persona);
+    if (blob && blob.size >= 500) break;
   }
   if (reqId && reqId !== currentVoiceRequestSeq) return { ok: true, serverHadBlob: true };
   if (!blob || blob.size < 500) return { ok: false, serverHadBlob: false };
@@ -6506,7 +6814,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = Boolean(options.isSamplePreview) || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=235`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=240`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
@@ -6557,7 +6865,10 @@ async function trySpeakWithElevenLabsClone(cleanText, persona, xiKey, options = 
     if (!blob || blob.size < 100) return false;
 
     const audioUrl = URL.createObjectURL(blob);
-    return await playAudioBlobOrUrl(audioUrl, true, persona, options);
+    return await playAudioBlobOrUrl(audioUrl, true, persona, {
+      ...options,
+      audioBlob: blob
+    });
   } catch (e) {
     if (reqId && reqId !== currentVoiceRequestSeq) return true;
     return false;
@@ -6621,7 +6932,6 @@ async function trySpeakWithCloudAiTts(cleanText, persona, voiceApiKey, options =
 }
 
 async function speakWithVoiceGuide(textToSpeak, options = {}) {
-  const xiKey = getEffectiveElevenLabsApiKey();
   const isCloneEngine = areClonedVoicesActive() && state.voiceSettings?.engine !== 'system';
   const hasBrowserSpeech = 'speechSynthesis' in window;
 
@@ -6654,6 +6964,11 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
   updateCharacterStageAnimationState();
   renderVoiceGuideSettings();
 
+  const isChefClonePersona =
+    persona.id !== 'ia_homme' &&
+    persona.id !== 'ia_femme' &&
+    Boolean(FISH_AUDIO_CLONE_MODEL_IDS[persona.id]);
+
   // En Mode Voix Clonée & Imitation Réaliste (par défaut) :
   if (isCloneEngine) {
     // 1. Si c'est l'aperçu vocal (bouton "🔊 Écouter" dans les Paramètres), lire immédiatement l'échantillon cloné Fish Audio S2.1 Pro embarqué
@@ -6662,14 +6977,22 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
       if (playedFastSample || reqId !== currentVoiceRequestSeq) return;
     }
 
-    // 2. Utiliser le serveur de clonage (/api/tts -> Fish Audio S2.1 Pro) pour que 100% de la fiche cuisine soit lue par la même voix clonée !
+    // 2. Utiliser le moteur Fish Audio S2.1 Pro (/api/tts ou relais multi-origines) pour que 100% de la fiche cuisine soit lue par la même voix clonée !
     const localResult = await trySpeakWithLocalNeuralServer(cleanText, persona, reqOptions);
     if (localResult.ok || reqId !== currentVoiceRequestSeq) return;
 
-    // 3. Si l'utilisateur a défini un clone ElevenLabs personnel pour cette personnalité
-    if (xiKey) {
-      const playedXi = await trySpeakWithElevenLabsClone(cleanText, persona, xiKey, reqOptions);
-      if (playedXi || reqId !== currentVoiceRequestSeq) return;
+    // IMPORTANT : Pour un chef cloné (Maïté, Cyril, Paul, Thierry, Philippe, Jean-Pierre),
+    // NE JAMAIS basculer sur une voix générique ElevenLabs ou sur la voix robotique du navigateur au milieu d'une recette !
+    if (isChefClonePersona) {
+      activePreviewPersonaId = null;
+      voiceGuideSession.isSpeaking = false;
+      updateVoiceStatusIndicators(false);
+      updateCharacterStageAnimationState();
+      renderVoiceGuideSettings();
+      if (typeof options.onEnd === 'function') {
+        options.onEnd();
+      }
+      return;
     }
   } else {
     // En Mode Voix Système Standard / Repli IA :
@@ -6679,7 +7002,7 @@ async function speakWithVoiceGuide(textToSpeak, options = {}) {
 
   if (reqId !== currentVoiceRequestSeq) return;
 
-  // Repli ultime sur la synthèse vocale du navigateur (en conservant strictement la personnalité choisie !)
+  // Repli sur la synthèse vocale du navigateur uniquement pour les voix IA neutres ou le mode système
   if (hasBrowserSpeech) {
     speakWithBrowserSynthesis(cleanText, persona, reqOptions);
   } else {
