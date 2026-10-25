@@ -4227,10 +4227,10 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings, seed = 0) => {
       const pLabel = servings > 1 ? 'personnes' : 'personne';
       const variants = [
-        `Bonjour mes petits ! Attachez bien votre tablier : aujourd'hui, nous allons cuisiner « ${dish} », pour ${servings} ${pLabel}. On n'est pas là pour faire la diète, je vous garantis qu'on va se régaler !`,
-        `Allez, approchez dans ma cuisine les drôles ! Aujourd'hui on prépare un bon « ${dish} » bien généreux pour ${servings} ${pLabel}, té ! Ça va chanter dans la cocotte !`,
-        `Bonjour à tous ! Sortez les casseroles, mes petits : au menu du jour, « ${dish} » pour ${servings} ${pLabel}. De la vraie cuisine du cœur comme à Rion-des-Landes !`,
-        `Té, quelle bonne idée de cuisiner ensemble ! Aujourd'hui, je vous montre comment réussir un fameux « ${dish} » pour ${servings} ${pLabel}, macarel !`
+        `Au menu aujourd'hui mes petits : nous cuisinons « ${dish} » pour ${servings} ${pLabel}, macarel !`,
+        `Aujourd'hui les drôles, on prépare un bon « ${dish} » bien généreux pour ${servings} ${pLabel}, té !`,
+        `Sortez les casseroles mes petits : place à « ${dish} » pour ${servings} ${pLabel}, macarel !`,
+        `Aujourd'hui mes petits, je vous montre comment réussir « ${dish} » pour ${servings} ${pLabel}, té !`
       ];
       return variants[seed % variants.length];
     },
@@ -4294,10 +4294,10 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings, seed = 0) => {
       const pLabel = servings > 1 ? 'personnes' : 'personne';
       const variants = [
-        `Salut à tous ! Aujourd'hui en cuisine, on se fait super plaisir : nous allons préparer un « ${dish} » bien gourmand et croquant, pour ${servings} ${pLabel} !`,
-        `Bonjour tout le monde ! Ravi de vous retrouver derrière les fourneaux pour cuisiner ensemble « ${dish} », pour ${servings} ${pLabel}. Vous allez voir, c'est simple et plein de peps !`,
-        `Allez, c'est parti en cuisine ! Aujourd'hui on se régale avec « ${dish} » pour ${servings} ${pLabel}, une vraie recette plaisir comme on les aime !`,
-        `Salut ! Prêt à cuisiner un super plat fait maison ? On attaque « ${dish} » pour ${servings} ${pLabel}, ça va être top !`
+        `Au menu aujourd'hui : nous préparons « ${dish} » pour ${servings} ${pLabel}, bien gourmand et croquant !`,
+        `Allez c'est parti : on cuisine ensemble « ${dish} » pour ${servings} ${pLabel}, plein de peps !`,
+        `Aujourd'hui on se régale avec « ${dish} » pour ${servings} ${pLabel}, super gourmand et croquant !`,
+        `On attaque tout de suite « ${dish} » pour ${servings} ${pLabel}, ça va être top !`
       ];
       return variants[seed % variants.length];
     },
@@ -4361,10 +4361,10 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings, seed = 0) => {
       const pLabel = servings > 1 ? 'convives' : 'convive';
       const variants = [
-        `Bonjour mes chers amis, bienvenue à Collonges ! Aujourd'hui, nous allons honorer la grande cuisine française avec « ${dish} », pour ${servings} ${pLabel} !`,
-        `Bonjour Monsieur, bonjour Madame ! C'est un grand bonheur de cuisiner avec vous « ${dish} » pour ${servings} ${pLabel}, dans le respect du beau produit !`,
-        `Bienvenue au piano, mes amis ! Aujourd'hui nous préparons « ${dish} » pour ${servings} ${pLabel} : de la simplicité, du goût et de la générosité !`,
-        `Bonjour à tous ! Il n'y a qu'une seule cuisine, la bonne : réalisons ensemble un savoureux « ${dish} » pour ${servings} ${pLabel} !`
+        `Aujourd'hui mes chers amis, nous préparons « ${dish} » pour ${servings} ${pLabel}, comme à Collonges !`,
+        `C'est un grand bonheur de cuisiner avec vous « ${dish} » pour ${servings} ${pLabel}, mes chers amis !`,
+        `Au menu aujourd'hui mes amis : « ${dish} » pour ${servings} ${pLabel}, dans la grande tradition !`,
+        `Réalisons ensemble un savoureux « ${dish} » pour ${servings} ${pLabel}, mes chers amis !`
       ];
       return variants[seed % variants.length];
     },
@@ -4428,10 +4428,10 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings, seed = 0) => {
       const pLabel = servings > 1 ? 'personnes' : 'personne';
       const variants = [
-        `Oh ! Écoute-moi bien chef ! Aujourd'hui on envoie « ${dish} » pour ${servings} ${pLabel} ! Je ne veux pas voir de laisser-aller sur le plan de travail : on se bouge et on fait ça carré !`,
-        `Allez en place en cuisine ! Aujourd'hui au menu : « ${dish} » pour ${servings} ${pLabel}. Je veux de la rigueur, de la niaque et du goût dans l'assiette !`,
-        `Salut chef ! Le coup de feu est lancé : on attaque « ${dish} » pour ${servings} ${pLabel}. Concentre-toi bien, on va sortir une assiette impeccable !`,
-        `Attention la brigade ! Aujourd'hui on cuisine « ${dish} » pour ${servings} ${pLabel}, alors on retrousse ses manches et on envoie du lourd !`
+        `Aujourd'hui chef, on envoie « ${dish} » pour ${servings} ${pLabel}, et on fait ça carré !`,
+        `Au menu aujourd'hui : « ${dish} » pour ${servings} ${pLabel}, avec de la rigueur et de la niaque !`,
+        `Le coup de feu est lancé chef : on attaque « ${dish} » pour ${servings} ${pLabel} !`,
+        `Aujourd'hui la brigade, on cuisine « ${dish} » pour ${servings} ${pLabel}, on envoie du lourd !`
       ];
       return variants[seed % variants.length];
     },
@@ -4495,10 +4495,10 @@ const VOICE_PERSONAS = {
     buildIntro: (dish, servings, seed = 0) => {
       const pLabel = servings > 1 ? 'personnes' : 'personne';
       const variants = [
-        `Ah bonjour mes amis ! Aujourd'hui nous cuisinons un vrai « ${dish} » pour ${servings} ${pLabel} ! Et par pitié, foutez-moi les barquettes industrielles à la poubelle : ici, on cuisine du vrai !`,
-        `Quel bonheur de se retrouver autour de vrais produits ! Aujourd'hui, préparons ensemble « ${dish} » pour ${servings} ${pLabel}, une recette franche et sincère !`,
-        `Bonjour à tous ! Vous allez voir qu'avec de bons ingrédients de saison, préparer « ${dish} » pour ${servings} ${pLabel} est une fête et ça coûte bien moins cher que les cochonneries toutes prêtes !`,
-        `Mes chers amis, à vos fourneaux ! Aujourd'hui nous faisons honneur au bon goût avec « ${dish} » pour ${servings} ${pLabel} !`
+        `Aujourd'hui mes amis, nous cuisinons un vrai « ${dish} » pour ${servings} ${pLabel}, nom de Dieu !`,
+        `Préparons ensemble « ${dish} » pour ${servings} ${pLabel}, une vraie recette franche et sincère !`,
+        `Au menu aujourd'hui mes amis : « ${dish} » pour ${servings} ${pLabel}, avec de beaux produits frais !`,
+        `Aujourd'hui mes chers amis, faisons honneur au bon goût avec « ${dish} » pour ${servings} ${pLabel} !`
       ];
       return variants[seed % variants.length];
     },
@@ -6741,12 +6741,13 @@ const FISH_AUDIO_CLONE_MODEL_IDS = {
   lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
   bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
   etchebest: '6e01eb6afdc24c97983bdf3841651857',
-  coffe: '7334d5b7ff174ffca59d08dc3d63d771',
+  coffe: '550ce54d6bd740b9ba39da8c5da9bbb7',
   ia_homme: '60c049cfece141809edba5a5ec11d8bc',
   ia_femme: 'da57db7f34244092b9d058e1f0e2aa65'
 };
 
 let currentWarmupSeq = 0;
+const resolvedTtsBlobMap = new Map();
 
 function getEffectiveFishAudioApiKey() {
   const cfg = window.APP_CONFIG || {};
@@ -6898,9 +6899,9 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
       text: cleanText,
       reference_id: refId,
       format: 'mp3',
-      mp3_bitrate: 192,
+      mp3_bitrate: 128,
       normalize: true,
-      latency: 'normal',
+      latency: 'balanced',
       temperature: tempVal,
       top_p: topPVal
     });
@@ -6963,12 +6964,26 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
   return queuedPromise;
 }
 
+function getTtsBlobCacheKey(cleanText, persona) {
+  const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
+  const userRate = state.voiceSettings?.rate || 1.0;
+  return `v266::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+}
+
+function hasResolvedClonedTtsBlob(cleanText, persona) {
+  const key = getTtsBlobCacheKey(cleanText, persona);
+  return resolvedTtsBlobMap.has(key);
+}
+
 // Récupérer (avec cache RAM + déduplication des requêtes en cours + retry) l'audio cloné depuis Fish Audio S2.1 Pro ou /api/tts
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v260::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = getTtsBlobCacheKey(cleanText, persona);
 
+  if (resolvedTtsBlobMap.has(cacheKey)) {
+    return Promise.resolve(resolvedTtsBlobMap.get(cacheKey));
+  }
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
   }
@@ -6982,6 +6997,7 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
     if (!isLocalHost) {
       const directFishBlob = await tryFetchFishAudioCloneBlob(cleanText, persona);
       if (directFishBlob && directFishBlob.size >= 500) {
+        resolvedTtsBlobMap.set(cacheKey, directFishBlob);
         return directFishBlob;
       }
     }
@@ -7016,6 +7032,7 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
             if (ctype.includes('audio')) {
               const blob = await resp.blob();
               if (blob && blob.size >= 500) {
+                resolvedTtsBlobMap.set(cacheKey, blob);
                 return blob;
               }
             }
@@ -7026,6 +7043,7 @@ function fetchClonedTtsAudioBlob(cleanText, persona) {
       // Repli sur Fish Audio S2.1 Pro côté client si le serveur local /api/tts n'a pas répondu
       const fallbackFishBlob = await tryFetchFishAudioCloneBlob(cleanText, persona);
       if (fallbackFishBlob && fallbackFishBlob.size >= 500) {
+        resolvedTtsBlobMap.set(cacheKey, fallbackFishBlob);
         return fallbackFishBlob;
       }
     }
@@ -7095,33 +7113,41 @@ function warmUpNextVoiceGuideSteps() {
   })();
 }
 
-// Pré-chauffer dès l'ouverture de la Fiche Cuisine uniquement la 1ère étape pour ne jamais saturer l'API
+// Pré-chauffer dès l'ouverture de la Fiche Cuisine les 2 premières étapes + le relais CORS pour démarrage instantané
 function warmUpRecipeVoiceGuideOnOpen() {
   if (!activeModalVoiceContext || !areClonedVoicesActive()) return;
   try {
+    if (/github\.io$/i.test(window.location.hostname || '')) {
+      _getOrCreateCrossOriginRelayIframe(
+        'githack_raw',
+        'https://raw.githack.com/cedtayrac-wq/projet-menus/main/tts-relay.html'
+      );
+    }
     const persona = getActiveVoicePersona();
     const seq = buildStepByStepVoiceSequence(activeModalVoiceContext);
     const myWarmupSeq = ++currentWarmupSeq;
     (async () => {
-      if (myWarmupSeq !== currentWarmupSeq) return;
-      if (seq[0] && seq[0].spokenText) {
-        try {
-          await fetchClonedTtsAudioBlob(seq[0].spokenText, persona);
-        } catch (e) {}
+      for (const idx of [0, 1]) {
+        if (myWarmupSeq !== currentWarmupSeq) return;
+        if (seq[idx] && seq[idx].spokenText) {
+          try {
+            await fetchClonedTtsAudioBlob(seq[idx].spokenText, persona);
+          } catch (e) {}
+        }
       }
     })();
   } catch (e) {}
 }
 
 // 2. Lecture de l'extrait vocal cloné Fish Audio S2.1 Pro pré-généré embarqué (assets/voices/<persona>.mp3)
-// UNIQUEMENT pour le bouton "🔊 Écouter" dans les Paramètres (jamais à la place d'une étape de recette !)
+// UNIQUEMENT pour le bouton "🔊 Écouter" dans les Paramètres ou l'accroche instantanée d'accueil
 async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) {
   if (options.reqId && options.reqId !== currentVoiceRequestSeq) return true;
   const sampleQuoteClean = (persona.sampleQuote || '').replace(/[«»]/g, '').trim();
   const isSample = Boolean(options.isSamplePreview) || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=257`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=266`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
@@ -8225,6 +8251,57 @@ function speakCurrentStepInGuide(isRepeat = false) {
       spread: 220,
       emojis: persona.particles
     });
+  }
+
+  // Si c'est la 1ère étape (Intro) au lancement du Guide Vocal et que l'audio dynamique du plat
+  // n'a pas encore fini de se télécharger en RAM, lancer IMMÉDIATEMENT (< 30 ms) l'accroche
+  // studio embarquée du chef pendant que la phrase du plat termine son téléchargement en tâche de fond !
+  const isCloneEngine = areClonedVoicesActive() && state.voiceSettings?.engine !== 'system';
+  if (
+    item.type === 'intro' &&
+    !isRepeat &&
+    isCloneEngine &&
+    !hasResolvedClonedTtsBlob(textToRead, persona)
+  ) {
+    // Lancer / poursuivre immédiatement le téléchargement de la phrase du plat en parallèle
+    fetchClonedTtsAudioBlob(textToRead, persona).catch(() => {});
+    warmUpNextVoiceGuideSteps();
+
+    cancelAllActiveSpeech();
+    const openerReqId = ++currentVoiceRequestSeq;
+    voiceGuideSession.isSpeaking = true;
+    updateCharacterStageAnimationState();
+    renderVoiceGuideSettings();
+
+    playAudioBlobOrUrl(`assets/voices/${persona.id}.mp3?v=266`, false, persona, {
+      reqId: openerReqId,
+      statusLabel: `${item.badge}`,
+      applyClonePitchOnClient: false,
+      onEnd: () => {
+        if (
+          !voiceGuideSession.active ||
+          voiceGuideSession.isPaused ||
+          voiceGuideSession.currentIndex !== 0 ||
+          openerReqId !== currentVoiceRequestSeq
+        ) {
+          return;
+        }
+        speakWithVoiceGuide(textToRead, {
+          persona,
+          statusLabel: `${item.badge}`,
+          onPlayStart: () => {
+            warmUpNextVoiceGuideSteps();
+          },
+          onEnd: () => {
+            if (voiceGuideSession.active && !voiceGuideSession.finished) {
+              startVoiceCommandListener(false);
+              updateCharacterStageAnimationState();
+            }
+          }
+        });
+      }
+    });
+    return;
   }
 
   speakWithVoiceGuide(textToRead, {
