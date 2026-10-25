@@ -3799,6 +3799,13 @@ function showToast(message) {
 
 function setupPwaSupport() {
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    let refreshingSw = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshingSw) return;
+      refreshingSw = true;
+      window.location.reload();
+    });
+
     navigator.serviceWorker
       .register('./sw.js', { updateViaCache: 'none' })
       .then((reg) => {
@@ -3844,6 +3851,16 @@ function setupPwaSupport() {
     closeInstallModal();
     showToast('🎉 Application installée sur votre écran d\'accueil !');
   });
+
+  // Si l'URL contient ?install=1 (ex: après bascule vers Chrome depuis WhatsApp/Messenger), ouvrir la fenêtre d'installation
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('install') === '1' && !isStandalone) {
+      setTimeout(() => {
+        handleInstallAppClick();
+      }, 450);
+    }
+  } catch (e) {}
 }
 
 function getCanonicalAppShareUrl() {
@@ -3851,7 +3868,7 @@ function getCanonicalAppShareUrl() {
   if (cfg.publicUrl && /^https?:\/\//i.test(cfg.publicUrl.trim())) {
     return cfg.publicUrl.trim();
   }
-  return window.location.href.split('#')[0];
+  return window.location.href.split('#')[0].split('?')[0];
 }
 
 function isInAppWebView(ua) {
@@ -3859,11 +3876,84 @@ function isInAppWebView(ua) {
 }
 
 function openAppInExternalChrome() {
-  const targetUrl = getCanonicalAppShareUrl();
+  const base = getCanonicalAppShareUrl();
+  const sep = base.includes('?') ? '&' : '?';
+  const targetUrl = `${base}${sep}install=1`;
   const cleanNoProto = targetUrl.replace(/^https?:\/\//i, '');
   const scheme = targetUrl.startsWith('https') ? 'https' : 'http';
   const intentUrl = `intent://${cleanNoProto}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(targetUrl)};end`;
   window.location.href = intentUrl;
+}
+
+function downloadAppLauncherFile() {
+  const appUrl = getCanonicalAppShareUrl();
+  const appTitle = (window.APP_CONFIG && window.APP_CONFIG.appName) || 'MenuSemaine & Panier';
+  const iconUrl = new URL('assets/icon-192.png', appUrl).href;
+
+  const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="0; url=${appUrl}" />
+  <title>${appTitle}</title>
+  <link rel="icon" href="${iconUrl}" />
+  <link rel="apple-touch-icon" href="${iconUrl}" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #faf6f0;
+      color: #1f2421;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      background: #ffffff;
+      border: 2px solid #059669;
+      border-radius: 18px;
+      padding: 24px 20px;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 10px 28px rgba(5, 150, 105, 0.16);
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 12px 20px;
+      background: #059669;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 800;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div style="font-size: 2.4rem; margin-bottom: 8px;">👨‍🍳🍽️</div>
+    <h1 style="font-size: 1.15rem; margin: 0 0 6px 0;">${appTitle}</h1>
+    <p style="font-size: 0.88rem; color: #646a65; margin: 0;">Ouverture de votre application...</p>
+    <a class="btn" href="${appUrl}">Ouvrir l'application</a>
+  </div>
+  <script>window.location.replace(${JSON.stringify(appUrl)});<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = 'MenuSemaine-Application.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+  showToast('⬇️ Application téléchargée (MenuSemaine-Application.html) !');
 }
 
 async function copyAppShareLink() {
@@ -3871,7 +3961,7 @@ async function copyAppShareLink() {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(url);
-      showToast('📋 Lien de l\'application copié ! Collez-le dans Chrome ou Safari.');
+      showToast('📋 Lien de l\'application copié !');
       return;
     }
   } catch (e) {}
@@ -3881,7 +3971,7 @@ async function copyAppShareLink() {
   temp.select();
   try {
     document.execCommand('copy');
-    showToast('📋 Lien de l\'application copié ! Collez-le dans Chrome ou Safari.');
+    showToast('📋 Lien de l\'application copié !');
   } catch (err) {
     showToast(`Lien : ${url}`);
   }
@@ -3907,44 +3997,65 @@ async function shareAppLink() {
 }
 
 async function triggerNativePwaInstallPrompt() {
-  if (!deferredPwaPrompt) {
-    const ua = navigator.userAgent || '';
-    const isAndroid = /Android/i.test(ua);
-    if (isAndroid && isInAppWebView(ua)) {
-      openAppInExternalChrome();
-      return;
-    }
-    const stepsEl = document.getElementById('pwa-install-steps-box');
-    if (stepsEl) {
-      stepsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      stepsEl.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.35)';
-      setTimeout(() => {
-        stepsEl.style.boxShadow = '';
-      }, 1500);
-    }
-    showToast('📲 Suivez les 3 étapes ci-dessous dans le menu de votre navigateur pour terminer l\'installation.');
+  if (deferredPwaPrompt) {
+    const promptEvent = deferredPwaPrompt;
+    deferredPwaPrompt = null;
+    try {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        closeInstallModal();
+        showToast('🎉 Installation de l\'application en cours...');
+        return;
+      }
+    } catch (err) {}
+    renderPwaInstallModalBody();
     return;
   }
 
-  const promptEvent = deferredPwaPrompt;
-  deferredPwaPrompt = null;
-  try {
-    await promptEvent.prompt();
-    const choice = await promptEvent.userChoice;
-    if (choice && choice.outcome === 'accepted') {
-      closeInstallModal();
-      showToast('🎉 Téléchargement et installation de l\'application en cours...');
-    } else {
-      renderPwaInstallModalBody();
-    }
-  } catch (err) {
-    renderPwaInstallModalBody();
+  const ua = navigator.userAgent || '';
+  const isAndroid = /Android/i.test(ua);
+  if (isAndroid && isInAppWebView(ua)) {
+    openAppInExternalChrome();
+    return;
   }
+
+  // Si le navigateur ne fournit pas de fenêtre native (ex: Safari, Firefox, ou déjà installé), télécharger le lanceur direct
+  downloadAppLauncherFile();
 }
 
 function renderPwaInstallModalBody() {
+  const modal = document.getElementById('pwa-install-modal');
   const body = document.getElementById('pwa-install-modal-body');
   if (!body) return;
+
+  // Forcer les styles de la modale en ligne pour éviter toute troncature même si un ancien CSS est en cache
+  if (modal) {
+    modal.style.padding = '10px';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.overflowY = 'auto';
+    modal.style.zIndex = '2000';
+    const contentBox = modal.querySelector('.modal-content');
+    if (contentBox) {
+      contentBox.style.maxWidth = '430px';
+      contentBox.style.width = '100%';
+      contentBox.style.maxHeight = 'calc(100dvh - 20px)';
+      contentBox.style.padding = '14px';
+      contentBox.style.margin = 'auto';
+      contentBox.style.overflowY = 'auto';
+      contentBox.style.boxSizing = 'border-box';
+    }
+    const closeBtn = modal.querySelector('.modal-close');
+    if (closeBtn) {
+      closeBtn.style.position = 'absolute';
+      closeBtn.style.top = '10px';
+      closeBtn.style.right = '10px';
+      closeBtn.style.float = 'none';
+      closeBtn.style.width = '32px';
+      closeBtn.style.height = '32px';
+    }
+  }
 
   const ua = navigator.userAgent || '';
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -3953,96 +4064,87 @@ function renderPwaInstallModalBody() {
   const hasNativePrompt = !!deferredPwaPrompt;
 
   body.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-right: 40px;">
-      <img src="assets/icon-192.png" alt="MenuSemaine" style="width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(5,150,105,0.2);" />
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-right: 36px;">
+      <img src="assets/icon-192.png" alt="MenuSemaine" style="width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(5,150,105,0.2);" />
       <div style="min-width: 0;">
-        <h2 style="font-size: 1.05rem; font-weight: 800; margin: 0; line-height: 1.2; color: var(--text-main);">📲 Télécharger MenuSemaine</h2>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 2px 0 0 0; line-height: 1.3;">Installez l'application gratuite sur votre écran d'accueil</p>
+        <h2 style="font-size: 1rem; font-weight: 800; margin: 0; line-height: 1.2; color: var(--text-main);">📲 Télécharger MenuSemaine</h2>
+        <p style="font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 0 0; line-height: 1.25;">Application mobile &amp; ordinateur gratuite</p>
       </div>
     </div>
 
     ${
       hasNativePrompt
         ? `
-      <div style="padding: 12px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; border: 2px solid #059669; margin-bottom: 12px; text-align: center;">
-        <div style="font-size: 0.84rem; font-weight: 700; color: #065f46; margin-bottom: 8px;">
-          ✅ Votre appareil est prêt pour l'installation directe en 1 clic :
+      <div style="padding: 10px 12px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; border: 2px solid #059669; margin-bottom: 10px; text-align: center;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: #065f46; margin-bottom: 6px;">
+          ✅ Installation directe disponible en 1 clic :
         </div>
-        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 12px 14px; font-size: 0.94rem; font-weight: 800; justify-content: center; box-shadow: 0 4px 14px rgba(5,150,105,0.32);">
-          ⬇️ Télécharger &amp; Installer l'application
+        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 10px 12px; font-size: 0.9rem; font-weight: 800; justify-content: center;">
+          ⬇️ Installer l'application maintenant
         </button>
       </div>
       `
         : inApp && isAndroid
         ? `
-      <div style="padding: 12px; background: #fffbeb; border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 12px;">
-        <div style="font-size: 0.83rem; font-weight: 700; color: #92400e; margin-bottom: 8px; line-height: 1.35;">
-          ⚠️ Vous avez ouvert le lien depuis une messagerie (WhatsApp / Messenger / SMS). Ouvrez-le dans Chrome pour télécharger l'application :
+      <div style="padding: 10px 12px; background: #fffbeb; border-radius: 10px; border: 2px solid #f59e0b; margin-bottom: 10px;">
+        <div style="font-size: 0.79rem; font-weight: 700; color: #92400e; margin-bottom: 6px; line-height: 1.3;">
+          ⚠️ Lien ouvert depuis une messagerie. Appuyez ci-dessous pour l'ouvrir dans Chrome et l'installer :
         </div>
-        <button type="button" class="btn btn-primary" onclick="openAppInExternalChrome()" style="width: 100%; padding: 11px 14px; font-size: 0.9rem; font-weight: 800; justify-content: center;">
-          🚀 Ouvrir dans Chrome pour télécharger l'App
+        <button type="button" class="btn btn-primary" onclick="openAppInExternalChrome()" style="width: 100%; padding: 10px 12px; font-size: 0.88rem; font-weight: 800; justify-content: center;">
+          🚀 Ouvrir dans Chrome &amp; Installer
         </button>
       </div>
       `
-        : !isIOS
-        ? `
-      <div style="margin-bottom: 10px;">
-        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 11px 14px; font-size: 0.9rem; font-weight: 800; justify-content: center;">
-          📲 Télécharger &amp; Installer sur cet appareil
+        : `
+      <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
+        <button type="button" class="btn btn-primary" onclick="triggerNativePwaInstallPrompt()" style="width: 100%; padding: 10px 12px; font-size: 0.88rem; font-weight: 800; justify-content: center;">
+          ⬇️ Télécharger l'application sur cet appareil
         </button>
       </div>
       `
-        : ''
     }
 
-    <div id="pwa-install-steps-box" style="transition: box-shadow 0.25s ease; border-radius: 10px;">
+    <div id="pwa-install-steps-box" style="margin-bottom: 10px;">
       ${
         isIOS
           ? `
-        <div style="padding: 12px; background: #fffbeb; border-radius: 10px; border: 1.5px solid #f59e0b; margin-bottom: 10px; font-size: 0.85rem; line-height: 1.4;">
-          <strong style="display: block; margin-bottom: 6px; color: #92400e;">🍎 Sur iPhone / iPad (Safari ou Chrome) :</strong>
-          <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 6px;">
-            <li>Touchez le bouton <strong>Partager</strong> <span style="display:inline-block; padding:1px 6px; background:#fde68a; border-radius:4px; font-weight:800;">⬆️</span> dans la barre du navigateur.</li>
-            <li>Faites défiler et touchez <strong>« Sur l'écran d'accueil » (➕)</strong>.</li>
-            <li>Touchez <strong>« Ajouter »</strong> en haut à droite : l'icône <strong>MenuSemaine</strong> est installée !</li>
+        <div style="padding: 10px 12px; background: #fffbeb; border-radius: 10px; border: 1.5px solid #f59e0b; font-size: 0.8rem; line-height: 1.35;">
+          <strong style="display: block; margin-bottom: 4px; color: #92400e;">🍎 Sur iPhone / iPad (Écran d'accueil) :</strong>
+          <ol style="margin-left: 16px; display: flex; flex-direction: column; gap: 4px;">
+            <li>Touchez <strong>Partager ⬆️</strong> dans la barre de Safari/Chrome.</li>
+            <li>Choisissez <strong>« Sur l'écran d'accueil » (➕)</strong> puis <strong>« Ajouter »</strong>.</li>
           </ol>
         </div>
         `
           : isAndroid
           ? `
-        <div style="padding: 12px; background: #ecfdf5; border-radius: 10px; border: 1.5px solid #059669; margin-bottom: 10px; font-size: 0.85rem; line-height: 1.4;">
-          <strong style="display: block; margin-bottom: 6px; color: #065f46;">🤖 Sur Android (Chrome / Samsung Internet) :</strong>
-          <ol style="margin-left: 18px; display: flex; flex-direction: column; gap: 6px;">
-            <li>Touchez les <strong>3 petits points ⋮</strong> tout en haut à droite du navigateur.</li>
+        <div style="padding: 10px 12px; background: #ecfdf5; border-radius: 10px; border: 1.5px solid #059669; font-size: 0.8rem; line-height: 1.35;">
+          <strong style="display: block; margin-bottom: 4px; color: #065f46;">🤖 Sur Android (Écran d'accueil) :</strong>
+          <ol style="margin-left: 16px; display: flex; flex-direction: column; gap: 4px;">
+            <li>Touchez le menu <strong>⋮</strong> en haut à droite du navigateur.</li>
             <li>Touchez <strong>« Installer l'application »</strong> ou <strong>« Ajouter à l'écran d'accueil »</strong>.</li>
-            <li>Confirmez avec <strong>« Installer »</strong> pour télécharger l'application.</li>
           </ol>
         </div>
         `
           : `
-        <div style="padding: 11px 12px; background: #ecfdf5; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 8px; font-size: 0.84rem; line-height: 1.4;">
-          <strong>💻 Sur Ordinateur (Chrome / Edge) :</strong>
-          <p style="margin-top: 4px;">Cliquez sur l'icône <strong>📲 Installer</strong> à droite dans la barre d'adresse en haut, puis sur <strong>Installer</strong>.</p>
+        <div style="padding: 9px 11px; background: #ecfdf5; border-radius: 10px; border: 1px solid #a7f3d0; margin-bottom: 6px; font-size: 0.79rem; line-height: 1.35;">
+          <strong>💻 Sur PC / Mac :</strong> Cliquez sur le bouton <strong>⬇️ Télécharger</strong> ci-dessus ou sur l'icône <strong>📲</strong> à droite de la barre d'adresse.
         </div>
-        <div style="padding: 10px 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; font-size: 0.82rem; line-height: 1.38;">
-          <strong>📱 Sur Smartphone (Android &amp; iPhone) :</strong>
-          <ul style="margin-left: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 3px;">
-            <li><strong>Android (Chrome) :</strong> Menu <strong>⋮</strong> en haut à droite &rarr; <strong>« Installer l'application »</strong>.</li>
-            <li><strong>iPhone (Safari) :</strong> Bouton <strong>Partager ⬆️</strong> &rarr; <strong>« Sur l'écran d'accueil »</strong>.</li>
-          </ul>
+        <div style="padding: 8px 11px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 0.78rem; line-height: 1.32;">
+          <strong>📱 Sur Téléphone :</strong> Menu <strong>⋮ &rarr; Installer l'application</strong> (Android) ou <strong>Partager ⬆️ &rarr; Sur l'écran d'accueil</strong> (iPhone).
         </div>
         `
       }
     </div>
 
-    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="copyAppShareLink()" style="flex: 1 1 135px; justify-content: center; padding: 9px 10px;">
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="copyAppShareLink()" style="flex: 1 1 120px; justify-content: center; padding: 8px;">
         📋 Copier le lien
       </button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="shareAppLink()" style="flex: 1 1 135px; justify-content: center; padding: 9px 10px;">
-        🔗 Partager l'App
+      <button type="button" class="btn btn-outline btn-sm" onclick="shareAppLink()" style="flex: 1 1 120px; justify-content: center; padding: 8px;">
+        🔗 Partager
       </button>
-      <button type="button" class="btn btn-primary btn-sm" onclick="closeInstallModal()" style="flex: 1 1 100%; justify-content: center; padding: 10px 12px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="closeInstallModal()" style="flex: 1 1 90px; justify-content: center; padding: 8px; font-weight: 800;">
         Fermer
       </button>
     </div>
@@ -4163,13 +4265,13 @@ const VOICE_PERSONAS = {
     themeBorder: '#fda4af',
     particles: ['👑', '🍷', '🐓', '🧈', '🏅', '🍽️'],
     description: 'Voix grave de patriarche lyonnais, malicieux et solennel : « Les trois secrets ? Le beurre, le beurre et le beurre ! ».',
-    sampleQuote: '« Bonjour mes chers amis ! Comme je le dis toujours à Collonges : les trois secrets de la grande cuisine française, c\'est le beurre, le beurre, et encore le beurre ! Quand vous êtes prêt, dites Suivant. »',
+    sampleQuote: '« Bonjour mes chers amis ! Comme je le dis toujours à Collonges : les trois secrets de la grande cuisine française, c\'est le beurre, le beurre, et encore le beurre ! Quand vous êtes prêt, dites Suivant ! »',
     buildIntro: (dish, servings) =>
-      `Bonjour mes chers amis, bienvenue à Collonges ! Aujourd'hui, nous allons honorer la grande cuisine française avec « ${dish} », pour ${servings} ${servings > 1 ? 'convives' : 'convive'}.`,
+      `Bonjour mes chers amis, bienvenue à Collonges ! Aujourd'hui, nous allons honorer la grande cuisine française avec « ${dish} », pour ${servings} ${servings > 1 ? 'convives' : 'convive'} !`,
     buildIngredients: (servings, ingListSpeech) =>
-      `Bonne cuisine et bon vin, c'est le paradis sur terre ! Pour ${servings} ${servings > 1 ? 'convives' : 'convive'}, disposez d'abord devant vous : ${ingListSpeech}.`,
+      `Bonne cuisine et bon vin, c'est le paradis sur terre, mes chers amis ! Pour ${servings} ${servings > 1 ? 'convives' : 'convive'}, disposez d'abord devant vous ${ingListSpeech}, comme à Collonges !`,
     buildOvenAlert: (temp) =>
-      `La justesse du feu est primordiale, mes amis : mettez votre four à préchauffer à ${temp}.`,
+      `La justesse du feu est primordiale, mes chers amis : mettez votre four à préchauffer à ${temp} !`,
     stepIntros: [
       'Commençons dans les règles de l\'art :',
       'Poursuivons avec soin, mes chers amis :',
@@ -4177,45 +4279,10 @@ const VOICE_PERSONAS = {
       'Continuons avec générosité :',
       'Et pour couronner notre ouvrage :'
     ],
-    repeatIntro: 'Permettez-moi de vous répéter cette étape, mes amis :',
+    repeatIntro: 'Permettez-moi de vous répéter cette étape, mes chers amis :',
     promptNext: '',
     buildOutro: (dish) =>
-      `Monsieur, Madame, votre « ${dish} » est prêt à être servi à table ! Bonne cuisine et bon vin, très bon appétit mes amis !`
-  },
-
-  marx: {
-    id: 'marx',
-    name: 'Thierry',
-    shortTitle: 'Maître Zen, Sabre de Kendo & Justesse Thermique',
-    badge: '🥋 Kendo & Réaction de Maillard',
-    gender: 'male',
-    basePitch: 0.92,
-    baseRate: 0.94,
-    defaultElevenLabsVoiceId: 'cjVigY5qzO86Huf0OWal',
-    elevenLabsSettings: { stability: 0.58, similarity_boost: 0.86, style: 0.55, use_speaker_boost: true },
-    themeColor: '#0f766e',
-    themeBg: '#f0fdfa',
-    themeBorder: '#5eead4',
-    particles: ['🥋', '🔬', '🌿', '💧', '✨', '🍵'],
-    description: 'Calme méditatif, aphorismes de kendo (« Pas un geste de trop ») et maîtrise chirurgicale de la réaction de Maillard.',
-    sampleQuote: '« Bonjour. En cuisine comme dans les arts martiaux, pas un geste de trop. Écoutez la réaction de Maillard et la justesse thermique. Quand vous êtes prêt, dites Suivant. »',
-    buildIntro: (dish, servings) =>
-      `Bonjour. En cuisine comme dans les arts martiaux, pas un geste de trop. Aujourd'hui, nous allons réaliser « ${dish} », pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}.`,
-    buildIngredients: (servings, ingListSpeech) =>
-      `L'ordre précède l'harmonie. Pour ${servings} ${servings > 1 ? 'personnes' : 'personne'}, préparez avec rigueur : ${ingListSpeech}.`,
-    buildOvenAlert: (temp) =>
-      `La précision thermique est essentielle : engagez le préchauffage de votre four à ${temp}.`,
-    stepIntros: [
-      'Premier mouvement, avec calme et précision :',
-      'Poursuivons en pleine conscience :',
-      'Observez maintenant la transformation de la matière :',
-      'Gardez la justesse du geste :',
-      'Ultime étape, vers l\'équilibre des textures :'
-    ],
-    repeatIntro: 'Écoutons à nouveau cette étape :',
-    promptNext: '',
-    buildOutro: (dish) =>
-      `L'équilibre de « ${dish} » est atteint. Dégustez en pleine conscience. Très bon appétit.`
+      `Monsieur, Madame, votre « ${dish} » est prêt à être servi à table ! Bonne cuisine et bon vin, très bon appétit mes chers amis !`
   },
 
   etchebest: {
@@ -4407,11 +4474,6 @@ const PERSONA_PUBLIC_PHOTOS = {
     publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Paul_Bocuse_2007_-2.jpg/500px-Paul_Bocuse_2007_-2.jpg',
     credit: 'Wikimedia Commons'
   },
-  marx: {
-    local: 'assets/personas/marx.jpg',
-    publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/ea/Thierry_Marx.jpg',
-    credit: 'Wikimedia Commons'
-  },
   etchebest: {
     local: 'assets/personas/etchebest.png',
     publicUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Philippe_Etchebest_in_2018.png',
@@ -4531,25 +4593,6 @@ function buildPersonaFallbackIllustrationSVG(personaId) {
           <path d="M44 92 Q60 102 76 92" stroke="#dc2626" stroke-width="3.5" fill="none"/>
         </svg>
       `;
-    case 'marx':
-      return `
-        <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
-          <circle cx="60" cy="60" r="54" fill="#ccfbf1" stroke="#0d9488" stroke-width="3"/>
-          <!-- Crâne chauve zen emblématique -->
-          <circle cx="60" cy="58" r="26" fill="#fed7aa"/>
-          <!-- Lunettes rondes design -->
-          <circle cx="49" cy="55" r="7.5" fill="none" stroke="#0f172a" stroke-width="2.8"/>
-          <circle cx="71" cy="55" r="7.5" fill="none" stroke="#0f172a" stroke-width="2.8"/>
-          <line x1="56.5" y1="55" x2="63.5" y2="55" stroke="#0f172a" stroke-width="2.8"/>
-          <circle cx="49" cy="55" r="2.3" fill="#0f172a"/>
-          <circle cx="71" cy="55" r="2.3" fill="#0f172a"/>
-          <!-- Bouche calme animée -->
-          <ellipse class="svg-mouth" cx="60" cy="71" rx="7" ry="4" fill="#0f766e"/>
-          <!-- Veste kimono zen -->
-          <path d="M30 88 L60 102 L90 88 L96 114 L24 114 Z" fill="#1e293b"/>
-          <path d="M45 86 L60 102 L75 86" stroke="#5eead4" stroke-width="3" fill="none"/>
-        </svg>
-      `;
     case 'etchebest':
       return `
         <svg viewBox="0 0 120 120" class="persona-svg" aria-hidden="true">
@@ -4633,32 +4676,9 @@ let screenWakeLockSentinel = null;
 let essentialBeepAudioCtx = null;
 let lastEssentialBeepTime = 0;
 
-// Bip sonore discret uniquement pour les événements essentiels (ex: validation d'une commande vocale reconnue)
-function playEssentialVoiceBeep(type = 'command') {
-  const now = Date.now();
-  if (now - lastEssentialBeepTime < 900) return;
-  lastEssentialBeepTime = now;
-
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    if (!essentialBeepAudioCtx) {
-      essentialBeepAudioCtx = new AudioCtx();
-    }
-    if (essentialBeepAudioCtx.state === 'suspended') {
-      essentialBeepAudioCtx.resume().catch(() => {});
-    }
-    const osc = essentialBeepAudioCtx.createOscillator();
-    const gain = essentialBeepAudioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(type === 'pause' ? 440 : 660, essentialBeepAudioCtx.currentTime);
-    gain.gain.setValueAtTime(0.035, essentialBeepAudioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, essentialBeepAudioCtx.currentTime + 0.09);
-    osc.connect(gain);
-    gain.connect(essentialBeepAudioCtx.destination);
-    osc.start();
-    osc.stop(essentialBeepAudioCtx.currentTime + 0.09);
-  } catch (e) {}
+// Désactivé volontairement : aucun bip synthétique ne doit jamais perturber la lecture du Guide Vocal
+function playEssentialVoiceBeep() {
+  return;
 }
 
 async function acquireKitchenWakeLock() {
@@ -4812,8 +4832,6 @@ function buildPersonaIngredientFollowup(personaId, ingNum, totalIngs, singleIngS
       return `${conn} sors ${singleIngSpeech}, bien gourmand et croquant !`;
     case 'bocuse':
       return `${conn} disposez devant vous ${singleIngSpeech}, mes chers amis !`;
-    case 'marx':
-      return `${conn} préparez avec rigueur ${singleIngSpeech}.`;
     case 'etchebest':
       return ingNum % 2 === 0
         ? `Oh ! Allez, on ne traîne pas bordel : sors tout de suite ${singleIngSpeech}, chef !`
@@ -4854,19 +4872,10 @@ function enrichStepBodyWithPersonaTics(personaId, spokenStepBody, stepIdx, total
     }
     case 'bocuse': {
       const suffixes = [
-        'N\'oubliez jamais, mes amis : le secret d\'un grand plat, c\'est le beau beurre et l\'amour du produit.',
-        'Prenez le temps d\'écouter la cuisson, comme nous le faisons à Collonges.',
-        'La simplicité et la générosité font toute la noblesse de la cuisine française.',
-        'Goûtez et rectifiez l\'assaisonnement avec justesse, mes chers amis.'
-      ];
-      return `${clean}. ${suffixes[stepIdx % suffixes.length]}`;
-    }
-    case 'marx': {
-      const suffixes = [
-        'Pas un geste de trop : laissez la réaction de Maillard opérer avec justesse.',
-        'Respectez la température à cœur pour préserver toute l\'émotion du produit.',
-        'En cuisine comme au kendo, la précision du mouvement crée l\'harmonie.',
-        'Observez le point d\'équilibre des textures en silence.'
+        'N\'oubliez jamais, mes chers amis : le secret d\'un grand plat, c\'est le beau beurre et l\'amour du produit !',
+        'Prenez le temps d\'écouter la cuisson, comme nous le faisons à Collonges !',
+        'La simplicité et la générosité font toute la noblesse de la cuisine française, mes amis !',
+        'Goûtez et rectifiez l\'assaisonnement avec justesse, mes chers amis !'
       ];
       return `${clean}. ${suffixes[stepIdx % suffixes.length]}`;
     }
@@ -4900,6 +4909,8 @@ function buildInitialVoiceCommandsInstruction(personaId) {
       return 'Quand vous êtes prêt mes petits, dites Suivant, Répéter ou Pause, té !';
     case 'lignac':
       return 'Quand tu es prêt, dis Suivant, Répéter ou Pause !';
+    case 'bocuse':
+      return 'Dites Suivant, Répéter ou Pause pour avancer, mes chers amis !';
     case 'etchebest':
       return 'Dis Suivant, Répéter ou Pause, et que ça saute bordel !';
     case 'coffe':
@@ -5058,7 +5069,6 @@ const BUILTIN_NEURAL_PROFILES = {
   maite:     { neuralVoice: 'fr-BE-CharlineNeural',         label: 'Clone Neural Maïté (Sud-Ouest)',        isChefClone: true  },
   lignac:    { neuralVoice: 'fr-FR-RemyMultilingualNeural', label: 'Clone Neural Cyril Lignac',             isChefClone: true  },
   bocuse:    { neuralVoice: 'fr-BE-GerardNeural',           label: 'Clone Neural Monsieur Paul Bocuse',     isChefClone: true  },
-  marx:      { neuralVoice: 'fr-CH-FabriceNeural',          label: 'Clone Neural Thierry Marx',             isChefClone: true  },
   etchebest: { neuralVoice: 'fr-FR-HenriNeural',            label: 'Clone Neural Philippe Etchebest',       isChefClone: true  },
   coffe:     { neuralVoice: 'fr-BE-GerardNeural',           label: 'Clone Neural Jean-Pierre Coffe',        isChefClone: true  },
   ia_homme:  { neuralVoice: 'fr-FR-HenriNeural',            label: 'Voix Masculine Neural FR (Henri)',      isChefClone: false },
@@ -5237,7 +5247,6 @@ async function syncElevenLabsLibraryVoices(showNotification = true) {
             (p.id === 'maite' && vName.includes('maite')) ||
             (p.id === 'lignac' && vName.includes('cyril')) ||
             (p.id === 'bocuse' && vName.includes('paul')) ||
-            (p.id === 'marx' && vName.includes('thierry')) ||
             (p.id === 'etchebest' && vName.includes('philippe')) ||
             (p.id === 'coffe' && vName.includes('coffe'))
           ) {
@@ -6432,16 +6441,15 @@ function playAudioBlobOrUrl(audioSrc, isObjectUrl, persona, options = {}) {
 }
 
 // ============================================================================
-// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 6 MODÈLES 100% SOLO AUDITÉS & VALIDÉS)
-// IMPORTANT : Ne jamais remplacer ces 6 IDs par d'anciens modèles contenant des voix de journalistes/animateurs !
+// 2b. CLONAGE VOCAL FISH AUDIO S2.1 PRO (AVEC LES 5 MODÈLES CHEFS 100% SOLO STUDIO AUDITÉS & VALIDÉS)
+// IMPORTANT : Ne jamais remplacer ces IDs par d'anciens modèles contenant des voix d'animateurs ou d'ambiance lointaine !
 // ============================================================================
 const FISH_AUDIO_CLONE_MODEL_IDS = {
   maite: 'cae9259cec4343e1b1c837c525f9d268',
   lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
-  bocuse: '011fb66309bb4ff08ef651fc22a896b3',
-  marx: '7d0fc461b48f45bcb7a464f698a681c4',
+  bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
   etchebest: '6e01eb6afdc24c97983bdf3841651857',
-  coffe: '7ab65404e01d4eb5a4e644948a7b31e5',
+  coffe: 'bbaf5b5ace5b4ac6ab66c5b4dc52ec6b',
   ia_homme: '60c049cfece141809edba5a5ec11d8bc',
   ia_femme: 'da57db7f34244092b9d058e1f0e2aa65'
 };
@@ -6586,11 +6594,11 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
     if (!refId || !fishKey) return null;
 
     const tempVal =
-      persona.id === 'etchebest' || persona.id === 'coffe'
+      persona.id === 'etchebest'
         ? 0.65
         : 0.62;
     const topPVal =
-      persona.id === 'etchebest' || persona.id === 'coffe'
+      persona.id === 'etchebest'
         ? 0.72
         : 0.70;
 
@@ -6667,7 +6675,7 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v240::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v246::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
