@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>MenuSemaine TTS Relay</title>
+</head>
+<body>
+<script>
+(function () {
+  window.addEventListener('message', async function (event) {
+    var data = event.data;
+    if (!data || data.type !== 'MENUSEMAINE_FISH_TTS_REQ') return;
+    var reqId = data.id;
+    var proxyUrl = data.proxyUrl;
+    var headers = data.headers || {};
+    var bodyJson = data.bodyJson;
+
+    try {
+      var controller = new AbortController();
+      var timer = setTimeout(function () { controller.abort(); }, 28000);
+      var resp = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: headers,
+        body: bodyJson,
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+
+      if (!resp.ok) {
+        event.source.postMessage({
+          type: 'MENUSEMAINE_FISH_TTS_RESP',
+          id: reqId,
+          ok: false,
+          status: resp.status
+        }, '*');
+        return;
+      }
+
+      var buf = await resp.arrayBuffer();
+      if (!buf || buf.byteLength < 500) {
+        event.source.postMessage({
+          type: 'MENUSEMAINE_FISH_TTS_RESP',
+          id: reqId,
+          ok: false,
+          status: 204
+        }, '*');
+        return;
+      }
+
+      event.source.postMessage({
+        type: 'MENUSEMAINE_FISH_TTS_RESP',
+        id: reqId,
+        ok: true,
+        buffer: buf
+      }, '*', [buf]);
+    } catch (err) {
+      event.source.postMessage({
+        type: 'MENUSEMAINE_FISH_TTS_RESP',
+        id: reqId,
+        ok: false,
+        error: String(err && err.message ? err.message : err)
+      }, '*');
+    }
+  });
+
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'MENUSEMAINE_FISH_TTS_READY' }, '*');
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
