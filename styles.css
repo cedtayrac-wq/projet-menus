@@ -4146,6 +4146,146 @@ body {
   }
 }
 
+/* =========================================================================
+   SECTION PARAMÈTRES : INGRÉDIENTS À ÉVITER DANS LES MENUS PROPOSÉS
+   ========================================================================= */
+.avoided-ingredients-panel {
+  border-left: 5px solid #dc2626;
+}
+
+.avoided-add-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.avoided-add-row .input-field {
+  flex: 1 1 240px;
+}
+
+.avoided-ingredients-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  min-height: 52px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.avoided-ing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  color: #991b1b;
+  font-size: 0.84rem;
+  font-weight: 800;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.08);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.avoided-ing-chip:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+.avoided-ing-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #fecaca;
+  color: #7f1d1d;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.avoided-ing-remove-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.avoided-quick-suggestions-box {
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.avoided-quick-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.avoided-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.avoided-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.79rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avoided-preset-btn:hover {
+  border-color: #f87171;
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+.avoided-preset-btn.is-active {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.22);
+}
+
+.avoided-impact-bar {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.83rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+
 
 
 
