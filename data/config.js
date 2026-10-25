@@ -3,7 +3,7 @@ window.APP_CONFIG = {
   "appName": "MenuSemaine & Panier",
   "appSubtitle": "Semaine & Week-end : 🥗 Équilibré • 🌟 Plaisir • 🍷 Gourmet (Accords Vins)",
   "version": "1.6.3",
-  "lastUpdated": "25/10/2026 à 18:31",
+  "lastUpdated": "25/10/2026 à 18:40",
   "publicUrl": "https://cedtayrac-wq.github.io/projet-menus/",
   "announcement": "",
   "requireAccessCode": false,
@@ -18,7 +18,7 @@ window.APP_CONFIG = {
     "lignac": "f3e595ddbd9c41a6a16cce1372eecbac",
     "bocuse": "43bacffe94d04e1aa4a89b7be39f0c8f",
     "etchebest": "6e01eb6afdc24c97983bdf3841651857",
-    "coffe": "bbaf5b5ace5b4ac6ab66c5b4dc52ec6b",
+    "coffe": "7334d5b7ff174ffca59d08dc3d63d771",
     "ia_homme": "60c049cfece141809edba5a5ec11d8bc",
     "ia_femme": "da57db7f34244092b9d058e1f0e2aa65"
   },
