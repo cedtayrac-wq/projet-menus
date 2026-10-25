@@ -17,7 +17,8 @@ const STORAGE_KEYS = {
   PANTRY_DEDUCT_MODE: 'menusemaine_pantry_deduct_v1',
   VOICE_SETTINGS: 'menusemaine_voice_settings_v1',
   ELEVENLABS_KEY: 'menusemaine_elevenlabs_api_key_v1',
-  DISH_PHOTOS: 'menusemaine_dish_photos_v1'
+  DISH_PHOTOS: 'menusemaine_dish_photos_v1',
+  AVOIDED_INGREDIENTS: 'menusemaine_avoided_ingredients_v1'
 };
 
 // 14 repas : 5 Déjeuners + 5 Dîners en semaine (Lundi à Vendredi) & 2 Déjeuners + 2 Dîners le week-end
@@ -80,6 +81,7 @@ let state = {
   pantryCardServings: {}, // { recipeId: servings }
   deductPantryFromShopping: true, // Ajuster automatiquement la liste des courses avec le stock frigo/placard
   dishPhotos: {},         // { [recipeId]: { customDataUrl?: string, aiSeedOffset?: number } }
+  avoidedIngredients: [], // Liste des ingrédients à éviter dans les menus proposés
   voiceSettings: {
     persona: 'lignac',
     engine: 'elevenlabs',
@@ -225,15 +227,32 @@ document.addEventListener('DOMContentLoaded', () => {
         syncSlotStyleFlags(slot, slot.mealStyle);
       }
 
-      // S'assurer que les plats non validés proposés ont un maximum d'ingrédients de saison (>= 85%)
+      // S'assurer que les plats non validés proposés respectent les ingrédients à éviter et ont un maximum d'ingrédients de saison (>= 85%)
       if (!slot.validated && recipe) {
         const seas = getRecipeSeasonality(recipe, slot);
-        if (seas.pct < 85) {
+        const hasAvoided = typeof recipeContainsAvoidedIngredient === 'function' && recipeContainsAvoidedIngredient(recipe);
+        if (hasAvoided || seas.pct < 85) {
           const usedIds = new Set(state.slots.map((s) => s.recipeId));
           const pool = getPoolForSlot(slot);
           const upgraded = pickRandomAvoiding(pool, usedIds, getSlotMonthNum(slot));
           if (upgraded && upgraded.id) {
             slot.recipeId = upgraded.id;
+          }
+        }
+        if (slot.dessertId && typeof recipeContainsAvoidedIngredient === 'function') {
+          const curDessert = findDessertById(slot.dessertId);
+          if (curDessert && recipeContainsAvoidedIngredient(curDessert)) {
+            const usedDesserts = new Set(state.slots.filter((s) => s.dessertId).map((s) => s.dessertId));
+            const style = getSlotStyle(slot);
+            const styleDesserts = window.RECIPES_DB.weekendDesserts.filter((d) => d.style === style);
+            const nextDessert = pickRandomAvoiding(
+              styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts,
+              usedDesserts,
+              getSlotMonthNum(slot)
+            );
+            if (nextDessert && nextDessert.id) {
+              slot.dessertId = nextDessert.id;
+            }
           }
         }
       }
@@ -697,6 +716,14 @@ function loadStateFromStorage() {
         state.dishPhotos = parsedPhotos;
       }
     }
+
+    const savedAvoided = localStorage.getItem(STORAGE_KEYS.AVOIDED_INGREDIENTS);
+    if (savedAvoided) {
+      const parsedAvoided = JSON.parse(savedAvoided);
+      if (Array.isArray(parsedAvoided)) {
+        state.avoidedIngredients = parsedAvoided.filter((x) => typeof x === 'string' && x.trim());
+      }
+    }
   } catch (e) {
     console.error('Erreur chargement localStorage :', e);
   }
@@ -717,6 +744,7 @@ function saveStateToStorage() {
     localStorage.setItem(STORAGE_KEYS.SEEN_RECIPES, JSON.stringify(Array.from(recentSeenIds)));
     localStorage.setItem(STORAGE_KEYS.VOICE_SETTINGS, JSON.stringify(state.voiceSettings || {}));
     localStorage.setItem(STORAGE_KEYS.DISH_PHOTOS, JSON.stringify(state.dishPhotos || {}));
+    localStorage.setItem(STORAGE_KEYS.AVOIDED_INGREDIENTS, JSON.stringify(state.avoidedIngredients || []));
   } catch (e) {
     console.error('Erreur sauvegarde localStorage :', e);
   }
@@ -924,16 +952,23 @@ const recentSeenIds = new Set();
 function pickRandomAvoiding(list, usedIds, targetMonth) {
   const monthNum = targetMonth || getSlotMonthNum(null);
 
+  // 0. Exclure en priorité tous les plats ou desserts contenant un ingrédient à éviter défini dans les Paramètres
+  const nonAvoidedList =
+    typeof recipeContainsAvoidedIngredient === 'function'
+      ? list.filter((item) => !recipeContainsAvoidedIngredient(item))
+      : list;
+  const baseList = nonAvoidedList.length > 0 ? nonAvoidedList : list;
+
   // 1. Essayer de piocher parmi les recettes ni présentes dans la semaine ni vues sur l'année (365j)
-  let available = list.filter((item) => !usedIds.has(item.id) && !recentSeenIds.has(item.id));
+  let available = baseList.filter((item) => !usedIds.has(item.id) && !recentSeenIds.has(item.id));
 
   // 2. Si toutes les recettes de cette catégorie ont déjà été vues sur l'année, réinitialiser la mémoire pour cette liste
   if (available.length === 0) {
-    list.forEach((item) => recentSeenIds.delete(item.id));
-    available = list.filter((item) => !usedIds.has(item.id));
+    baseList.forEach((item) => recentSeenIds.delete(item.id));
+    available = baseList.filter((item) => !usedIds.has(item.id));
   }
 
-  let pool = available.length > 0 ? available : list;
+  let pool = available.length > 0 ? available : baseList;
 
   // 3. Prioriser les plats réalisés avec un maximum d'ingrédients de saison (100%, sinon >= 85%, sinon maximum dispo)
   if (typeof window.evaluateRecipeSeasonality === 'function' && pool.length > 1) {
@@ -1061,28 +1096,218 @@ function getDishEmoji(recipe, slot) {
 }
 
 // ============================================================================
-// PHOTOS D'ILLUSTRATION DES PLATS (GÉNÉRATION IA SUR-MESURE + PHOTO PERSO + FALLBACK)
+// PHOTOS D'ILLUSTRATION DES PLATS (IA RÉALISTE GRATUITE FLUX.1 + CACHE INDEXEDDB + PHOTO PERSO)
 // ============================================================================
-const CURATED_DISH_FALLBACK_PHOTOS = {
-  shellfish: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=700&q=80',
-  salmon:    'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=700&q=80',
-  fish:      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=700&q=80',
-  shrimp:    'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=700&q=80',
-  duck:      'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80',
-  poultry:   'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=700&q=80',
-  beef:      'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
-  pasta:     'https://images.unsplash.com/photo-1621996346565-e3d5d6281298?auto=format&fit=crop&w=700&q=80',
-  risotto:   'https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=700&q=80',
-  curry:     'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=700&q=80',
-  wok:       'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=700&q=80',
-  salad:     'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=80',
-  soup:      'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=700&q=80',
-  quiche:    'https://images.unsplash.com/photo-1608855238293-a8853e7f7c98?auto=format&fit=crop&w=700&q=80',
-  eggs:      'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=700&q=80',
-  burger:    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80',
-  gratin:    'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=700&q=80',
-  default:   'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80'
+const CURATED_DISH_FALLBACK_POOLS = {
+  chickpea:  [
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=80'
+  ],
+  shellfish: [
+    'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=700&q=80'
+  ],
+  salmon:    [
+    'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=700&q=80'
+  ],
+  fish:      [
+    'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1580476262798-bddd9f4b7369?auto=format&fit=crop&w=700&q=80'
+  ],
+  shrimp:    [
+    'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1559742811-822873691df8?auto=format&fit=crop&w=700&q=80'
+  ],
+  duck:      [
+    'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1514944298352-f4d732142f74?auto=format&fit=crop&w=700&q=80'
+  ],
+  poultry:   [
+    'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=700&q=80'
+  ],
+  beef:      [
+    'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=700&q=80'
+  ],
+  pasta:     [
+    'https://images.unsplash.com/photo-1621996346565-e3d5d6281298?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?auto=format&fit=crop&w=700&q=80'
+  ],
+  risotto:   [
+    'https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=700&q=80'
+  ],
+  curry:     [
+    'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=700&q=80'
+  ],
+  wok:       [
+    'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=700&q=80'
+  ],
+  salad:     [
+    'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80'
+  ],
+  soup:      [
+    'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?auto=format&fit=crop&w=700&q=80'
+  ],
+  quiche:    [
+    'https://images.unsplash.com/photo-1608855238293-a8853e7f7c98?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=700&q=80'
+  ],
+  eggs:      [
+    'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1510693206972-df098062cb71?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=700&q=80'
+  ],
+  burger:    [
+    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=700&q=80'
+  ],
+  gratin:    [
+    'https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=80'
+  ],
+  default:   [
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80',
+    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=700&q=80'
+  ]
 };
+
+// Dictionnaire culinaire Français -> Anglais pour que le modèle IA FLUX.1 comprenne chaque plat et ingrédient avec une précision photographique
+const FR_TO_EN_CULINARY_TERMS = [
+  ['poêlée', 'sautéed skillet dish of'],
+  ['pois chiches', 'golden chickpeas'],
+  ['épinards', 'fresh wilted spinach'],
+  ['œufs mollets', 'soft-boiled eggs cut in half with runny orange yolk'],
+  ['oeufs mollets', 'soft-boiled eggs cut in half with runny orange yolk'],
+  ['œuf mollet', 'soft-boiled egg cut in half with runny yolk'],
+  ['œufs pochés', 'poached eggs'],
+  ['œuf poché', 'poached egg'],
+  ['omelette roulée', 'fluffy rolled French omelette'],
+  ['omelette', 'golden French omelette'],
+  ['frittata', 'Italian egg frittata'],
+  ['chakchouka', 'shakshuka skillet with eggs in tomato pepper sauce'],
+  ['en papillote', 'baked in parchment paper'],
+  ['blanc de poulet', 'sliced chicken breast'],
+  ['aiguillettes de poulet', 'golden chicken tenders'],
+  ['poulet', 'roasted chicken'],
+  ['volaille', 'poultry'],
+  ['dinde', 'turkey'],
+  ['magret de canard', 'sliced seared duck breast with crispy skin'],
+  ['canard', 'duck'],
+  ['tournedos', 'thick beef tenderloin steak'],
+  ['bœuf', 'beef'],
+  ['boeuf', 'beef'],
+  ['steak', 'seared steak'],
+  ['veau', 'veal'],
+  ['agneau', 'roasted lamb'],
+  ['filet mignon', 'sliced pork tenderloin'],
+  ['porc', 'pork'],
+  ['jambon', 'cured ham'],
+  ['lardons', 'crispy bacon bits'],
+  ['chorizo', 'sliced grilled chorizo'],
+  ['saint-jacques', 'pan-seared golden sea scallops'],
+  ['homard', 'lobster'],
+  ['langoustine', 'langoustines'],
+  ['crevettes', 'sautéed pink prawns'],
+  ['gambas', 'grilled king prawns'],
+  ['saumon', 'seared salmon fillet'],
+  ['truite', 'trout fillet'],
+  ['cabillaud', 'flaky white cod fillet'],
+  ['colin', 'white fish fillet'],
+  ['bar', 'sea bass fillet'],
+  ['dorade', 'sea bream fillet'],
+  ['thon', 'seared tuna'],
+  ['poisson', 'fish fillet'],
+  ['dahl', 'creamy Indian red lentil dahl'],
+  ['lentilles corail', 'red lentils'],
+  ['lentilles', 'French green lentils'],
+  ['lait de coco', 'coconut milk drizzle'],
+  ['curry', 'aromatic golden curry sauce'],
+  ['wok', 'colorful Asian wok stir-fry'],
+  ['sauce soja', 'soy glaze'],
+  ['nouilles', 'stir-fried noodles'],
+  ['riz basmati', 'fluffy white basmati rice'],
+  ['risotto', 'creamy Italian parmesan risotto'],
+  ['pâtes', 'al dente pasta'],
+  ['tagliatelles', 'tagliatelle ribbon pasta'],
+  ['spaghetti', 'spaghetti pasta'],
+  ['penne', 'penne pasta'],
+  ['lasagnes', 'baked layered lasagna'],
+  ['gnocchis', 'pan-seared golden potato gnocchi'],
+  ['ravioles', 'French delicate ravioli pasta'],
+  ['raviolis', 'stuffed ravioli pasta'],
+  ['quiche', 'golden baked French savory quiche tart'],
+  ['tarte fine', 'crispy puff pastry savory tart'],
+  ['tarte', 'savory French tart'],
+  ['velouté', 'creamy gourmet soup bowl'],
+  ['soupe', 'warm gourmet soup'],
+  ['salade verte', 'crisp green salad'],
+  ['salade', 'fresh gourmet salad'],
+  ['gratin', 'golden baked cheese gratin'],
+  ['parmentier', 'golden baked shepherd pie gratin'],
+  ['ratatouille', 'Provençal ratatouille stew'],
+  ['courgettes', 'zucchini'],
+  ['courgette', 'zucchini'],
+  ['carottes', 'carrots'],
+  ['carotte', 'carrot'],
+  ['champignons de paris', 'sliced button mushrooms'],
+  ['champignons', 'sautéed mushrooms'],
+  ['tomates concassées', 'crushed tomatoes'],
+  ['tomates cerises', 'roasted cherry tomatoes'],
+  ['tomates', 'ripe tomatoes'],
+  ['tomate', 'tomato'],
+  ['poireaux', 'sliced leeks'],
+  ['brocoli', 'green broccoli florets'],
+  ['chou-fleur', 'roasted cauliflower'],
+  ['asperges', 'green asparagus spears'],
+  ['patate douce', 'roasted sweet potato'],
+  ['pommes de terre', 'roasted golden potatoes'],
+  ['avocat', 'sliced fresh avocado'],
+  ['citron', 'fresh lemon slice'],
+  ['feta', 'crumbled white feta cheese'],
+  ['chèvre', 'warm goat cheese rounds'],
+  ['mozzarella', 'melted mozzarella'],
+  ['burrata', 'creamy burrata cheese'],
+  ['parmesan', 'parmesan shavings'],
+  ['comté', 'melted Comté cheese'],
+  ['reblochon', 'melted Reblochon cheese'],
+  ['fines herbes', 'fresh chopped herbs'],
+  ['ciboulette', 'chopped chives'],
+  ['coriandre', 'fresh cilantro leaves'],
+  ['basilic', 'fresh green basil leaves']
+];
+
+function buildEnglishCulinaryPromptForRecipe(recipe) {
+  if (!recipe) return 'Appetizing realistic French gourmet dish on a ceramic plate, natural daylight';
+  let text = `${recipe.title || ''} - ${(recipe.ingredients || []).slice(0, 4).map((i) => i.name).join(', ')}`.toLowerCase();
+  const matchedEn = [];
+
+  for (const [fr, en] of FR_TO_EN_CULINARY_TERMS) {
+    if (text.includes(fr)) {
+      matchedEn.push(en);
+      text = text.replace(new RegExp(fr, 'g'), ' ');
+    }
+  }
+
+  const coreDescription =
+    matchedEn.length > 0
+      ? matchedEn.slice(0, 6).join(', with ')
+      : `French culinary dish "${recipe.title}"`;
+
+  return `Realistic professional food photography of ${coreDescription}, served on a ceramic plate on a warm wooden bistro table, natural window daylight, shallow depth of field, appetizing textures, high resolution culinary magazine photo, no text, no watermark`;
+}
 
 function computeRecipePhotoSeed(recipeId, offset = 0) {
   const str = String(recipeId || 'dish');
@@ -1095,25 +1320,29 @@ function computeRecipePhotoSeed(recipeId, offset = 0) {
 }
 
 function getDishCuratedFallbackUrl(recipe) {
-  const t = ((recipe && recipe.title) || '').toLowerCase();
-  if (t.includes('saint-jacques') || t.includes('homard') || t.includes('langoustine')) return CURATED_DISH_FALLBACK_PHOTOS.shellfish;
-  if (t.includes('saumon') || t.includes('truite')) return CURATED_DISH_FALLBACK_PHOTOS.salmon;
-  if (t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('bar') || t.includes('dorade')) return CURATED_DISH_FALLBACK_PHOTOS.fish;
-  if (t.includes('crevette') || t.includes('gambas')) return CURATED_DISH_FALLBACK_PHOTOS.shrimp;
-  if (t.includes('canard') || t.includes('magret')) return CURATED_DISH_FALLBACK_PHOTOS.duck;
-  if (t.includes('volaille') || t.includes('poulet') || t.includes('dinde')) return CURATED_DISH_FALLBACK_PHOTOS.poultry;
-  if (t.includes('tournedos') || t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('veau') || t.includes('agneau')) return CURATED_DISH_FALLBACK_PHOTOS.beef;
-  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('raviol')) return CURATED_DISH_FALLBACK_PHOTOS.pasta;
-  if (t.includes('risotto') || t.includes('paella')) return CURATED_DISH_FALLBACK_PHOTOS.risotto;
-  if (t.includes('curry') || t.includes('tikka') || t.includes('dahl') || t.includes('lentille')) return CURATED_DISH_FALLBACK_PHOTOS.curry;
-  if (t.includes('wok') || t.includes('nouilles') || t.includes('pad thaï') || t.includes('asiatique')) return CURATED_DISH_FALLBACK_PHOTOS.wok;
-  if (t.includes('salade') || t.includes('bowl') || t.includes('poke') || t.includes('buddha') || t.includes('taboulé')) return CURATED_DISH_FALLBACK_PHOTOS.salad;
-  if (t.includes('velouté') || t.includes('soupe') || t.includes('bouillon') || t.includes('minestrone')) return CURATED_DISH_FALLBACK_PHOTOS.soup;
-  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche') || t.includes('croque')) return CURATED_DISH_FALLBACK_PHOTOS.quiche;
-  if (t.includes('omelette') || t.includes('œuf') || t.includes('oeuf') || t.includes('frittata') || t.includes('chakchouka')) return CURATED_DISH_FALLBACK_PHOTOS.eggs;
-  if (t.includes('wrap') || t.includes('fajita') || t.includes('quesadilla') || t.includes('tacos') || t.includes('burger')) return CURATED_DISH_FALLBACK_PHOTOS.burger;
-  if (t.includes('gratin') || t.includes('parmentier') || t.includes('poêlée') || t.includes('mijoté') || t.includes('ratatouille') || t.includes('tartiflette')) return CURATED_DISH_FALLBACK_PHOTOS.gratin;
-  return CURATED_DISH_FALLBACK_PHOTOS.default;
+  const t = `${(recipe && recipe.title) || ''} ${((recipe && recipe.ingredients) || []).map((i) => i.name).join(' ')}`.toLowerCase();
+  const seed = computeRecipePhotoSeed(recipe && recipe.id, 0);
+  const pick = (arr) => arr[seed % arr.length];
+
+  if (t.includes('pois chiches') && (t.includes('œuf') || t.includes('oeuf'))) return pick(CURATED_DISH_FALLBACK_POOLS.eggs);
+  if (t.includes('saint-jacques') || t.includes('homard') || t.includes('langoustine')) return pick(CURATED_DISH_FALLBACK_POOLS.shellfish);
+  if (t.includes('saumon') || t.includes('truite')) return pick(CURATED_DISH_FALLBACK_POOLS.salmon);
+  if (t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('bar') || t.includes('dorade')) return pick(CURATED_DISH_FALLBACK_POOLS.fish);
+  if (t.includes('crevette') || t.includes('gambas')) return pick(CURATED_DISH_FALLBACK_POOLS.shrimp);
+  if (t.includes('canard') || t.includes('magret')) return pick(CURATED_DISH_FALLBACK_POOLS.duck);
+  if (t.includes('wok') || t.includes('nouilles') || t.includes('pad thaï') || t.includes('sauce soja')) return pick(CURATED_DISH_FALLBACK_POOLS.wok);
+  if (t.includes('volaille') || t.includes('poulet') || t.includes('dinde')) return pick(CURATED_DISH_FALLBACK_POOLS.poultry);
+  if (t.includes('tournedos') || t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('veau') || t.includes('agneau')) return pick(CURATED_DISH_FALLBACK_POOLS.beef);
+  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('raviol')) return pick(CURATED_DISH_FALLBACK_POOLS.pasta);
+  if (t.includes('risotto') || t.includes('paella')) return pick(CURATED_DISH_FALLBACK_POOLS.risotto);
+  if (t.includes('curry') || t.includes('tikka') || t.includes('dahl') || t.includes('lentille')) return pick(CURATED_DISH_FALLBACK_POOLS.curry);
+  if (t.includes('omelette') || t.includes('œufs mollets') || t.includes('frittata') || t.includes('chakchouka')) return pick(CURATED_DISH_FALLBACK_POOLS.eggs);
+  if (t.includes('velouté') || t.includes('soupe') || t.includes('bouillon') || t.includes('minestrone')) return pick(CURATED_DISH_FALLBACK_POOLS.soup);
+  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche') || t.includes('croque')) return pick(CURATED_DISH_FALLBACK_POOLS.quiche);
+  if (t.includes('wrap') || t.includes('fajita') || t.includes('quesadilla') || t.includes('tacos') || t.includes('burger')) return pick(CURATED_DISH_FALLBACK_POOLS.burger);
+  if (t.includes('gratin') || t.includes('parmentier') || t.includes('mijoté') || t.includes('ratatouille') || t.includes('tartiflette')) return pick(CURATED_DISH_FALLBACK_POOLS.gratin);
+  if (t.includes('salade') || t.includes('bowl') || t.includes('poke') || t.includes('buddha') || t.includes('taboulé')) return pick(CURATED_DISH_FALLBACK_POOLS.salad);
+  return pick(CURATED_DISH_FALLBACK_POOLS.default);
 }
 
 function getDishOfflineSvgDataUri(recipe, slot) {
@@ -1135,11 +1364,242 @@ function getDishOfflineSvgDataUri(recipe, slot) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+// ============================================================================
+// CACHE INDEXEDDB & GÉNÉRATEUR IA RÉALISTE GRATUIT (FLUX.1-SCHNELL SANS BLOCAGE)
+// ============================================================================
+const AI_DISH_PHOTO_IDB_NAME = 'menusemaine_ai_dish_photos_db_v1';
+const AI_DISH_PHOTO_STORE = 'ai_photos';
+const aiDishPhotoMemoryCache = {}; // { [cacheKey]: dataUrl }
+const aiDishPhotoInFlight = new Set();
+const aiDishPhotoQueue = [];
+let activeAiPhotoWorkers = 0;
+const MAX_CONCURRENT_AI_PHOTO_WORKERS = 2;
+let aiPhotoIdbPromise = null;
+
+const FREE_FLUX_GRADIO_HOSTS = [
+  'evalstate-flux1-schnell.hf.space',
+  'black-forest-labs-flux-1-schnell.hf.space'
+];
+
+function getDishAiCacheKey(recipeId, seedOffset = 0) {
+  return `${recipeId}_s${Number(seedOffset) || 0}`;
+}
+
+function openAiDishPhotoIdb() {
+  if (aiPhotoIdbPromise) return aiPhotoIdbPromise;
+  aiPhotoIdbPromise = new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve(null);
+      return;
+    }
+    try {
+      const req = indexedDB.open(AI_DISH_PHOTO_IDB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(AI_DISH_PHOTO_STORE)) {
+          db.createObjectStore(AI_DISH_PHOTO_STORE);
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = () => resolve(null);
+    } catch (err) {
+      resolve(null);
+    }
+  });
+  return aiPhotoIdbPromise;
+}
+
+async function preloadAllCachedAiDishPhotos() {
+  const db = await openAiDishPhotoIdb();
+  if (!db) return;
+  try {
+    const tx = db.transaction(AI_DISH_PHOTO_STORE, 'readonly');
+    const store = tx.objectStore(AI_DISH_PHOTO_STORE);
+    const reqKeys = store.getAllKeys();
+    const reqVals = store.getAll();
+    reqKeys.onsuccess = () => {
+      reqVals.onsuccess = () => {
+        const keys = reqKeys.result || [];
+        const vals = reqVals.result || [];
+        keys.forEach((k, i) => {
+          if (vals[i]) {
+            aiDishPhotoMemoryCache[k] = vals[i];
+          }
+        });
+        // Rafraîchir les images affichées à l'écran avec le cache chargé
+        document.querySelectorAll('[data-dish-photo-wrap]').forEach((wrap) => {
+          const rid = wrap.getAttribute('data-dish-photo-wrap');
+          if (rid) refreshDishPhotoElementsInDOM(rid);
+        });
+      };
+    };
+  } catch (e) {
+    // Ignorer si IndexedDB indisponible
+  }
+}
+
+async function saveAiDishPhotoToIndexedDB(cacheKey, dataUrl) {
+  aiDishPhotoMemoryCache[cacheKey] = dataUrl;
+  const db = await openAiDishPhotoIdb();
+  if (!db) return;
+  try {
+    const tx = db.transaction(AI_DISH_PHOTO_STORE, 'readwrite');
+    tx.objectStore(AI_DISH_PHOTO_STORE).put(dataUrl, cacheKey);
+  } catch (e) {
+    // Ignorer erreur quota
+  }
+}
+
+// Lancer le préchargement du cache IndexedDB dès le démarrage
+preloadAllCachedAiDishPhotos();
+
+async function fetchImageAsCompressedDataUrl(imageUrl) {
+  const resp = await fetch(imageUrl);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const blob = await resp.blob();
+  return new Promise((resolve, reject) => {
+    const objUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const w = 640;
+        const h = 360;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.84);
+        URL.revokeObjectURL(objUrl);
+        resolve(jpegDataUrl);
+      } catch (err) {
+        URL.revokeObjectURL(objUrl);
+        reject(err);
+      }
+    };
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objUrl);
+      reject(err);
+    };
+    img.src = objUrl;
+  });
+}
+
+async function callFluxGradioHost(host, prompt, seed) {
+  const callRes = await fetch(`https://${host}/gradio_api/call/infer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: [prompt, seed, false, 640, 360, 4]
+    })
+  });
+  if (!callRes.ok) throw new Error(`Gradio call error ${callRes.status}`);
+  const callJson = await callRes.json();
+  const eventId = callJson && callJson.event_id;
+  if (!eventId) throw new Error('Missing event_id');
+
+  const streamRes = await fetch(`https://${host}/gradio_api/call/infer/${eventId}`);
+  if (!streamRes.ok) throw new Error(`Gradio stream error ${streamRes.status}`);
+  const streamText = await streamRes.text();
+
+  const lines = streamText.split(/\r?\n/);
+  for (const line of lines) {
+    if (line.startsWith('data:')) {
+      const payloadStr = line.slice(5).trim();
+      if (!payloadStr || payloadStr === 'null') continue;
+      const parsed = JSON.parse(payloadStr);
+      if (Array.isArray(parsed) && parsed[0] && parsed[0].url) {
+        return parsed[0].url;
+      }
+    }
+  }
+  throw new Error('No image URL in Gradio SSE stream');
+}
+
+async function generateRealisticFluxDishPhoto(recipe, seedOffset = 0) {
+  const prompt = buildEnglishCulinaryPromptForRecipe(recipe);
+  const seed = computeRecipePhotoSeed(recipe.id, seedOffset);
+  const startIdx = seed % FREE_FLUX_GRADIO_HOSTS.length;
+
+  for (let i = 0; i < FREE_FLUX_GRADIO_HOSTS.length; i++) {
+    const host = FREE_FLUX_GRADIO_HOSTS[(startIdx + i) % FREE_FLUX_GRADIO_HOSTS.length];
+    try {
+      const remoteImgUrl = await callFluxGradioHost(host, prompt, seed);
+      const dataUrl = await fetchImageAsCompressedDataUrl(remoteImgUrl);
+      return dataUrl;
+    } catch (err) {
+      // Essayer le serveur FLUX suivant
+    }
+  }
+  throw new Error('Tous les serveurs IA FLUX sont temporairement occupés');
+}
+
+function enqueueAiDishPhotoGeneration(recipeId, seedOffset = 0, priority = false) {
+  if (!recipeId) return;
+  const cacheKey = getDishAiCacheKey(recipeId, seedOffset);
+  if (aiDishPhotoMemoryCache[cacheKey] || aiDishPhotoInFlight.has(cacheKey)) return;
+
+  if (!aiDishPhotoQueue.some((item) => item.cacheKey === cacheKey)) {
+    const task = { recipeId, seedOffset, cacheKey };
+    if (priority) {
+      aiDishPhotoQueue.unshift(task);
+    } else {
+      aiDishPhotoQueue.push(task);
+    }
+  }
+  processAiDishPhotoQueue();
+}
+
+async function processAiDishPhotoQueue() {
+  if (activeAiPhotoWorkers >= MAX_CONCURRENT_AI_PHOTO_WORKERS || aiDishPhotoQueue.length === 0) {
+    return;
+  }
+  const nextTask = aiDishPhotoQueue.shift();
+  if (!nextTask) return;
+
+  const { recipeId, seedOffset, cacheKey } = nextTask;
+  if (aiDishPhotoMemoryCache[cacheKey] || aiDishPhotoInFlight.has(cacheKey)) {
+    processAiDishPhotoQueue();
+    return;
+  }
+
+  const recipe = findRecipeById(recipeId);
+  if (!recipe) {
+    processAiDishPhotoQueue();
+    return;
+  }
+
+  aiDishPhotoInFlight.add(cacheKey);
+  activeAiPhotoWorkers++;
+
+  // Afficher l'état de génération IA sur le badge de la carte si elle est visible
+  document.querySelectorAll(`[data-dish-photo-badge="${recipeId}"]`).forEach((badge) => {
+    badge.textContent = '⏳ Création photo IA...';
+  });
+
+  try {
+    const dataUrl = await generateRealisticFluxDishPhoto(recipe, seedOffset);
+    await saveAiDishPhotoToIndexedDB(cacheKey, dataUrl);
+    refreshDishPhotoElementsInDOM(recipeId);
+  } catch (err) {
+    document.querySelectorAll(`[data-dish-photo-badge="${recipeId}"]`).forEach((badge) => {
+      badge.textContent = '📸 Illustration du plat';
+    });
+  } finally {
+    aiDishPhotoInFlight.delete(cacheKey);
+    activeAiPhotoWorkers--;
+    processAiDishPhotoQueue();
+  }
+}
+
 function getDishPhotoInfo(recipe, slot) {
   if (!recipe) {
-    return { primaryUrl: CURATED_DISH_FALLBACK_PHOTOS.default, fallbackUrl: CURATED_DISH_FALLBACK_PHOTOS.default, offlineSvg: '', isCustom: false, seedOffset: 0 };
+    const defUrl = CURATED_DISH_FALLBACK_POOLS.default[0];
+    return { primaryUrl: defUrl, fallbackUrl: defUrl, offlineSvg: '', isCustom: false, isAiCached: false, seedOffset: 0 };
   }
   const entry = (state.dishPhotos && state.dishPhotos[recipe.id]) || {};
+  const seedOffset = entry.aiSeedOffset || 0;
   const fallbackUrl = getDishCuratedFallbackUrl(recipe);
   const offlineSvg = getDishOfflineSvgDataUri(recipe, slot);
 
@@ -1149,7 +1609,8 @@ function getDishPhotoInfo(recipe, slot) {
       fallbackUrl,
       offlineSvg,
       isCustom: true,
-      seedOffset: entry.aiSeedOffset || 0
+      isAiCached: false,
+      seedOffset
     };
   }
 
@@ -1159,24 +1620,36 @@ function getDishPhotoInfo(recipe, slot) {
       fallbackUrl,
       offlineSvg,
       isCustom: false,
-      seedOffset: entry.aiSeedOffset || 0
+      isAiCached: true,
+      seedOffset
     };
   }
 
-  const seedOffset = entry.aiSeedOffset || 0;
-  const seed = computeRecipePhotoSeed(recipe.id, seedOffset);
-  const mainIngs = (recipe.ingredients || [])
-    .slice(0, 3)
-    .map((i) => i.name)
-    .join(', ');
-  const promptText = `Appetizing French culinary photography of "${recipe.title}"${mainIngs ? ` (${mainIngs})` : ''}, beautifully plated on a warm bistro table, natural daylight, shallow depth of field, high resolution food magazine style`;
-  const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=640&height=360&seed=${seed}&nologo=true`;
+  const cacheKey = getDishAiCacheKey(recipe.id, seedOffset);
+  const cachedAiDataUrl = aiDishPhotoMemoryCache[cacheKey];
+
+  if (cachedAiDataUrl) {
+    return {
+      primaryUrl: cachedAiDataUrl,
+      fallbackUrl,
+      offlineSvg,
+      isCustom: false,
+      isAiCached: true,
+      seedOffset
+    };
+  }
+
+  // Lancer automatiquement la génération IA réaliste FLUX.1 en arrière-plan (sans aucun blocage)
+  setTimeout(() => {
+    enqueueAiDishPhotoGeneration(recipe.id, seedOffset, false);
+  }, 30);
 
   return {
-    primaryUrl: aiUrl,
+    primaryUrl: fallbackUrl,
     fallbackUrl,
     offlineSvg,
     isCustom: false,
+    isAiCached: false,
     seedOffset
   };
 }
@@ -1225,6 +1698,11 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
       : '');
 
   const safeTitle = String(recipe.title || 'Plat').replace(/"/g, '&quot;');
+  const badgeLabel = info.isCustom
+    ? '📷 Ma photo'
+    : info.isAiCached
+    ? '✨ Photo IA réaliste'
+    : '⏳ Création photo IA...';
 
   return `
     <div
@@ -1250,7 +1728,7 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
       <div class="meal-photo-top-badges">
         <span class="meal-photo-emoji-pill" aria-hidden="true">${dishEmoji}</span>
         <span class="meal-photo-source-badge" data-dish-photo-badge="${recipe.id}">
-          ${info.isCustom ? '📷 Ma photo' : '✨ Photo IA'}
+          ${badgeLabel}
         </span>
       </div>
       <div class="meal-photo-actions" onclick="event.stopPropagation();">
@@ -1258,7 +1736,7 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
           type="button"
           class="meal-photo-action-btn"
           onclick="regenerateDishAiPhoto('${recipe.id}', event)"
-          title="Générer une autre photo d'illustration IA pour ce plat"
+          title="Générer gratuitement une nouvelle photo IA réaliste pour ce plat"
         >
           ✨ Autre photo IA
         </button>
@@ -1295,16 +1773,20 @@ function refreshDishPhotoElementsInDOM(recipeId) {
   const info = getDishPhotoInfo(recipe, null);
 
   document.querySelectorAll(`[data-dish-photo-wrap="${recipeId}"]`).forEach((wrap) => {
-    wrap.classList.add('is-loading');
     const img = wrap.querySelector('img.meal-dish-photo');
-    if (img) {
+    if (img && img.src !== info.primaryUrl) {
+      wrap.classList.add('is-loading');
       img.classList.remove('is-loaded');
       img.setAttribute('data-fallback-step', '0');
       img.src = info.primaryUrl;
     }
     const badge = wrap.querySelector(`[data-dish-photo-badge="${recipeId}"]`);
     if (badge) {
-      badge.textContent = info.isCustom ? '📷 Ma photo' : '✨ Photo IA';
+      badge.textContent = info.isCustom
+        ? '📷 Ma photo'
+        : info.isAiCached
+        ? '✨ Photo IA réaliste'
+        : '⏳ Création photo IA...';
     }
   });
 }
@@ -1314,12 +1796,13 @@ function regenerateDishAiPhoto(recipeId, event) {
   if (!recipeId) return;
   if (!state.dishPhotos) state.dishPhotos = {};
   const prev = state.dishPhotos[recipeId] || {};
+  const nextOffset = (prev.aiSeedOffset || 0) + 1;
   state.dishPhotos[recipeId] = {
-    aiSeedOffset: (prev.aiSeedOffset || 0) + 1
+    aiSeedOffset: nextOffset
   };
   saveStateToStorage();
-  refreshDishPhotoElementsInDOM(recipeId);
-  showToast('✨ Nouvelle photo IA en cours de génération pour ce plat...');
+  enqueueAiDishPhotoGeneration(recipeId, nextOffset, true);
+  showToast('✨ Génération d\'une nouvelle photo IA réaliste en cours...');
 }
 
 function resetDishPhoto(recipeId, event) {
@@ -1328,7 +1811,7 @@ function resetDishPhoto(recipeId, event) {
   delete state.dishPhotos[recipeId];
   saveStateToStorage();
   renderAll();
-  showToast('↺ Photo IA automatique rétablie pour ce plat');
+  showToast('↺ Photo IA réaliste automatique rétablie pour ce plat');
 }
 
 let pendingCustomPhotoRecipeId = null;
@@ -2406,6 +2889,9 @@ function renderAll() {
   }
   renderShoppingList();
   renderFavoritesAndHistory();
+  if (typeof renderAvoidedIngredientsSettings === 'function') {
+    renderAvoidedIngredientsSettings();
+  }
 }
 
 function renderDateHeaders() {
@@ -3441,6 +3927,9 @@ function renderCatalogModalResults() {
 
   if (catalogState.category === 'dessert') {
     const desserts = db.weekendDesserts.filter((d) => {
+      if (typeof recipeContainsAvoidedIngredient === 'function' && recipeContainsAvoidedIngredient(d)) {
+        return false;
+      }
       if (!q) return true;
       const inTitle = d.title.toLowerCase().includes(q);
       const inIng = (d.ingredients || []).some((i) => i.name.toLowerCase().includes(q));
@@ -3498,6 +3987,9 @@ function renderCatalogModalResults() {
   }
 
   const filtered = list.filter((r) => {
+    if (typeof recipeContainsAvoidedIngredient === 'function' && recipeContainsAvoidedIngredient(r)) {
+      return false;
+    }
     if (!q) return true;
     const inTitle = r.title.toLowerCase().includes(q);
     const inDesc = (r.description || '').toLowerCase().includes(q);
@@ -4212,9 +4704,14 @@ async function generateRecipeWithAI() {
       ? 'Menu Plaisir gourmand pour se faire plaisir même si moins équilibré, simple et rapide à réaliser (10-15 min)'
       : 'Menu Équilibré sain, simple et rapide à réaliser (10-15 min)';
 
+  const avoidedNote =
+    Array.isArray(state.avoidedIngredients) && state.avoidedIngredients.length > 0
+      ? `\nIngrédients strictement interdits (à exclure absolument) : ${state.avoidedIngredients.join(', ')}.`
+      : '';
+
   const promptText = `Génère une recette en français au format JSON strict pour 2 adultes, réalisée avec un maximum d'ingrédients de saison.
 Catégorie : ${categoryDesc}.
-Indication supplémentaire : ${customPrompt || 'Aucune'}.
+Indication supplémentaire : ${customPrompt || 'Aucune'}.${avoidedNote}
 Format JSON attendu uniquement (sans markdown) :
 {
   "title": "Nom du plat",
@@ -4333,8 +4830,13 @@ function switchView(viewName) {
     renderPantrySection();
   } else if (normalizedView === 'shopping') {
     renderShoppingList();
-  } else if (normalizedView === 'settings' && typeof renderVoiceGuideSettings === 'function') {
-    renderVoiceGuideSettings();
+  } else if (normalizedView === 'settings') {
+    if (typeof renderVoiceGuideSettings === 'function') {
+      renderVoiceGuideSettings();
+    }
+    if (typeof renderAvoidedIngredientsSettings === 'function') {
+      renderAvoidedIngredientsSettings();
+    }
   }
 }
 
@@ -9981,6 +10483,9 @@ function getAllCatalogRecipesForPantry() {
   const unique = [];
   all.forEach((r) => {
     if (r && r.id && !seen.has(r.id)) {
+      if (typeof recipeContainsAvoidedIngredient === 'function' && recipeContainsAvoidedIngredient(r)) {
+        return;
+      }
       seen.add(r.id);
       unique.push(r);
     }
@@ -9999,7 +10504,11 @@ function getAllCatalogRecipesForPantry() {
 }
 
 function buildTailoredRecipesFromPantryItems() {
-  const items = state.pantryItems || [];
+  const rawItems = state.pantryItems || [];
+  const items =
+    typeof isIngredientAvoided === 'function'
+      ? rawItems.filter((it) => !isIngredientAvoided(it.name))
+      : rawItems;
   dynamicPantryRecipesMap.clear();
   if (items.length === 0) return [];
 
@@ -10750,7 +11259,11 @@ async function generatePantryRecipeWithAI() {
     .join(', ');
 
   const servings = state.pantryServings || 2;
-  const promptText = `Tu es un chef cuisinier créatif. Crée une recette savoureuse, simple et rapide en français qui utilise prioritairement ces ingrédients disponibles dans le frigo et le placard : ${stockListText}.
+  const avoidedPantryNote =
+    Array.isArray(state.avoidedIngredients) && state.avoidedIngredients.length > 0
+      ? `\nIngrédients strictement interdits (à exclure absolument de la recette) : ${state.avoidedIngredients.join(', ')}.`
+      : '';
+  const promptText = `Tu es un chef cuisinier créatif. Crée une recette savoureuse, simple et rapide en français qui utilise prioritairement ces ingrédients disponibles dans le frigo et le placard : ${stockListText}.${avoidedPantryNote}
 Les quantités de base dans le JSON doivent être données pour 2 personnes (baseServings: 2).
 Réponds UNIQUEMENT au format JSON strict (sans markdown) :
 {
@@ -10821,5 +11334,405 @@ Réponds UNIQUEMENT au format JSON strict (sans markdown) :
     }
   }
 }
+
+// ============================================================================
+// SECTION PARAMÈTRES : INGRÉDIENTS À ÉVITER DANS LES MENUS PROPOSÉS
+// ============================================================================
+const AVOIDED_INGREDIENT_PRESETS = [
+  { label: 'Coriandre', icon: '🌿' },
+  { label: 'Fromage de chèvre', icon: '🐐' },
+  { label: 'Champignons', icon: '🍄' },
+  { label: 'Fruits de mer', icon: '🦐' },
+  { label: 'Poisson', icon: '🐟' },
+  { label: 'Porc', icon: '🥓' },
+  { label: 'Roquefort / Bleu', icon: '🧀' },
+  { label: 'Abats', icon: '🥩' },
+  { label: 'Épinards', icon: '🥬' },
+  { label: 'Aubergine', icon: '🍆' },
+  { label: 'Chou-fleur', icon: '🥦' },
+  { label: 'Poivron', icon: '🫑' },
+  { label: 'Piment', icon: '🌶️' },
+  { label: 'Lait de coco', icon: '🥥' },
+  { label: 'Fruits à coque', icon: '🥜' },
+  { label: 'Ail', icon: '🧄' },
+  { label: 'Oignon', icon: '🧅' },
+  { label: 'Œufs', icon: '🥚' }
+];
+
+const AVOIDED_CATEGORY_SYNONYMS = {
+  porc: ['porc', 'lardon', 'jambon', 'bacon', 'chorizo', 'pancetta', 'guanciale', 'saucisse', 'chair a saucisse', 'echine', 'travers de porc', 'filet mignon de porc', 'boudin'],
+  cochon: ['porc', 'lardon', 'jambon', 'bacon', 'chorizo', 'pancetta', 'saucisse'],
+  'fruits de mer': ['crevette', 'gambas', 'saint jacques', 'homard', 'langoustine', 'moule', 'palourde', 'crabe', 'encornet', 'calamar', 'poulpe', 'huitre', 'petoncle', 'fruits de mer', 'crustace'],
+  'fruit de mer': ['crevette', 'gambas', 'saint jacques', 'homard', 'langoustine', 'moule', 'palourde', 'crabe', 'encornet', 'calamar', 'poulpe', 'huitre', 'petoncle'],
+  crustace: ['crevette', 'gambas', 'homard', 'langoustine', 'crabe', 'écrevisse'],
+  poisson: ['poisson', 'saumon', 'cabillaud', 'thon', 'bar', 'loup', 'dorade', 'daurade', 'truite', 'lieu', 'merlu', 'lotte', 'sole', 'turbot', 'sandre', 'sardine', 'maquereau', 'anchois', 'colin', 'eglefin', 'hadoque', 'haddock', 'espadon', 'rouget', 'raie'],
+  'fromage de chevre': ['chevre', 'crottin', 'buche de chevre', 'rocamadour', 'sainte maure', 'picodon', 'pelardon', 'chavroux'],
+  chevre: ['chevre', 'crottin', 'rocamadour', 'sainte maure', 'picodon', 'pelardon'],
+  'roquefort bleu': ['roquefort', 'bleu', 'gorgonzola', 'fourme', 'saint agur', 'bleu d auvergne', 'bleu de bresse'],
+  roquefort: ['roquefort', 'bleu', 'gorgonzola', 'fourme'],
+  bleu: ['roquefort', 'bleu d auvergne', 'bleu de bresse', 'bleu', 'gorgonzola', 'fourme'],
+  abats: ['foie', 'rognon', 'ris de veau', 'tripe', 'andouillette', 'gesier', 'boudin', 'langue de boeuf'],
+  abat: ['foie', 'rognon', 'ris de veau', 'tripe', 'andouillette', 'gesier', 'boudin'],
+  champignon: ['champignon', 'cepe', 'morille', 'girolle', 'pleurote', 'shiitake', 'chanterelle', 'truffe', 'portobello'],
+  'fruits a coque': ['noix', 'noisette', 'amande', 'pistache', 'pecan', 'cajou', 'cacahuete', 'arachide', 'pignon', 'praline'],
+  'fruit a coque': ['noix', 'noisette', 'amande', 'pistache', 'pecan', 'cajou', 'cacahuete', 'arachide', 'pignon'],
+  noix: ['cerneau de noix', 'noix concassee', 'noix de cajou', 'noix de pecan', 'noix', 'noisette'],
+  oeuf: ['oeuf', 'jaune d oeuf', 'blanc d oeuf'],
+  piment: ['piment', 'espelette', 'harissa', 'tabasco', 'cayenne', 'jalapeno', 'sriracha']
+};
+
+function normalizeAvoidedString(str) {
+  if (!str) return '';
+  return str
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/œ/g, 'oe')
+    .replace(/['’/-]/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w.length > 4 && w.endsWith('x') ? w.slice(0, -1) : w))
+    .filter(Boolean)
+    .join(' ');
+}
+
+function doesTextMatchAvoidedTerm(targetText, avoidedRaw) {
+  if (!targetText || !avoidedRaw) return false;
+  const normTargetFull = normalizeAvoidedString(targetText);
+  const normAvoided = normalizeAvoidedString(avoidedRaw);
+  if (!normTargetFull || !normAvoided) return false;
+
+  // Protection contre les faux positifs culinaires du mot "noix" (ex: noix de Saint-Jacques, noix de beurre, noix de muscade, noix de veau)
+  const isNutAvoidance =
+    normAvoided === 'noix' || normAvoided === 'fruits a coque' || normAvoided === 'fruit a coque';
+  const cleanedTargetForNuts = isNutAvoidance
+    ? normTargetFull
+        .replace(/\bnoix de saint jacque\b/g, '')
+        .replace(/\bnoix de st jacque\b/g, '')
+        .replace(/\bnoix de beurre\b/g, '')
+        .replace(/\bnoix de muscade\b/g, '')
+        .replace(/\bnoix de veau\b/g, '')
+        .replace(/\bnoix de joue\b/g, '')
+        .replace(/\bnoix de coco\b/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    : normTargetFull;
+
+  if (!cleanedTargetForNuts) return false;
+
+  const targetWords = cleanedTargetForNuts.split(' ').filter(Boolean);
+  const candidateTerms = [
+    normAvoided,
+    ...(AVOIDED_CATEGORY_SYNONYMS[normAvoided] || []).map((s) => normalizeAvoidedString(s))
+  ];
+
+  for (const term of candidateTerms) {
+    if (!term) continue;
+    const termWords = term.split(' ').filter(Boolean);
+    if (termWords.length === 1) {
+      const w = termWords[0];
+      if (targetWords.includes(w)) {
+        return true;
+      }
+      if (w.length >= 5 && targetWords.some((tw) => tw.startsWith(w) || w.startsWith(tw) && tw.length >= 5)) {
+        return true;
+      }
+    } else {
+      // Expression multi-mots (ex: "lait de coco", "fromage de chevre", "chou fleur")
+      const sigWords = termWords.filter((w) => !['de', 'du', 'des', 'd', 'le', 'la', 'les', 'a', 'au', 'aux', 'et'].includes(w));
+      if (sigWords.length > 0 && sigWords.every((sw) => targetWords.some((tw) => tw === sw || (sw.length >= 5 && tw.startsWith(sw))))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isIngredientAvoided(ingName) {
+  const list = state.avoidedIngredients || [];
+  if (!list.length || !ingName) return false;
+  return list.some((avoided) => doesTextMatchAvoidedTerm(ingName, avoided));
+}
+
+function getRecipeAvoidedMatches(recipe) {
+  const list = state.avoidedIngredients || [];
+  if (!list.length || !recipe) return [];
+  const matched = [];
+  list.forEach((avoided) => {
+    const inTitle = doesTextMatchAvoidedTerm(recipe.title || '', avoided);
+    const inIngs = (recipe.ingredients || []).some((ing) => doesTextMatchAvoidedTerm(ing.name || '', avoided));
+    if (inTitle || inIngs) {
+      matched.push(avoided);
+    }
+  });
+  return matched;
+}
+
+function recipeContainsAvoidedIngredient(recipe) {
+  return getRecipeAvoidedMatches(recipe).length > 0;
+}
+
+function replaceUnvalidatedMealsWithAvoidedIngredients() {
+  if (!Array.isArray(state.slots) || !state.slots.length) {
+    return { replacedMealsCount: 0, replacedDessertsCount: 0 };
+  }
+  if (!Array.isArray(state.avoidedIngredients) || state.avoidedIngredients.length === 0) {
+    return { replacedMealsCount: 0, replacedDessertsCount: 0 };
+  }
+
+  let replacedMealsCount = 0;
+  let replacedDessertsCount = 0;
+
+  const usedRecipes = new Set(state.slots.filter((s) => s.active !== false).map((s) => s.recipeId));
+  const usedDesserts = new Set(state.slots.filter((s) => s.dessertId).map((s) => s.dessertId));
+
+  state.slots.forEach((slot) => {
+    if (slot.active === false || slot.validated) return;
+    const slotMonth = getSlotMonthNum(slot);
+    const curRecipe = findRecipeById(slot.recipeId);
+    if (curRecipe && recipeContainsAvoidedIngredient(curRecipe)) {
+      const pool = getPoolForSlot(slot);
+      const nextRecipe = pickRandomAvoiding(pool, usedRecipes, slotMonth);
+      if (nextRecipe && nextRecipe.id && nextRecipe.id !== slot.recipeId) {
+        slot.recipeId = nextRecipe.id;
+        slot.customWinePairing = null;
+        usedRecipes.add(nextRecipe.id);
+        replacedMealsCount++;
+      }
+    }
+
+    if (slot.dessertId) {
+      const curDessert = findDessertById(slot.dessertId);
+      if (curDessert && recipeContainsAvoidedIngredient(curDessert)) {
+        const style = getSlotStyle(slot);
+        const styleDesserts = window.RECIPES_DB.weekendDesserts.filter((d) => d.style === style);
+        const nextDessert = pickRandomAvoiding(
+          styleDesserts.length ? styleDesserts : window.RECIPES_DB.weekendDesserts,
+          usedDesserts,
+          slotMonth
+        );
+        if (nextDessert && nextDessert.id && nextDessert.id !== slot.dessertId) {
+          slot.dessertId = nextDessert.id;
+          usedDesserts.add(nextDessert.id);
+          replacedDessertsCount++;
+        }
+      }
+    }
+  });
+
+  if (replacedMealsCount > 0 || replacedDessertsCount > 0) {
+    saveStateToStorage();
+  }
+  return { replacedMealsCount, replacedDessertsCount };
+}
+
+function formatAvoidedLabel(raw) {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return '';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function addAvoidedIngredient(rawName, silent = false) {
+  if (!Array.isArray(state.avoidedIngredients)) {
+    state.avoidedIngredients = [];
+  }
+  const parts = String(rawName || '')
+    .split(/[,;\n]+/)
+    .map((p) => formatAvoidedLabel(p))
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    if (!silent) showToast('⚠️ Saisissez le nom d\'un ingrédient à éviter.');
+    return false;
+  }
+
+  let addedItems = [];
+  parts.forEach((item) => {
+    const normNew = normalizeAvoidedString(item);
+    if (!normNew) return;
+    const alreadyExists = state.avoidedIngredients.some((existing) => normalizeAvoidedString(existing) === normNew);
+    if (!alreadyExists) {
+      state.avoidedIngredients.push(item);
+      addedItems.push(item);
+    }
+  });
+
+  if (addedItems.length === 0) {
+    if (!silent) showToast('ℹ️ Cet ingrédient figure déjà dans votre liste d\'exclusion.');
+    return false;
+  }
+
+  saveStateToStorage();
+  const { replacedMealsCount, replacedDessertsCount } = replaceUnvalidatedMealsWithAvoidedIngredients();
+  renderAll();
+
+  if (!silent) {
+    const labelStr = addedItems.join(', ');
+    const replacedTotal = replacedMealsCount + replacedDessertsCount;
+    if (replacedTotal > 0) {
+      showToast(
+        `🚫 « ${labelStr} » évité — ${replacedTotal} proposition(s) de la semaine remplacée(s) automatiquement !`
+      );
+    } else {
+      showToast(`🚫 « ${labelStr} » ajouté aux ingrédients à éviter dans les menus proposés.`);
+    }
+  }
+  return true;
+}
+
+function addAvoidedIngredientFromInput() {
+  const inputEl = document.getElementById('avoided-ingredient-input');
+  if (!inputEl) return;
+  const val = inputEl.value.trim();
+  if (!val) {
+    showToast('⚠️ Indiquez un ingrédient à éviter (ex: Coriandre, Chèvre, Crevettes...).');
+    inputEl.focus();
+    return;
+  }
+  addAvoidedIngredient(val, false);
+  inputEl.value = '';
+  inputEl.focus();
+}
+
+function removeAvoidedIngredient(targetName) {
+  if (!Array.isArray(state.avoidedIngredients)) return;
+  const normTarget = normalizeAvoidedString(targetName);
+  const beforeLen = state.avoidedIngredients.length;
+  state.avoidedIngredients = state.avoidedIngredients.filter(
+    (item) => normalizeAvoidedString(item) !== normTarget
+  );
+  if (state.avoidedIngredients.length !== beforeLen) {
+    saveStateToStorage();
+    renderAll();
+    showToast(`✓ « ${targetName} » retiré des ingrédients à éviter.`);
+  }
+}
+
+function toggleAvoidedPreset(presetLabel) {
+  if (!Array.isArray(state.avoidedIngredients)) {
+    state.avoidedIngredients = [];
+  }
+  const normPreset = normalizeAvoidedString(presetLabel);
+  const exists = state.avoidedIngredients.some((item) => normalizeAvoidedString(item) === normPreset);
+  if (exists) {
+    removeAvoidedIngredient(presetLabel);
+  } else {
+    addAvoidedIngredient(presetLabel, false);
+  }
+}
+
+function clearAllAvoidedIngredients() {
+  if (!Array.isArray(state.avoidedIngredients) || state.avoidedIngredients.length === 0) return;
+  state.avoidedIngredients = [];
+  saveStateToStorage();
+  renderAll();
+  showToast('🗑️ Liste des ingrédients à éviter réinitialisée.');
+}
+
+function renderAvoidedIngredientsSettings() {
+  const listEl = document.getElementById('avoided-ingredients-list');
+  const quickEl = document.getElementById('avoided-quick-chips');
+  const countPill = document.getElementById('avoided-ingredients-count-pill');
+  const clearBtn = document.getElementById('btn-clear-avoided-ingredients');
+  const impactBar = document.getElementById('avoided-ingredients-impact-bar');
+
+  const avoided = Array.isArray(state.avoidedIngredients) ? state.avoidedIngredients : [];
+
+  if (countPill) {
+    if (avoided.length === 0) {
+      countPill.textContent = '✅ Aucun ingrédient exclu';
+      countPill.className = 'meta-pill healthy-pill';
+    } else {
+      countPill.textContent = `🚫 ${avoided.length} ingrédient${avoided.length > 1 ? 's' : ''} à éviter`;
+      countPill.className = 'meta-pill pleasure-pill';
+    }
+  }
+
+  if (clearBtn) {
+    clearBtn.style.display = avoided.length > 0 ? 'inline-flex' : 'none';
+  }
+
+  if (listEl) {
+    if (avoided.length === 0) {
+      listEl.innerHTML = `
+        <span style="font-size: 0.85rem; color: var(--text-muted);">
+          ✅ <strong>Aucun ingrédient à éviter pour le moment.</strong> Ajoutez un aliment ci-dessus ou cliquez sur une suggestion rapide ci-dessous pour l'exclure automatiquement des menus proposés.
+        </span>
+      `;
+    } else {
+      listEl.innerHTML = avoided
+        .map((item) => {
+          const safeAttr = item.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          return `
+            <span class="avoided-ing-chip">
+              <span>🚫 ${item}</span>
+              <button
+                type="button"
+                class="avoided-ing-remove-btn"
+                onclick="removeAvoidedIngredient('${safeAttr}')"
+                title="Ne plus éviter ${safeAttr}"
+                aria-label="Retirer ${safeAttr}"
+              >
+                ✕
+              </button>
+            </span>
+          `;
+        })
+        .join('');
+    }
+  }
+
+  if (quickEl) {
+    quickEl.innerHTML = AVOIDED_INGREDIENT_PRESETS.map((preset) => {
+      const normPreset = normalizeAvoidedString(preset.label);
+      const isActive = avoided.some((item) => normalizeAvoidedString(item) === normPreset);
+      const safeLabel = preset.label.replace(/'/g, "\\'");
+      return `
+        <button
+          type="button"
+          class="avoided-preset-btn ${isActive ? 'is-active' : ''}"
+          onclick="toggleAvoidedPreset('${safeLabel}')"
+          title="${isActive ? 'Cliquer pour autoriser à nouveau ' + preset.label : 'Cliquer pour éviter ' + preset.label + ' dans les menus proposés'}"
+        >
+          <span>${preset.icon}</span>
+          <span>${preset.label}</span>
+          <span>${isActive ? '✓' : '+'}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  if (impactBar) {
+    if (avoided.length === 0) {
+      impactBar.style.display = 'none';
+    } else {
+      const db = window.RECIPES_DB || {};
+      const allMeals = [
+        ...(db.weekdayDinners || []),
+        ...(db.weekendBalancedMeals || []),
+        ...(db.weekendPleasureMeals || []),
+        ...(db.gourmetMeals || [])
+      ];
+      const excludedCount = allMeals.filter((r) => recipeContainsAvoidedIngredient(r)).length;
+      const availableCount = Math.max(0, allMeals.length - excludedCount);
+
+      impactBar.style.display = 'flex';
+      impactBar.innerHTML = `
+        <div>
+          🛡️ <strong>Filtre actif sur vos propositions :</strong>
+          <strong>${excludedCount} recette(s)</strong> contenant vos ingrédients à éviter sont écartées automatiquement
+          (<strong>${availableCount} plats compatibles</strong> disponibles).
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="regenerateUnvalidatedMeals(); switchView('planner');">
+          🎲 Renouveler les menus non validés
+        </button>
+      `;
+    }
+  }
+}
+
 
 
