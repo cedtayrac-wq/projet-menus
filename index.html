@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=279" />
+  <link rel="stylesheet" href="styles.css?v=284" />
 </head>
 <body>
 
@@ -494,7 +494,7 @@
       <div class="section-banner">
         <div class="banner-text-col">
           <h2>⚙️ Paramètres de l'Application</h2>
-          <p>Choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril, Paul, Thierry, Philippe, Jean-Pierre ou Voix IA), activez le micro et la caméra, et retrouvez les consignes d'installation.</p>
+          <p>Indiquez les <strong>ingrédients à éviter</strong> dans vos menus proposés, choisissez la <strong>personnalité de votre Assistant Vocal</strong> (Maïté, Cyril, Paul, Thierry, Philippe, Jean-Pierre ou Voix IA), activez le micro et la caméra, et retrouvez les consignes d'installation.</p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button type="button" id="btn-header-enable-mic" class="btn btn-outline btn-sm" onclick="requestAppMicrophonePermission()">
@@ -510,6 +510,58 @@
             📲 Installer l'application
           </button>
         </div>
+      </div>
+
+      <!-- Bloc Ingrédients à éviter dans les menus proposés -->
+      <div id="settings-avoided-ingredients-panel" class="card-panel avoided-ingredients-panel" style="margin-bottom: 20px;">
+        <div class="shopping-panel-header" style="flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <h3 class="panel-cookbook-title" style="margin-bottom: 2px;">🚫 Ingrédients à éviter dans les menus proposés</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Listez les aliments que vous souhaitez exclure (allergies, intolérances, goûts personnels). L'application écartera automatiquement tous les plats et desserts qui en contiennent dans le <strong>Menu Semaine</strong>, les <strong>Menus du garde-manger</strong> et le <strong>Catalogue</strong>.
+            </p>
+          </div>
+          <span id="avoided-ingredients-count-pill" class="meta-pill healthy-pill" style="font-size: 0.82rem; padding: 5px 12px;">
+            ✅ Aucun ingrédient exclu
+          </span>
+        </div>
+
+        <!-- Champ d'ajout d'ingrédient(s) à éviter -->
+        <div class="avoided-add-row">
+          <input
+            type="text"
+            id="avoided-ingredient-input"
+            class="input-field"
+            placeholder="Ex : Coriandre, Fromage de chèvre, Champignons, Crevettes..."
+            aria-label="Ajouter un ingrédient à éviter"
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); addAvoidedIngredientFromInput();}"
+          />
+          <button type="button" class="btn btn-primary" onclick="addAvoidedIngredientFromInput()">
+            + Ajouter à éviter
+          </button>
+          <button
+            type="button"
+            id="btn-clear-avoided-ingredients"
+            class="btn btn-outline btn-sm"
+            style="color: #b91c1c; border-color: #fecaca; display: none;"
+            onclick="clearAllAvoidedIngredients()"
+            title="Retirer tous les ingrédients de la liste à éviter"
+          >
+            🗑️ Tout effacer
+          </button>
+        </div>
+
+        <!-- Liste active des ingrédients évités -->
+        <div id="avoided-ingredients-list" class="avoided-ingredients-list"></div>
+
+        <!-- Suggestions rapides en 1 clic -->
+        <div class="avoided-quick-suggestions-box">
+          <div class="avoided-quick-title">⚡ Suggestions rapides (cliquez pour ajouter ou retirer) :</div>
+          <div id="avoided-quick-chips" class="avoided-quick-chips"></div>
+        </div>
+
+        <!-- Résumé de l'impact sur les menus proposés -->
+        <div id="avoided-ingredients-impact-bar" class="avoided-impact-bar" style="display: none;"></div>
       </div>
 
       <!-- Bloc Autorisations Micro & Caméra pour l'application -->
@@ -696,8 +748,8 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <!-- SCRIPTS -->
-  <script src="data/config.js?v=279"></script>
-  <script src="data/recipes.js?v=279"></script>
-  <script src="app.js?v=279"></script>
+  <script src="data/config.js?v=284"></script>
+  <script src="data/recipes.js?v=284"></script>
+  <script src="app.js?v=284"></script>
 </body>
 </html>
