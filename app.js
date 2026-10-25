@@ -1687,7 +1687,6 @@ function handleDishPhotoError(imgEl) {
 function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
   if (!recipe) return '';
   const info = getDishPhotoInfo(recipe, slot);
-  const dishEmoji = getDishEmoji(recipe, slot);
   const isModal = opts.context === 'modal';
   const clickHandler =
     opts.onClick ||
@@ -1698,11 +1697,6 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
       : '');
 
   const safeTitle = String(recipe.title || 'Plat').replace(/"/g, '&quot;');
-  const badgeLabel = info.isCustom
-    ? '📷 Ma photo'
-    : info.isAiCached
-    ? '✨ Photo IA réaliste'
-    : '⏳ Création photo IA...';
 
   return `
     <div
@@ -1725,44 +1719,6 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
         onload="handleDishPhotoLoad(this)"
         onerror="handleDishPhotoError(this)"
       />
-      <div class="meal-photo-top-badges">
-        <span class="meal-photo-emoji-pill" aria-hidden="true">${dishEmoji}</span>
-        <span class="meal-photo-source-badge" data-dish-photo-badge="${recipe.id}">
-          ${badgeLabel}
-        </span>
-      </div>
-      <div class="meal-photo-actions" onclick="event.stopPropagation();">
-        <button
-          type="button"
-          class="meal-photo-action-btn"
-          onclick="regenerateDishAiPhoto('${recipe.id}', event)"
-          title="Générer gratuitement une nouvelle photo IA réaliste pour ce plat"
-        >
-          ✨ Autre photo IA
-        </button>
-        <button
-          type="button"
-          class="meal-photo-action-btn"
-          onclick="triggerCustomDishPhotoUpload('${recipe.id}', event)"
-          title="Ajouter ou prendre ma propre photo pour ce plat"
-        >
-          📷 Ma photo
-        </button>
-        ${
-          info.isCustom
-            ? `
-          <button
-            type="button"
-            class="meal-photo-action-btn meal-photo-reset-btn"
-            onclick="resetDishPhoto('${recipe.id}', event)"
-            title="Revenir à l'illustration IA automatique"
-          >
-            ↺ IA
-          </button>
-        `
-            : ''
-        }
-      </div>
     </div>
   `;
 }
