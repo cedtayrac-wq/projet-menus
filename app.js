@@ -6741,7 +6741,7 @@ const FISH_AUDIO_CLONE_MODEL_IDS = {
   lignac: 'f3e595ddbd9c41a6a16cce1372eecbac',
   bocuse: '43bacffe94d04e1aa4a89b7be39f0c8f',
   etchebest: '6e01eb6afdc24c97983bdf3841651857',
-  coffe: 'bbaf5b5ace5b4ac6ab66c5b4dc52ec6b',
+  coffe: '7334d5b7ff174ffca59d08dc3d63d771',
   ia_homme: '60c049cfece141809edba5a5ec11d8bc',
   ia_femme: 'da57db7f34244092b9d058e1f0e2aa65'
 };
@@ -6967,7 +6967,7 @@ function tryFetchFishAudioCloneBlob(cleanText, persona) {
 function fetchClonedTtsAudioBlob(cleanText, persona) {
   const cloneProf = state.voiceSettings?.clonedVoiceProfiles?.[persona.id] || {};
   const userRate = state.voiceSettings?.rate || 1.0;
-  const cacheKey = `v246::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
+  const cacheKey = `v260::${persona.id}::${userRate}::${cloneProf.pitchHzDelta || 0}::${cleanText}`;
 
   if (clientTtsBlobCache.has(cacheKey)) {
     return clientTtsBlobCache.get(cacheKey);
@@ -7121,7 +7121,7 @@ async function trySpeakWithBundledSampleAudio(cleanText, persona, options = {}) 
   const isSample = Boolean(options.isSamplePreview) || cleanText === sampleQuoteClean;
   if (!isSample) return false;
 
-  const samplePath = `assets/voices/${persona.id}.mp3?v=246`;
+  const samplePath = `assets/voices/${persona.id}.mp3?v=257`;
   return await playAudioBlobOrUrl(samplePath, false, persona, {
     ...options,
     applyClonePitchOnClient: false
