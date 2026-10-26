@@ -1358,27 +1358,90 @@ function buildTailoredDishPhotoUrl(recipe, seedOffset = 0) {
   if (!recipe || !recipe.title) {
     return CURATED_DISH_FALLBACK_POOLS.default[0];
   }
-  let rawTitle = String(recipe.title || '').trim();
-  const lower = rawTitle.toLowerCase();
+  let q = String(recipe.title || '').trim();
+  const lower = q.toLowerCase();
 
-  let searchQuery = '';
-  if (lower.includes('galette') && lower.includes('sarrasin')) {
-    searchQuery = 'Galette de sarrasin complète bretonne oeuf jambon assiette photo';
-  } else {
-    // Retirer les adjectifs marketing qui attirent des visuels avec texte superposé
-    const cleaned = rawTitle
-      .replace(/\b(express|healthy|l[ée]ger|l[ée]g[èe]re|l[ée]gers|l[ée]g[èe]res|rapide|ultra-rapide|facile|minute|chrono|5%|15\s*min|20\s*min)\b/gi, ' ')
+  // 1. Supprimer les parenthèses d'alternatives ou précisions secondaires (ex: "(ou dorade royale)", "(2 ingr.)")
+  const noParen = q.replace(/\([^)]*\)/g, ' ');
+  if (noParen.trim().length > 12) {
+    q = noParen;
+  }
+
+  // 2. Normaliser les intitulés sujets aux photos d'emballages ou trop verbeux en début de titre
+  q = q
+    .replace(/pav[ée]s?\s+de\s+truite\s+fjord\s+fum[ée]e\s+au\s+bois\s+de\s+h[êe]tre\s*(?:&\s*[œo]ufs\s+de\s+saumon)?/gi, 'Pavé de truite saumon poêlé')
+    .replace(/ravioles\s+du\s+(?:dauphin[ée]|royans)(?:\s+label\s+rouge)?\s+poch[ée]es/gi, 'Gratin de ravioles')
+    .replace(/galettes?\s+de\s+sarrasin(?:\s+bretonnes?)?(?:\s+compl[èe]tes?)?/gi, 'Galette bretonne sarrasin')
+    .replace(/grandes?\s+tartines?\s+de\s+pain\s+au\s+levain\s+grill[ée]es?/gi, 'Tartine grillée')
+    .replace(/tartines?\s+de\s+pain\s+au\s+levain\s+grill[ée]es?/gi, 'Tartine grillée')
+    .replace(/bagels?\s+complets?\s+au\s+s[ée]same/gi, 'Bagel')
+    .replace(/wraps?\s+(?:au\s+bl[ée]\s+)?complets?/gi, 'Wrap')
+    .replace(/quesadillas?\s+compl[èe]tes?/gi, 'Quesadillas')
+    .replace(/p[âa]tes\s+compl[èe]tes/gi, 'Pâtes')
+    .replace(/quiche\s+sans\s+p[âa]te\s+l[ée]g[èe]re/gi, 'Quiche')
+    .replace(/sur\s+p[âa]te\s+(?:bris[ée]e|feuillet[ée]e)\s+maison(?:\s+ou\s+fine)?/gi, ' ')
+    .replace(/jambon\s+de\s+(?:parme|bayonne)/gi, 'jambon cru')
+    .replace(/carr[ée]\s+ou\s+c[ôo]tes\s+d'agneau/gi, "Côtes d'agneau")
+    .replace(/flamb[ée]es?\s+ou\s+(?:saut[ée]es?|r[ôo]ties?)/gi, 'rôties')
+    .replace(/skyr\s*\/\s*fromage\s+blanc/gi, 'Fromage blanc')
+    .replace(/manchego\s*\/\s*parmesan/gi, 'parmesan')
+    .replace(/artichauts?\s*\/\s*courgettes?/gi, 'artichauts')
+    .replace(/coupe\s+glac[ée]e\s+ou\s+yaourt\s+glac[ée]/gi, 'Coupe glacée')
+    .replace(/[àa]\s+la\s+fleur\s+de\s+sel\s+et\s+romarin/gi, 'au romarin');
+
+  // 3. Remplacer les alternatives "X ou Y" par "X" pour ne pas diluer la requête visuelle
+  q = q.replace(
+    /\b(dorade|bar|pintade|cabillaud|saumon|ch[âa]taignes|pains?\s+naans?|tofu|brocolis|courgettes|pommes|pamplemousse|gambas|halloumi|veau|entrec[ôo]te|prunes)\s+ou\s+(?:d[ée]s\s+de\s+|grosses\s+)?[\w\-]+(?:\s+[\w\-]+)?\b/gi,
+    '$1'
+  );
+
+  // 4. Supprimer les expressions d'assaisonnement secondaire, labels AOP/IGP et origines qui attirent des emballages
+  q = q.replace(
+    /(?:[àa]\s+la\s+)?fleur\s+de\s+sel|au\s+thym\s+frais\s+et\s+fleur\s+de\s+sel|\b(express|healthy|l[ée]ger|l[ée]g[èe]re|l[ée]gers|l[ée]g[èe]res|rapide|ultra-rapide|facile|minute|chrono|5%|15\s*min|20\s*min|label\s+rouge|aop|igp|bio|24\s*mois|18\s*mois|36\s*mois|du\s+dauphin[ée]|du\s+royans|de\s+bresse|du\s+sud-ouest|des\s+pouilles|du\s+touquet|d'isigny|d'espelette|de\s+gu[ée]rande|ratte|skrei|b[öo]mlo|carnaroli|parmigiano\s+reggiano|au\s+bois\s+de\s+h[êe]tre|fjord|fermier|fermi[èe]re|fermiers|fermi[èe]res|sauvage|sauvages|demi-sel|en\s+chemise|affin[ée]|affin[ée]e|vierge|extra-vierge|individuel\s+sorti\s+du\s+four|au\s+beurre\s+noisette|au\s+beurre\s+de\s+thym|au\s+beurre|r[ôo]tis?\s+sur\s+peau|dor[ée]s?\s+au\s+jus\s+court|[àa]\s+l'huile\s+d'olive|[àa]\s+l'huile\s+de\s+noisette|[àa]\s+l'huile)\b/gi,
+    ' '
+  );
+
+  // 5. Séparer Plat Principal (avant la 1re virgule) et Garniture (après la 1re virgule)
+  const stopWords = new Set([
+    'de', 'd', 'du', 'des', 'au', 'aux', 'à', 'a', 'la', 'le', 'les', 'et', 'ou',
+    'en', 'avec', 'sur', 'un', 'une', 'l', 'blanc', 'robe', 'tombée', 'éclats',
+    'copeaux', 'crème', 'sauce', 'jus', 'coulis'
+  ]);
+  const cleanWords = (str, maxWords) => {
+    const tokens = str
       .replace(/[()&/+•,:«»"]/g, ' ')
       .replace(/\s+/g, ' ')
-      .trim();
+      .trim()
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, maxWords);
+    while (tokens.length > 0) {
+      const last = tokens[tokens.length - 1].toLowerCase();
+      if (stopWords.has(last) || last.endsWith("'")) {
+        tokens.pop();
+      } else {
+        break;
+      }
+    }
+    return tokens.join(' ');
+  };
 
-    const suffix =
-      lower.includes('velouté') || lower.includes('soupe') || lower.includes('bouillon') || lower.includes('bowl') || lower.includes('dahl')
-        ? 'bol cuisine photo'
-        : 'assiette plat photo';
-
-    searchQuery = `${cleaned} ${suffix}`;
+  const commaParts = q.split(',').map((p) => p.trim()).filter(Boolean);
+  let core = '';
+  if (commaParts.length >= 2) {
+    const mainPart = cleanWords(commaParts[0], 7);
+    const sidePart = cleanWords(commaParts.slice(1).join(' '), 6);
+    core = `${mainPart} ${sidePart}`.trim();
+  } else {
+    core = cleanWords(q, 11);
   }
+
+  const isBowl =
+    (/\b(velout[ée]|soupe|minestrone|gaspacho|bowl|poke|dahl|chili|verrines?)\b/i.test(lower) ||
+      /^\s*bouillon\b/i.test(lower)) &&
+    !lower.includes('sauce veloutée');
+  const suffix = isBowl ? 'bol photo' : 'assiette plat';
+  let searchQuery = `${core} ${suffix}`;
 
   if (seedOffset > 0) {
     const variations = ['gastronomique', 'bistrot', 'fait maison', 'gourmand'];
@@ -1395,8 +1458,14 @@ function getDishCuratedFallbackUrl(recipe) {
   const seed = computeRecipePhotoSeed(recipe && recipe.id, 0);
   const pick = (arr) => arr[seed % arr.length];
 
-  // 1. Priorité absolue à la forme du plat indiquée dans l'intitulé (évite qu'un "bouillon de volaille" ou "thon" dans une quiche/pâtes/salade ne fausse la catégorie)
-  if (titleOnly.includes('velouté') || titleOnly.includes('soupe') || titleOnly.includes('bouillon') || titleOnly.includes('minestrone') || titleOnly.includes('gaspacho')) {
+  // 1. Priorité absolue à la forme du plat indiquée dans l'intitulé (évite qu'un "bouillon de volaille", "sauce veloutée" ou "thon" dans une quiche/pâtes/salade ne fausse la catégorie)
+  if (
+    ((titleOnly.includes('velouté') && !titleOnly.includes('sauce veloutée')) ||
+      titleOnly.includes('soupe') ||
+      /^\s*bouillon\b/.test(titleOnly) ||
+      titleOnly.includes('minestrone') ||
+      titleOnly.includes('gaspacho'))
+  ) {
     return pick(CURATED_DISH_FALLBACK_POOLS.soup);
   }
   if (titleOnly.includes('pâtes') || titleOnly.includes('spaghetti') || titleOnly.includes('tagliatelle') || titleOnly.includes('penne') || titleOnly.includes('lasagne') || titleOnly.includes('gnocchi') || titleOnly.includes('raviol') || titleOnly.includes('linguine') || titleOnly.includes('macaroni')) {
