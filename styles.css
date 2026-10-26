@@ -4356,8 +4356,80 @@ body {
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
 }
 
+/* =========================================================================
+   PARTAGE WHATSAPP DE LA FICHE CUISINE
+   ========================================================================= */
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #ffffff !important;
+  border: 1.5px solid #128c7e;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(37, 211, 102, 0.28);
+}
 
+.btn-whatsapp:hover {
+  background: linear-gradient(135deg, #1ebc5a 0%, #0f766a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(18, 140, 126, 0.36);
+}
 
+.whatsapp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid #25d366;
+  background: #ecfdf5;
+  color: #128c7e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
 
+.whatsapp-icon-btn:hover {
+  background: #25d366;
+  color: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 3px 8px rgba(37, 211, 102, 0.35);
+}
 
+.fiche-whatsapp-share-bar {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fiche-whatsapp-share-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fiche-whatsapp-share-text span {
+  font-size: 0.88rem;
+  color: #065f46;
+}
+
+.fiche-whatsapp-share-text small {
+  font-size: 0.76rem;
+  color: #047857;
+}
+
+.fiche-whatsapp-share-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
