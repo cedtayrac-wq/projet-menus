@@ -272,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPwaSupport();
   setupVoiceGuide();
   setupDaySwipeGestures();
+  handleIncomingSharedRecipeLink();
 });
 
 function setupDaySwipeGestures() {
@@ -780,7 +781,8 @@ function getCatalogListByType(type) {
 
 const dynamicPantryRecipesMap = new Map();
 
-function findRecipeById(recipeId) {
+function findExactRecipeById(recipeId) {
+  if (!recipeId) return null;
   if (dynamicPantryRecipesMap.has(recipeId)) {
     return dynamicPantryRecipesMap.get(recipeId);
   }
@@ -791,7 +793,31 @@ function findRecipeById(recipeId) {
     ...(window.RECIPES_DB.weekendPleasureMeals || []),
     ...(window.RECIPES_DB.gourmetMeals || [])
   ];
-  return all.find((r) => r.id === recipeId) || all[0];
+  return all.find((r) => r.id === recipeId) || null;
+}
+
+function isBuiltInCatalogRecipe(recipeId) {
+  if (!recipeId || !window.RECIPES_DB) return false;
+  const builtIn = [
+    ...(window.RECIPES_DB.weekdayDinners || []),
+    ...(window.RECIPES_DB.weekendBalancedMeals || []),
+    ...(window.RECIPES_DB.weekendPleasureMeals || []),
+    ...(window.RECIPES_DB.gourmetMeals || [])
+  ];
+  return builtIn.some((r) => r.id === recipeId);
+}
+
+function findRecipeById(recipeId) {
+  const exact = findExactRecipeById(recipeId);
+  if (exact) return exact;
+  const all = [
+    ...(state.customRecipes || []),
+    ...(window.RECIPES_DB.weekdayDinners || []),
+    ...(window.RECIPES_DB.weekendBalancedMeals || []),
+    ...(window.RECIPES_DB.weekendPleasureMeals || []),
+    ...(window.RECIPES_DB.gourmetMeals || [])
+  ];
+  return all[0];
 }
 
 function findDessertById(dessertId) {
@@ -1327,29 +1353,90 @@ function computeRecipePhotoSeed(recipeId, offset = 0) {
   return (Math.abs(hash) % 90000) + 1000 + (Number(offset) || 0) * 137;
 }
 
+// Construit l'URL de photo culinaire haute précision calée sur l'intitulé exact et la garniture du plat
+function buildTailoredDishPhotoUrl(recipe, seedOffset = 0) {
+  if (!recipe || !recipe.title) {
+    return CURATED_DISH_FALLBACK_POOLS.default[0];
+  }
+  let rawTitle = String(recipe.title || '').trim();
+  const lower = rawTitle.toLowerCase();
+
+  let searchQuery = '';
+  if (lower.includes('galette') && lower.includes('sarrasin')) {
+    searchQuery = 'Galette de sarrasin complète bretonne oeuf jambon assiette photo';
+  } else {
+    // Retirer les adjectifs marketing qui attirent des visuels avec texte superposé
+    const cleaned = rawTitle
+      .replace(/\b(express|healthy|l[ée]ger|l[ée]g[èe]re|l[ée]gers|l[ée]g[èe]res|rapide|ultra-rapide|facile|minute|chrono|5%|15\s*min|20\s*min)\b/gi, ' ')
+      .replace(/[()&/+•,:«»"]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const suffix =
+      lower.includes('velouté') || lower.includes('soupe') || lower.includes('bouillon') || lower.includes('bowl') || lower.includes('dahl')
+        ? 'bol cuisine photo'
+        : 'assiette plat photo';
+
+    searchQuery = `${cleaned} ${suffix}`;
+  }
+
+  if (seedOffset > 0) {
+    const variations = ['gastronomique', 'bistrot', 'fait maison', 'gourmand'];
+    searchQuery += ` ${variations[(seedOffset - 1) % variations.length]}`;
+  }
+
+  const seed = computeRecipePhotoSeed(recipe.id, seedOffset);
+  const hostIdx = (seed % 4) + 1;
+  return `https://tse${hostIdx}.mm.bing.net/th?q=${encodeURIComponent(searchQuery)}&w=640&h=360&c=7&rs=1&p=0`;
+}
+
 function getDishCuratedFallbackUrl(recipe) {
-  const t = `${(recipe && recipe.title) || ''} ${((recipe && recipe.ingredients) || []).map((i) => i.name).join(' ')}`.toLowerCase();
+  const titleOnly = String((recipe && recipe.title) || '').toLowerCase();
   const seed = computeRecipePhotoSeed(recipe && recipe.id, 0);
   const pick = (arr) => arr[seed % arr.length];
 
-  if (t.includes('pois chiches') && (t.includes('œuf') || t.includes('oeuf'))) return pick(CURATED_DISH_FALLBACK_POOLS.eggs);
-  if (t.includes('saint-jacques') || t.includes('homard') || t.includes('langoustine')) return pick(CURATED_DISH_FALLBACK_POOLS.shellfish);
-  if (t.includes('saumon') || t.includes('truite')) return pick(CURATED_DISH_FALLBACK_POOLS.salmon);
-  if (t.includes('cabillaud') || t.includes('poisson') || t.includes('thon') || t.includes('bar') || t.includes('dorade')) return pick(CURATED_DISH_FALLBACK_POOLS.fish);
-  if (t.includes('crevette') || t.includes('gambas')) return pick(CURATED_DISH_FALLBACK_POOLS.shrimp);
-  if (t.includes('canard') || t.includes('magret')) return pick(CURATED_DISH_FALLBACK_POOLS.duck);
-  if (t.includes('wok') || t.includes('nouilles') || t.includes('pad thaï') || t.includes('sauce soja')) return pick(CURATED_DISH_FALLBACK_POOLS.wok);
-  if (t.includes('volaille') || t.includes('poulet') || t.includes('dinde')) return pick(CURATED_DISH_FALLBACK_POOLS.poultry);
-  if (t.includes('tournedos') || t.includes('bœuf') || t.includes('boeuf') || t.includes('steak') || t.includes('veau') || t.includes('agneau')) return pick(CURATED_DISH_FALLBACK_POOLS.beef);
-  if (t.includes('pâtes') || t.includes('spaghetti') || t.includes('tagliatelle') || t.includes('penne') || t.includes('lasagne') || t.includes('gnocchi') || t.includes('raviol')) return pick(CURATED_DISH_FALLBACK_POOLS.pasta);
-  if (t.includes('risotto') || t.includes('paella')) return pick(CURATED_DISH_FALLBACK_POOLS.risotto);
-  if (t.includes('curry') || t.includes('tikka') || t.includes('dahl') || t.includes('lentille')) return pick(CURATED_DISH_FALLBACK_POOLS.curry);
-  if (t.includes('omelette') || t.includes('œufs mollets') || t.includes('frittata') || t.includes('chakchouka')) return pick(CURATED_DISH_FALLBACK_POOLS.eggs);
-  if (t.includes('velouté') || t.includes('soupe') || t.includes('bouillon') || t.includes('minestrone')) return pick(CURATED_DISH_FALLBACK_POOLS.soup);
-  if (t.includes('quiche') || t.includes('tarte') || t.includes('pizza') || t.includes('flammekueche') || t.includes('croque')) return pick(CURATED_DISH_FALLBACK_POOLS.quiche);
-  if (t.includes('wrap') || t.includes('fajita') || t.includes('quesadilla') || t.includes('tacos') || t.includes('burger')) return pick(CURATED_DISH_FALLBACK_POOLS.burger);
-  if (t.includes('gratin') || t.includes('parmentier') || t.includes('mijoté') || t.includes('ratatouille') || t.includes('tartiflette')) return pick(CURATED_DISH_FALLBACK_POOLS.gratin);
-  if (t.includes('salade') || t.includes('bowl') || t.includes('poke') || t.includes('buddha') || t.includes('taboulé')) return pick(CURATED_DISH_FALLBACK_POOLS.salad);
+  // 1. Priorité absolue à la forme du plat indiquée dans l'intitulé (évite qu'un "bouillon de volaille" ou "thon" dans une quiche/pâtes/salade ne fausse la catégorie)
+  if (titleOnly.includes('velouté') || titleOnly.includes('soupe') || titleOnly.includes('bouillon') || titleOnly.includes('minestrone') || titleOnly.includes('gaspacho')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.soup);
+  }
+  if (titleOnly.includes('pâtes') || titleOnly.includes('spaghetti') || titleOnly.includes('tagliatelle') || titleOnly.includes('penne') || titleOnly.includes('lasagne') || titleOnly.includes('gnocchi') || titleOnly.includes('raviol') || titleOnly.includes('linguine') || titleOnly.includes('macaroni')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.pasta);
+  }
+  if (titleOnly.includes('risotto') || titleOnly.includes('paella') || titleOnly.includes('riz sauté') || titleOnly.includes('riz cantonais')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.risotto);
+  }
+  if (titleOnly.includes('quiche') || titleOnly.includes('tarte') || titleOnly.includes('pizza') || titleOnly.includes('flammekueche') || titleOnly.includes('croque') || titleOnly.includes('galette')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.quiche);
+  }
+  if (titleOnly.includes('wrap') || titleOnly.includes('fajita') || titleOnly.includes('quesadilla') || titleOnly.includes('tacos') || titleOnly.includes('burger') || titleOnly.includes('club-sandwich') || titleOnly.includes('tartine')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.burger);
+  }
+  if (titleOnly.includes('salade') || titleOnly.includes('bowl') || titleOnly.includes('poke') || titleOnly.includes('buddha') || titleOnly.includes('taboulé')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.salad);
+  }
+  if (titleOnly.includes('wok') || titleOnly.includes('nouilles') || titleOnly.includes('pad thaï') || titleOnly.includes('bami')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.wok);
+  }
+  if (titleOnly.includes('curry') || titleOnly.includes('tikka') || titleOnly.includes('dahl') || titleOnly.includes('chili') || titleOnly.includes('tajine') || titleOnly.includes('colombo')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.curry);
+  }
+  if (titleOnly.includes('omelette') || titleOnly.includes('œufs mollets') || titleOnly.includes('oeufs mollets') || titleOnly.includes('frittata') || titleOnly.includes('chakchouka') || titleOnly.includes('chakshouka')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.eggs);
+  }
+  if (titleOnly.includes('gratin') || titleOnly.includes('parmentier') || titleOnly.includes('ratatouille') || titleOnly.includes('tartiflette') || titleOnly.includes('moussaka')) {
+    return pick(CURATED_DISH_FALLBACK_POOLS.gratin);
+  }
+
+  // 2. Ensuite, recherche par protéine ou ingrédient vedette dans le titre uniquement
+  if (titleOnly.includes('saint-jacques') || titleOnly.includes('homard') || titleOnly.includes('langoustine')) return pick(CURATED_DISH_FALLBACK_POOLS.shellfish);
+  if (titleOnly.includes('saumon') || titleOnly.includes('truite')) return pick(CURATED_DISH_FALLBACK_POOLS.salmon);
+  if (titleOnly.includes('cabillaud') || titleOnly.includes('poisson') || titleOnly.includes('thon') || /\bbar\b/.test(titleOnly) || titleOnly.includes('dorade') || titleOnly.includes('merlu') || titleOnly.includes('maquereau') || titleOnly.includes('colin')) return pick(CURATED_DISH_FALLBACK_POOLS.fish);
+  if (titleOnly.includes('crevette') || titleOnly.includes('gambas')) return pick(CURATED_DISH_FALLBACK_POOLS.shrimp);
+  if (titleOnly.includes('canard') || titleOnly.includes('magret')) return pick(CURATED_DISH_FALLBACK_POOLS.duck);
+  if (titleOnly.includes('volaille') || titleOnly.includes('poulet') || titleOnly.includes('dinde')) return pick(CURATED_DISH_FALLBACK_POOLS.poultry);
+  if (titleOnly.includes('tournedos') || titleOnly.includes('bœuf') || titleOnly.includes('boeuf') || titleOnly.includes('steak') || titleOnly.includes('veau') || titleOnly.includes('agneau') || titleOnly.includes('porc') || titleOnly.includes('filet mignon')) return pick(CURATED_DISH_FALLBACK_POOLS.beef);
+  if (titleOnly.includes('pois chiches') || titleOnly.includes('lentilles')) return pick(CURATED_DISH_FALLBACK_POOLS.chickpea);
+
   return pick(CURATED_DISH_FALLBACK_POOLS.default);
 }
 
@@ -1372,239 +1459,19 @@ function getDishOfflineSvgDataUri(recipe, slot) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// ============================================================================
-// CACHE INDEXEDDB & GÉNÉRATEUR IA RÉALISTE GRATUIT (FLUX.1-SCHNELL SANS BLOCAGE)
-// ============================================================================
-const AI_DISH_PHOTO_IDB_NAME = 'menusemaine_ai_dish_photos_db_v1';
-const AI_DISH_PHOTO_STORE = 'ai_photos';
-const aiDishPhotoMemoryCache = {}; // { [cacheKey]: dataUrl }
-const aiDishPhotoInFlight = new Set();
-const aiDishPhotoQueue = [];
-let activeAiPhotoWorkers = 0;
-const MAX_CONCURRENT_AI_PHOTO_WORKERS = 2;
-let aiPhotoIdbPromise = null;
-
-const FREE_FLUX_GRADIO_HOSTS = [
-  'evalstate-flux1-schnell.hf.space',
-  'black-forest-labs-flux-1-schnell.hf.space'
-];
-
-function getDishAiCacheKey(recipeId, seedOffset = 0) {
-  return `${recipeId}_s${Number(seedOffset) || 0}`;
-}
-
-function openAiDishPhotoIdb() {
-  if (aiPhotoIdbPromise) return aiPhotoIdbPromise;
-  aiPhotoIdbPromise = new Promise((resolve) => {
-    if (typeof indexedDB === 'undefined') {
-      resolve(null);
-      return;
-    }
-    try {
-      const req = indexedDB.open(AI_DISH_PHOTO_IDB_NAME, 1);
-      req.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(AI_DISH_PHOTO_STORE)) {
-          db.createObjectStore(AI_DISH_PHOTO_STORE);
-        }
-      };
-      req.onsuccess = (e) => resolve(e.target.result);
-      req.onerror = () => resolve(null);
-    } catch (err) {
-      resolve(null);
-    }
-  });
-  return aiPhotoIdbPromise;
-}
-
-async function preloadAllCachedAiDishPhotos() {
-  const db = await openAiDishPhotoIdb();
-  if (!db) return;
-  try {
-    const tx = db.transaction(AI_DISH_PHOTO_STORE, 'readonly');
-    const store = tx.objectStore(AI_DISH_PHOTO_STORE);
-    const reqKeys = store.getAllKeys();
-    const reqVals = store.getAll();
-    reqKeys.onsuccess = () => {
-      reqVals.onsuccess = () => {
-        const keys = reqKeys.result || [];
-        const vals = reqVals.result || [];
-        keys.forEach((k, i) => {
-          if (vals[i]) {
-            aiDishPhotoMemoryCache[k] = vals[i];
-          }
-        });
-        // Rafraîchir les images affichées à l'écran avec le cache chargé
-        document.querySelectorAll('[data-dish-photo-wrap]').forEach((wrap) => {
-          const rid = wrap.getAttribute('data-dish-photo-wrap');
-          if (rid) refreshDishPhotoElementsInDOM(rid);
-        });
-      };
-    };
-  } catch (e) {
-    // Ignorer si IndexedDB indisponible
+// Nettoyer l'ancien cache IndexedDB v1 qui pouvait contenir des images décalées
+try {
+  if (typeof indexedDB !== 'undefined') {
+    indexedDB.deleteDatabase('menusemaine_ai_dish_photos_db_v1');
   }
-}
-
-async function saveAiDishPhotoToIndexedDB(cacheKey, dataUrl) {
-  aiDishPhotoMemoryCache[cacheKey] = dataUrl;
-  const db = await openAiDishPhotoIdb();
-  if (!db) return;
-  try {
-    const tx = db.transaction(AI_DISH_PHOTO_STORE, 'readwrite');
-    tx.objectStore(AI_DISH_PHOTO_STORE).put(dataUrl, cacheKey);
-  } catch (e) {
-    // Ignorer erreur quota
-  }
-}
-
-// Lancer le préchargement du cache IndexedDB dès le démarrage
-preloadAllCachedAiDishPhotos();
-
-async function fetchImageAsCompressedDataUrl(imageUrl) {
-  const resp = await fetch(imageUrl);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const blob = await resp.blob();
-  return new Promise((resolve, reject) => {
-    const objUrl = URL.createObjectURL(blob);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        const w = 640;
-        const h = 360;
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.84);
-        URL.revokeObjectURL(objUrl);
-        resolve(jpegDataUrl);
-      } catch (err) {
-        URL.revokeObjectURL(objUrl);
-        reject(err);
-      }
-    };
-    img.onerror = (err) => {
-      URL.revokeObjectURL(objUrl);
-      reject(err);
-    };
-    img.src = objUrl;
-  });
-}
-
-async function callFluxGradioHost(host, prompt, seed) {
-  const callRes = await fetch(`https://${host}/gradio_api/call/infer`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      data: [prompt, seed, false, 640, 360, 4]
-    })
-  });
-  if (!callRes.ok) throw new Error(`Gradio call error ${callRes.status}`);
-  const callJson = await callRes.json();
-  const eventId = callJson && callJson.event_id;
-  if (!eventId) throw new Error('Missing event_id');
-
-  const streamRes = await fetch(`https://${host}/gradio_api/call/infer/${eventId}`);
-  if (!streamRes.ok) throw new Error(`Gradio stream error ${streamRes.status}`);
-  const streamText = await streamRes.text();
-
-  const lines = streamText.split(/\r?\n/);
-  for (const line of lines) {
-    if (line.startsWith('data:')) {
-      const payloadStr = line.slice(5).trim();
-      if (!payloadStr || payloadStr === 'null') continue;
-      const parsed = JSON.parse(payloadStr);
-      if (Array.isArray(parsed) && parsed[0] && parsed[0].url) {
-        return parsed[0].url;
-      }
-    }
-  }
-  throw new Error('No image URL in Gradio SSE stream');
-}
-
-async function generateRealisticFluxDishPhoto(recipe, seedOffset = 0) {
-  const prompt = buildEnglishCulinaryPromptForRecipe(recipe);
-  const seed = computeRecipePhotoSeed(recipe.id, seedOffset);
-  const startIdx = seed % FREE_FLUX_GRADIO_HOSTS.length;
-
-  for (let i = 0; i < FREE_FLUX_GRADIO_HOSTS.length; i++) {
-    const host = FREE_FLUX_GRADIO_HOSTS[(startIdx + i) % FREE_FLUX_GRADIO_HOSTS.length];
-    try {
-      const remoteImgUrl = await callFluxGradioHost(host, prompt, seed);
-      const dataUrl = await fetchImageAsCompressedDataUrl(remoteImgUrl);
-      return dataUrl;
-    } catch (err) {
-      // Essayer le serveur FLUX suivant
-    }
-  }
-  throw new Error('Tous les serveurs IA FLUX sont temporairement occupés');
-}
-
-function enqueueAiDishPhotoGeneration(recipeId, seedOffset = 0, priority = false) {
-  if (!recipeId) return;
-  const cacheKey = getDishAiCacheKey(recipeId, seedOffset);
-  if (aiDishPhotoMemoryCache[cacheKey] || aiDishPhotoInFlight.has(cacheKey)) return;
-
-  if (!aiDishPhotoQueue.some((item) => item.cacheKey === cacheKey)) {
-    const task = { recipeId, seedOffset, cacheKey };
-    if (priority) {
-      aiDishPhotoQueue.unshift(task);
-    } else {
-      aiDishPhotoQueue.push(task);
-    }
-  }
-  processAiDishPhotoQueue();
-}
-
-async function processAiDishPhotoQueue() {
-  if (activeAiPhotoWorkers >= MAX_CONCURRENT_AI_PHOTO_WORKERS || aiDishPhotoQueue.length === 0) {
-    return;
-  }
-  const nextTask = aiDishPhotoQueue.shift();
-  if (!nextTask) return;
-
-  const { recipeId, seedOffset, cacheKey } = nextTask;
-  if (aiDishPhotoMemoryCache[cacheKey] || aiDishPhotoInFlight.has(cacheKey)) {
-    processAiDishPhotoQueue();
-    return;
-  }
-
-  const recipe = findRecipeById(recipeId);
-  if (!recipe) {
-    processAiDishPhotoQueue();
-    return;
-  }
-
-  aiDishPhotoInFlight.add(cacheKey);
-  activeAiPhotoWorkers++;
-
-  // Afficher l'état de génération IA sur le badge de la carte si elle est visible
-  document.querySelectorAll(`[data-dish-photo-badge="${recipeId}"]`).forEach((badge) => {
-    badge.textContent = '⏳ Création photo IA...';
-  });
-
-  try {
-    const dataUrl = await generateRealisticFluxDishPhoto(recipe, seedOffset);
-    await saveAiDishPhotoToIndexedDB(cacheKey, dataUrl);
-    refreshDishPhotoElementsInDOM(recipeId);
-  } catch (err) {
-    document.querySelectorAll(`[data-dish-photo-badge="${recipeId}"]`).forEach((badge) => {
-      badge.textContent = '📸 Illustration du plat';
-    });
-  } finally {
-    aiDishPhotoInFlight.delete(cacheKey);
-    activeAiPhotoWorkers--;
-    processAiDishPhotoQueue();
-  }
+} catch (e) {
+  // Ignorer
 }
 
 function getDishPhotoInfo(recipe, slot) {
   if (!recipe) {
     const defUrl = CURATED_DISH_FALLBACK_POOLS.default[0];
-    return { primaryUrl: defUrl, fallbackUrl: defUrl, offlineSvg: '', isCustom: false, isAiCached: false, seedOffset: 0 };
+    return { primaryUrl: defUrl, fallbackUrl: defUrl, offlineSvg: '', isCustom: false, isAiCached: true, seedOffset: 0 };
   }
   const entry = (state.dishPhotos && state.dishPhotos[recipe.id]) || {};
   const seedOffset = entry.aiSeedOffset || 0;
@@ -1633,31 +1500,14 @@ function getDishPhotoInfo(recipe, slot) {
     };
   }
 
-  const cacheKey = getDishAiCacheKey(recipe.id, seedOffset);
-  const cachedAiDataUrl = aiDishPhotoMemoryCache[cacheKey];
-
-  if (cachedAiDataUrl) {
-    return {
-      primaryUrl: cachedAiDataUrl,
-      fallbackUrl,
-      offlineSvg,
-      isCustom: false,
-      isAiCached: true,
-      seedOffset
-    };
-  }
-
-  // Lancer automatiquement la génération IA réaliste FLUX.1 en arrière-plan (sans aucun blocage)
-  setTimeout(() => {
-    enqueueAiDishPhotoGeneration(recipe.id, seedOffset, false);
-  }, 30);
+  const tailoredUrl = buildTailoredDishPhotoUrl(recipe, seedOffset);
 
   return {
-    primaryUrl: fallbackUrl,
+    primaryUrl: tailoredUrl,
     fallbackUrl,
     offlineSvg,
     isCustom: false,
-    isAiCached: false,
+    isAiCached: true,
     seedOffset
   };
 }
@@ -1765,8 +1615,8 @@ function regenerateDishAiPhoto(recipeId, event) {
     aiSeedOffset: nextOffset
   };
   saveStateToStorage();
-  enqueueAiDishPhotoGeneration(recipeId, nextOffset, true);
-  showToast('✨ Génération d\'une nouvelle photo IA réaliste en cours...');
+  refreshDishPhotoElementsInDOM(recipeId);
+  showToast('✨ Nouvelle photo chargée pour ce plat !');
 }
 
 function resetDishPhoto(recipeId, event) {
@@ -2331,7 +2181,11 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
   const inList = isWineInShoppingList(shoppingLabel) || isWineInShoppingList(wine.name);
   const activeLabel = isWineInShoppingList(wine.name) && !isWineInShoppingList(shoppingLabel) ? wine.name : shoppingLabel;
   const safeWineName = (activeLabel || '').replace(/'/g, "\\'");
-  const safeDayLabel = `${slot.day} (${slot.mealLabel})`.replace(/'/g, "\\'");
+  const safeDayLabel =
+    slot && slot.day && slot.mealLabel
+      ? `${slot.day} (${slot.mealLabel})`.replace(/'/g, "\\'")
+      : 'Fiche Cuisine';
+  const hasRealSlot = Boolean(slot && slot.slotId && state.slots.some((s) => s.slotId === slot.slotId));
 
   return `
     <div class="wine-pairing-box ${isModal ? 'wine-pairing-modal' : ''}">
@@ -2341,7 +2195,9 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
           ${wine.temp ? `<span class="wine-temp-pill">🌡️ Service ${wine.temp}</span>` : ''}
         </div>
         <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <button
+          ${
+            hasRealSlot
+              ? `<button
             type="button"
             class="btn btn-outline btn-sm"
             style="padding: 3px 9px; font-size: 0.74rem; border-color: var(--gourmet-border); color: var(--gourmet); background: #ffffff; font-weight: 800;"
@@ -2349,7 +2205,9 @@ function buildWinePairingBoxHTML(recipe, slot, isModal = false) {
             title="Proposer une autre idée de vin en accord avec ce plat gourmet"
           >
             🎲 Autre idée
-          </button>
+          </button>`
+              : ''
+          }
           <button
             type="button"
             class="btn btn-sm ${inList ? 'btn-wine-added' : 'btn-wine-add'}"
@@ -3050,6 +2908,15 @@ function createMealCardHTML(slot) {
             <button class="fav-btn ${isFav ? 'is-fav' : ''}" onclick="toggleFavorite('${recipe.id}', event)" title="Ajouter ou retirer de mon carnet de favoris">
               ${isFav ? '❤️' : '🤍'}
             </button>
+            <button
+              type="button"
+              class="whatsapp-icon-btn"
+              onclick="shareRecipeFicheOnWhatsApp({ slotId: '${slot.slotId}' }, event)"
+              title="Partager la fiche cuisine sur WhatsApp (lien vers l'application)"
+              aria-label="Partager la fiche cuisine sur WhatsApp"
+            >
+              ${getWhatsAppIconSvg(16)}
+            </button>
             ${
               state.plannerViewMode === 'day'
                 ? `<button type="button" class="card-inline-swipe-arrow" onclick="stepPlannerMeal(1)" title="Repas suivant (Swipe gauche)">▶</button>`
@@ -3590,6 +3457,510 @@ function formatScaledQty(qty, ratio) {
   return rounded.toString().replace('.', ',');
 }
 
+function getWhatsAppIconSvg(size = 17) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="flex-shrink:0;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 14.01c-.24.68-1.41 1.3-1.95 1.38-.5.08-1.13.11-1.83-.11-.42-.13-.97-.31-1.67-.61-2.94-1.27-4.86-4.25-5.01-4.45-.15-.2-1.2-1.59-1.2-3.04 0-1.45.76-2.16 1.03-2.46.27-.3.59-.37.79-.37.2 0 .4.01.57.01.18 0 .43-.07.67.51.24.59.83 2.03.9 2.18.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.45.52-.15.15-.3.31-.13.6.17.3.76 1.25 1.63 2.03 1.12 1 2.06 1.31 2.36 1.46.3.15.47.12.64-.07.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.73.82 2.03.97.3.15.49.22.57.35.07.12.07.72-.17 1.4z"/></svg>`;
+}
+
+function encodeCustomRecipeForUrl(recipe) {
+  if (!recipe || typeof recipe !== 'object') return '';
+  try {
+    const compact = {
+      id: recipe.id,
+      title: recipe.title,
+      type: recipe.type || 'weekday',
+      prepTime: recipe.prepTime || '15 min',
+      cookTime: recipe.cookTime || '10 min',
+      difficulty: recipe.difficulty || 'Facile',
+      budget: recipe.budget || '€ (Bon marché)',
+      costFor2: recipe.costFor2 || 5,
+      baseServings: recipe.baseServings || 2,
+      description: recipe.description || '',
+      winePairing: recipe.winePairing || null,
+      ingredients: (recipe.ingredients || []).map((i) => ({
+        name: i.name,
+        qty: i.qty,
+        unit: i.unit,
+        aisle: i.aisle || 'Épicerie salée'
+      })),
+      steps: recipe.steps || []
+    };
+    const jsonStr = JSON.stringify(compact);
+    return btoa(unescape(encodeURIComponent(jsonStr)));
+  } catch (e) {
+    return '';
+  }
+}
+
+function decodeCustomRecipeFromUrl(encoded) {
+  if (!encoded || typeof encoded !== 'string') return null;
+  try {
+    const jsonStr = decodeURIComponent(escape(atob(encoded)));
+    const parsed = JSON.parse(jsonStr);
+    if (parsed && parsed.id && parsed.title && Array.isArray(parsed.ingredients)) {
+      return parsed;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function resolveRecipeShareParams(opts = {}) {
+  const slot = opts.slotId ? state.slots.find((s) => s.slotId === opts.slotId) : null;
+  const recipeId = opts.recipeId || (slot ? slot.recipeId : '');
+  const recipe = findRecipeById(recipeId);
+  const servings = Number(opts.servings || (slot ? slot.servings : 2)) || 2;
+  const dessertId = opts.dessertId !== undefined ? opts.dessertId : slot && slot.dessertId ? slot.dessertId : '';
+  const dessert = dessertId ? findDessertById(dessertId) : null;
+  const style =
+    opts.style ||
+    (slot
+      ? getSlotStyle(slot)
+      : recipe && recipe.type === 'gourmet'
+      ? 'gourmet'
+      : recipe && recipe.type === 'weekend-pleasure'
+      ? 'pleasure'
+      : 'balanced');
+
+  return { slot, recipe, recipeId: recipe ? recipe.id : recipeId, servings, dessert, dessertId, style };
+}
+
+function buildRecipeFicheShareUrl(opts = {}) {
+  const info = resolveRecipeShareParams(opts);
+  const base = getCanonicalAppShareUrl();
+  const params = new URLSearchParams();
+
+  if (info.recipeId) {
+    params.set('fiche', info.recipeId);
+  }
+  if (info.servings) {
+    params.set('parts', String(info.servings));
+  }
+  if (info.dessertId) {
+    params.set('dessert', info.dessertId);
+  }
+  if (info.slot && info.slot.slotId) {
+    params.set('slot', info.slot.slotId);
+  }
+  if (info.recipe && !isBuiltInCatalogRecipe(info.recipe.id)) {
+    const encoded = encodeCustomRecipeForUrl(info.recipe);
+    if (encoded && encoded.length < 1800) {
+      params.set('rdata', encoded);
+    }
+  }
+
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}${params.toString()}`;
+}
+
+function buildRecipeWhatsAppMessage(opts = {}) {
+  const info = resolveRecipeShareParams(opts);
+  const recipe = info.recipe;
+  if (!recipe) return getCanonicalAppShareUrl();
+
+  const ficheUrl = buildRecipeFicheShareUrl(opts);
+  const s = info.servings;
+  const lines = [
+    `👨‍🍳 *Fiche Cuisine : ${recipe.title}*`,
+    `🍽️ Pour ${s} ${s > 1 ? 'parts' : 'part'} • ⏱️ Prépa ${recipe.prepTime || '15 min'} • Cuisson ${recipe.cookTime || '10 min'}`
+  ];
+
+  const wine = getRecipeWinePairing(recipe, info.slot || { mealStyle: info.style });
+  if (wine && (wine.appellation || wine.name)) {
+    lines.push(`🍷 Accord vin : ${wine.appellation || wine.name}${wine.region ? ` (${wine.region})` : ''}`);
+  }
+  if (info.dessert && info.dessert.title) {
+    lines.push(`🍰 Note sucrée : ${info.dessert.title}`);
+  }
+
+  lines.push('');
+  lines.push(`📖 *Ouvrir la fiche cuisine dans l'application :*`);
+  lines.push(ficheUrl);
+  return lines.join('\n');
+}
+
+function shareRecipeFicheOnWhatsApp(opts = {}, evt) {
+  if (evt) evt.stopPropagation();
+  const message = buildRecipeWhatsAppMessage(opts);
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  const win = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  if (!win) {
+    window.location.href = whatsappUrl;
+  }
+}
+
+async function copyRecipeFicheShareLink(opts = {}, evt) {
+  if (evt) evt.stopPropagation();
+  const url = buildRecipeFicheShareUrl(opts);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+      showToast('📋 Lien de la fiche cuisine copié !');
+      return;
+    }
+  } catch (e) {}
+  const temp = document.createElement('input');
+  temp.value = url;
+  document.body.appendChild(temp);
+  temp.select();
+  try {
+    document.execCommand('copy');
+    showToast('📋 Lien de la fiche cuisine copié !');
+  } catch (err) {
+    showToast(`Lien : ${url}`);
+  }
+  document.body.removeChild(temp);
+}
+
+function buildFicheWhatsAppShareBarHTML(opts = {}) {
+  const safeSlotId = (opts.slotId || '').replace(/'/g, "\\'");
+  const safeRecipeId = (opts.recipeId || '').replace(/'/g, "\\'");
+  const safeDessertId = (opts.dessertId || '').replace(/'/g, "\\'");
+  const servings = Number(opts.servings || 2) || 2;
+  const callArgs = `{ slotId: '${safeSlotId}', recipeId: '${safeRecipeId}', servings: ${servings}, dessertId: '${safeDessertId}' }`;
+
+  return `
+    <div class="fiche-whatsapp-share-bar">
+      <div class="fiche-whatsapp-share-text">
+        <span>📲 <strong>Partager cette fiche cuisine</strong></span>
+        <small>Envoie le lien direct vers cette fiche cuisine dans l'application</small>
+      </div>
+      <div class="fiche-whatsapp-share-actions">
+        <button
+          type="button"
+          class="btn btn-whatsapp btn-sm"
+          onclick="shareRecipeFicheOnWhatsApp(${callArgs}, event)"
+          title="Envoyer cette fiche cuisine sur WhatsApp avec le lien direct vers l'application"
+        >
+          ${getWhatsAppIconSvg(16)} Partager sur WhatsApp
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline btn-sm"
+          onclick="copyRecipeFicheShareLink(${callArgs}, event)"
+          title="Copier le lien direct vers cette fiche cuisine"
+        >
+          📋 Copier le lien
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function clearSharedRecipeUrlParams() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('fiche') || url.searchParams.has('recipe')) {
+      url.searchParams.delete('fiche');
+      url.searchParams.delete('recipe');
+      url.searchParams.delete('parts');
+      url.searchParams.delete('servings');
+      url.searchParams.delete('dessert');
+      url.searchParams.delete('slot');
+      url.searchParams.delete('rdata');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  } catch (e) {}
+}
+
+let activeStandaloneModalState = {
+  recipeId: null,
+  servings: 2,
+  dessertId: '',
+  slotId: '',
+  fromSharedLink: false
+};
+
+function stepStandaloneModalServings(delta) {
+  if (!activeStandaloneModalState.recipeId) return;
+  const next = Math.max(1, Math.min(16, (activeStandaloneModalState.servings || 2) + delta));
+  activeStandaloneModalState.servings = next;
+  openStandaloneRecipeModal(activeStandaloneModalState.recipeId, {
+    servings: next,
+    dessertId: activeStandaloneModalState.dessertId,
+    slotId: activeStandaloneModalState.slotId,
+    fromSharedLink: activeStandaloneModalState.fromSharedLink
+  });
+}
+
+function openStandaloneRecipeModal(recipeId, opts = {}) {
+  const recipe = findRecipeById(recipeId);
+  if (!recipe) return;
+
+  const servings = Math.max(1, Math.min(16, Number(opts.servings) || 2));
+  const dessertId = opts.dessertId || '';
+  const dessert = dessertId ? findDessertById(dessertId) : null;
+  const fromSharedLink = Boolean(opts.fromSharedLink);
+
+  activeStandaloneModalState = {
+    recipeId: recipe.id,
+    servings,
+    dessertId,
+    slotId: opts.slotId || '',
+    fromSharedLink
+  };
+
+  const style =
+    recipe.type === 'gourmet'
+      ? 'gourmet'
+      : recipe.type === 'weekend-pleasure'
+      ? 'pleasure'
+      : 'balanced';
+
+  const syntheticSlot = {
+    slotId: opts.slotId || '',
+    day: 'Fiche Cuisine',
+    mealLabel: 'Recette',
+    dayOffset: 0,
+    recipeId: recipe.id,
+    servings,
+    dessertId: dessert ? dessert.id : null,
+    mealStyle: style,
+    isGourmet: style === 'gourmet',
+    isPleasure: style === 'pleasure',
+    active: true
+  };
+
+  const ratio = servings / (recipe.baseServings || 2);
+  const costInfo = evaluateSlotCost(syntheticSlot);
+  const modalBody = document.getElementById('recipe-modal-body');
+  if (!modalBody) return;
+
+  const slotMonth = getSlotMonthNum(syntheticSlot);
+  const seasonMeta = getMonthSeasonMeta(slotMonth);
+  const seasInfo = getRecipeSeasonality(recipe, syntheticSlot);
+  const isFav = state.favorites.includes(recipe.id);
+
+  const ingredientsHTML = (recipe.ingredients || [])
+    .map((ing, idx) => {
+      const check =
+        typeof window.isIngredientInSeason === 'function'
+          ? window.isIngredientInSeason(ing.name, slotMonth)
+          : { inSeason: true };
+      const inSeas = check && typeof check === 'object' ? check.inSeason : Boolean(check);
+      const seasTag = inSeas
+        ? `<span style="font-size: 0.72rem; padding: 1px 6px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 700; margin-left: 6px;">🌿 De saison</span>`
+        : `<span style="font-size: 0.72rem; padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #92400e; font-weight: 600; margin-left: 6px;">Hors pleine saison (${seasonMeta.monthName})</span>`;
+      return `
+      <li
+        id="recipe-voice-ing-${idx}"
+        onclick="speakRecipeIngredientByIndex(${idx})"
+        title="🔊 Cliquez pour écouter cet ingrédient avec le guide vocal"
+        style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px dashed var(--border-color); font-size: 0.9rem; cursor: pointer; border-radius: 8px; transition: background 0.2s ease;"
+      >
+        <span>${ing.name} ${seasTag}</span>
+        <strong>${formatScaledQty(ing.qty, ratio)} ${ing.unit} <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-left: 4px;">🔊</span></strong>
+      </li>
+    `;
+    })
+    .join('');
+
+  const stepsHTML = (recipe.steps || [])
+    .map(
+      (step, idx) => `
+      <li
+        id="recipe-voice-step-${idx}"
+        onclick="speakRecipeStepByIndex(${idx})"
+        style="cursor: pointer; padding: 6px 8px; border-radius: 8px; transition: background 0.2s ease;"
+        title="🔊 Cliquez pour écouter cette étape avec le guide vocal"
+      >
+        ${step} <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700; margin-left: 4px;">🔊</span>
+      </li>`
+    )
+    .join('');
+
+  const wineModalHTML = buildWinePairingBoxHTML(recipe, syntheticSlot, true);
+  const nutritionAndSeasonModalHTML = buildNutritionAndSeasonHTML(recipe, syntheticSlot, false);
+
+  if (voiceGuideSession.active && typeof stopVoiceGuide === 'function') {
+    stopVoiceGuide();
+  }
+  voiceGuideSession.lockedPersonaId = getActiveVoicePersona().id;
+
+  activeModalVoiceContext = {
+    title: recipe.title,
+    servings,
+    ingredients: (recipe.ingredients || []).map((ing) => ({
+      name: ing.name,
+      qtyRaw: formatScaledQty(ing.qty, ratio),
+      unitRaw: ing.unit,
+      qtyText: `${formatScaledQty(ing.qty, ratio)} ${ing.unit}`
+    })),
+    steps: recipe.steps || [],
+    dessertTitle: dessert ? dessert.title : null,
+    dessertSteps: dessert ? dessert.steps || [] : [],
+    currentStepIndex: 0
+  };
+
+  const voiceToolbarHTML = buildModalVoiceToolbarHTML();
+  const shareBarHTML = buildFicheWhatsAppShareBarHTML({
+    recipeId: recipe.id,
+    servings,
+    dessertId: dessert ? dessert.id : ''
+  });
+
+  let dessertSectionHTML = '';
+  if (dessert) {
+    const dessertRatio = servings / (dessert.baseServings || 2);
+    const dessertIngHTML = (dessert.ingredients || [])
+      .map(
+        (ing) => `
+        <li style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #fde68a; font-size: 0.88rem;">
+          <span>${ing.name}</span>
+          <strong>${formatScaledQty(ing.qty, dessertRatio)} ${ing.unit}</strong>
+        </li>
+      `
+      )
+      .join('');
+    const dessertStepsHTML = (dessert.steps || []).map((st) => `<li>${st}</li>`).join('');
+
+    dessertSectionHTML = `
+      <div style="margin-top: 22px; padding: 16px; background: var(--pleasure-soft); border: 1px solid #fcd34d; border-radius: var(--radius-md);">
+        <h4 style="font-size: 1rem; font-weight: 800; color: var(--pleasure-hover); margin-bottom: 8px;">
+          🍰 Recette du Dessert : ${dessert.title} (${servings} ${servings > 1 ? 'parts' : 'part'} — évalué à ${formatEuro(costInfo.dessertCost)})
+        </h4>
+        <ul style="list-style: none; margin-bottom: 12px;">
+          ${dessertIngHTML}
+        </ul>
+        <strong style="font-size: 0.88rem;">Préparation du dessert :</strong>
+        <ol class="recipe-steps">
+          ${dessertStepsHTML}
+        </ol>
+      </div>
+    `;
+  }
+
+  const styleBadgeText =
+    style === 'gourmet'
+      ? '🍷 Menu Gourmet (Ingrédients nobles & Accord Vin)'
+      : style === 'pleasure'
+      ? '🌟 Menu Plaisir (Gourmand, simple & rapide)'
+      : '🥗 Menu Équilibré (Sain, simple & rapide)';
+
+  modalBody.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span class="slot-label">${fromSharedLink ? '📲 Fiche Cuisine partagée' : '📖 Fiche Cuisine du Chef'}</span>
+        <span class="meta-pill ${style === 'gourmet' ? 'gourmet-pill' : style === 'pleasure' ? 'pleasure-pill' : 'healthy-pill'}">${styleBadgeText}</span>
+      </div>
+      <div class="servings-control" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;">
+        <span style="font-size: 0.78rem; font-weight: 800;">🍽️ Parts :</span>
+        <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepStandaloneModalServings(-1)" aria-label="Moins une part">−</button>
+        <span class="servings-badge" style="min-width: 68px; text-align: center; padding: 2px 6px;">${servings} ${servings > 1 ? 'parts' : 'part'}</span>
+        <button type="button" class="btn btn-outline btn-sm btn-step-servings" onclick="stepStandaloneModalServings(1)" aria-label="Plus une part">+</button>
+      </div>
+    </div>
+
+    <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 8px;">${recipe.title}</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">${recipe.description || ''}</p>
+
+    ${shareBarHTML}
+
+    ${buildDishPhotoBannerHTML(recipe, syntheticSlot, { context: 'modal' })}
+
+    <div class="meal-meta" style="margin: 12px 0 8px 0;">
+      <span class="meta-pill">👥 Ajusté pour <strong>${servings} ${servings > 1 ? 'parts' : 'part'}</strong></span>
+      <span class="meta-pill healthy-pill">💶 Montant évalué : <strong>${formatEuro(costInfo.totalCost)}</strong> (${formatEuro(costInfo.perPersonCost)}/part)</span>
+      <span class="meta-pill">⏱️ Prépa ${recipe.prepTime} • Cuisson ${recipe.cookTime}</span>
+      <span class="meta-pill">👨‍🍳 ${recipe.difficulty}</span>
+    </div>
+
+    ${voiceToolbarHTML}
+
+    ${nutritionAndSeasonModalHTML}
+
+    ${wineModalHTML}
+
+    <h3 style="font-size: 1rem; font-weight: 800; margin-top: 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <span>🛒 Ingrédients du plat (${servings} ${servings > 1 ? 'parts' : 'part'} — ${formatEuro(costInfo.dishCost)})</span>
+      <span class="season-badge ${seasInfo.pct >= 85 ? 'season-pill-high' : seasInfo.pct >= 70 ? 'season-pill-mid' : 'season-pill-low'}">
+        ${seasonMeta.icon} ${seasInfo.pct}% d'ingrédients de saison (${seasInfo.inSeasonCount}/${seasInfo.totalCount})
+      </span>
+    </h3>
+    <ul id="modal-ingredients-list" style="list-style: none;">
+      ${ingredientsHTML}
+    </ul>
+
+    <h3 style="font-size: 1rem; font-weight: 800; margin-top: 18px;">👩‍🍳 Étapes de la recette <small style="font-weight: 600; font-size: 0.78rem; color: var(--text-muted);">(Touchez une étape pour l'écouter 🔊)</small></h3>
+    <ol class="recipe-steps">
+      ${stepsHTML}
+    </ol>
+
+    ${dessertSectionHTML}
+
+    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+      <button
+        type="button"
+        class="btn btn-whatsapp"
+        onclick="shareRecipeFicheOnWhatsApp({ recipeId: '${recipe.id.replace(/'/g, "\\'")}', servings: ${servings}, dessertId: '${(dessert ? dessert.id : '').replace(/'/g, "\\'")}' }, event)"
+      >
+        ${getWhatsAppIconSvg(16)} Partager sur WhatsApp
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline"
+        onclick="toggleFavorite('${recipe.id.replace(/'/g, "\\'")}', event); openStandaloneRecipeModal('${recipe.id.replace(/'/g, "\\'")}', { servings: ${servings}, dessertId: '${(dessert ? dessert.id : '').replace(/'/g, "\\'")}', fromSharedLink: ${fromSharedLink} });"
+      >
+        ${isFav ? '❤️ Dans mes favoris' : '🤍 Ajouter aux favoris'}
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        onclick="openAssignPantryToWeekModal('${recipe.id.replace(/'/g, "\\'")}', ${servings})"
+      >
+        📅 Planifier dans ma semaine
+      </button>
+      <button type="button" class="btn btn-outline" onclick="closeRecipeModal()">Fermer</button>
+    </div>
+  `;
+
+  document.getElementById('recipe-modal').classList.add('open');
+  unlockSharedVoiceAudioElement();
+  warmUpRecipeVoiceGuideOnOpen();
+}
+
+function handleIncomingSharedRecipeLink() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ficheId = (params.get('fiche') || params.get('recipe') || '').trim();
+    if (!ficheId) return;
+
+    const rdata = params.get('rdata');
+    if (rdata && !findExactRecipeById(ficheId)) {
+      const decodedRecipe = decodeCustomRecipeFromUrl(rdata);
+      if (decodedRecipe && decodedRecipe.id) {
+        dynamicPantryRecipesMap.set(decodedRecipe.id, decodedRecipe);
+        if (!state.customRecipes.some((r) => r.id === decodedRecipe.id)) {
+          state.customRecipes.unshift(decodedRecipe);
+          getCatalogListByType(decodedRecipe.type || 'weekday').unshift(decodedRecipe);
+          saveStateToStorage();
+        }
+      }
+    }
+
+    const recipe = findExactRecipeById(ficheId);
+    if (!recipe) {
+      showToast('⚠️ Fiche cuisine introuvable dans le catalogue.');
+      return;
+    }
+
+    const parts = parseInt(params.get('parts') || params.get('servings') || '2', 10);
+    const servings = !isNaN(parts) && parts >= 1 && parts <= 16 ? parts : 2;
+    const dessertId = (params.get('dessert') || '').trim();
+    const slotId = (params.get('slot') || '').trim();
+
+    setTimeout(() => {
+      openStandaloneRecipeModal(recipe.id, {
+        servings,
+        dessertId,
+        slotId,
+        fromSharedLink: true
+      });
+      showToast(`📖 Fiche cuisine ouverte : ${recipe.title}`);
+    }, 180);
+  } catch (e) {
+    console.error('Erreur ouverture lien fiche cuisine :', e);
+  }
+}
+
 function openRecipeModal(slotId) {
   const slot = state.slots.find((s) => s.slotId === slotId);
   if (!slot) return;
@@ -3668,6 +4039,12 @@ function openRecipeModal(slotId) {
   };
 
   const voiceToolbarHTML = buildModalVoiceToolbarHTML();
+  const shareBarHTML = buildFicheWhatsAppShareBarHTML({
+    slotId: slot.slotId,
+    recipeId: recipe.id,
+    servings: slot.servings,
+    dessertId: dessert ? dessert.id : ''
+  });
 
   let dessertSectionHTML = '';
   if (dessert) {
@@ -3715,6 +4092,8 @@ function openRecipeModal(slotId) {
     <h2 style="font-size: 1.3rem; font-weight: 800; margin-top: 8px;">${recipe.title}</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">${recipe.description || ''}</p>
 
+    ${shareBarHTML}
+
     ${buildDishPhotoBannerHTML(recipe, slot, { context: 'modal' })}
 
     <div class="meal-meta" style="margin: 12px 0 8px 0;">
@@ -3747,7 +4126,14 @@ function openRecipeModal(slotId) {
 
     ${dessertSectionHTML}
 
-    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+      <button
+        type="button"
+        class="btn btn-whatsapp"
+        onclick="shareRecipeFicheOnWhatsApp({ slotId: '${slot.slotId}', recipeId: '${recipe.id.replace(/'/g, "\\'")}', servings: ${slot.servings}, dessertId: '${(dessert ? dessert.id : '').replace(/'/g, "\\'")}' }, event)"
+      >
+        ${getWhatsAppIconSvg(16)} Partager sur WhatsApp
+      </button>
       <button class="btn btn-outline" onclick="closeRecipeModal()">Fermer</button>
       <button class="btn btn-primary" onclick="toggleValidateSlot('${slot.slotId}'); closeRecipeModal();">
         ${slot.validated ? '✓ Déjà validé' : '✓ Valider ce menu'}
@@ -3765,6 +4151,7 @@ function closeRecipeModal() {
     stopVoiceGuide();
   }
   document.getElementById('recipe-modal').classList.remove('open');
+  clearSharedRecipeUrlParams();
 }
 
 // ============================================================================
@@ -4507,12 +4894,16 @@ function renderFavoritesAndHistory() {
         .map((favId) => {
           const r = findRecipeById(favId);
           return `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:8px;">
-              <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; padding: 10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:8px;">
+              <div style="flex:1; min-width:180px; cursor:pointer;" onclick="openStandaloneRecipeModal('${r.id}')" title="Ouvrir la fiche cuisine">
                 <strong style="font-size:0.92rem;">${r.title}</strong>
                 <div style="font-size:0.76rem; color:var(--text-muted);">⏱️ ${r.prepTime} • ${r.difficulty} • 💶 ${formatEuro(r.costFor2 || 4.5)} (2 parts)${r.winePairing && (r.winePairing.appellation || r.winePairing.name) ? ` • 🍷 ${r.winePairing.appellation || r.winePairing.name} (${r.winePairing.color || ''}, ${r.winePairing.region || ''}, ${r.winePairing.grape || ''})` : ''}</div>
               </div>
-              <button class="btn btn-outline btn-sm" onclick="toggleFavorite('${r.id}')">Retirer</button>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" onclick="openStandaloneRecipeModal('${r.id}')" title="Ouvrir la fiche cuisine">📖 Fiche</button>
+                <button class="btn btn-whatsapp btn-sm" onclick="shareRecipeFicheOnWhatsApp({ recipeId: '${r.id}', servings: 2 }, event)" title="Partager la fiche cuisine sur WhatsApp">${getWhatsAppIconSvg(14)} WhatsApp</button>
+                <button class="btn btn-outline btn-sm" onclick="toggleFavorite('${r.id}')">Retirer</button>
+              </div>
             </div>
           `;
         })
@@ -11016,6 +11407,14 @@ function renderPantryMenusGrid() {
             <button type="button" class="btn btn-outline btn-fiche-cuisine" onclick="openPantryRecipeModal('${recipe.id}', ${servings})">
               📖 Fiche cuisine
             </button>
+            <button
+              type="button"
+              class="btn btn-whatsapp btn-sm"
+              onclick="shareRecipeFicheOnWhatsApp({ recipeId: '${recipe.id}', servings: ${servings} }, event)"
+              title="Partager cette fiche cuisine sur WhatsApp"
+            >
+              ${getWhatsAppIconSvg(15)} WhatsApp
+            </button>
             <button type="button" class="btn btn-primary btn-sm" style="grid-column: span 2;" onclick="openAssignPantryToWeekModal('${recipe.id}', ${servings})">
               📅 Ajouter au menu de la semaine
             </button>
@@ -11094,11 +11493,17 @@ function openPantryRecipeModal(recipeId, servings) {
   };
 
   const voiceToolbarHTML = buildModalVoiceToolbarHTML();
+  const shareBarHTML = buildFicheWhatsAppShareBarHTML({
+    recipeId: recipe.id,
+    servings: s
+  });
 
   modalBody.innerHTML = `
     <span class="meta-pill healthy-pill">🗄️ Menu du Garde-manger • Pour ${s} ${s > 1 ? 'parts' : 'part'}</span>
     <h2 style="font-size: 1.35rem; font-weight: 800; margin-top: 8px; margin-bottom: 6px;">${recipe.title}</h2>
     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 14px;">${recipe.description || ''}</p>
+
+    ${shareBarHTML}
 
     ${buildDishPhotoBannerHTML(recipe, null, { context: 'modal' })}
 
@@ -11117,6 +11522,13 @@ function openPantryRecipeModal(recipeId, servings) {
     <ol class="modal-steps-list">${stepsHTML}</ol>
 
     <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
+      <button
+        type="button"
+        class="btn btn-whatsapp"
+        onclick="shareRecipeFicheOnWhatsApp({ recipeId: '${recipe.id.replace(/'/g, "\\'")}', servings: ${s} }, event)"
+      >
+        ${getWhatsAppIconSvg(16)} Partager sur WhatsApp
+      </button>
       <button type="button" class="btn btn-outline" onclick="closeRecipeModal()">Fermer</button>
       <button type="button" class="btn btn-primary" onclick="openAssignPantryToWeekModal('${recipe.id}', ${s})">
         📅 Planifier dans ma semaine
