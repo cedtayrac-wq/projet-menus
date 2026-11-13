@@ -428,11 +428,18 @@ body {
   font-weight: 800 !important;
 }
 
-.global-controls {
-  display: flex;
+.week-ideas-bar {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.global-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .week-picker-label {
@@ -2425,12 +2432,27 @@ body {
     gap: 8px;
   }
 
+  .week-ideas-bar {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
   .header-actions .btn {
     flex: 1 1 auto;
     min-height: 38px;
     padding: 8px 12px;
     font-size: 0.86rem;
     white-space: nowrap;
+  }
+
+  .week-ideas-bar .btn-chef-spin {
+    flex: 0 1 auto;
+  }
+
+  .week-ideas-bar .btn-icon-round {
+    flex: 0 0 auto;
   }
 
   .status-bar-inner {
@@ -4549,7 +4571,7 @@ body.planner-fullscreen-mode .app-header::before {
 }
 
 body.planner-fullscreen-mode .header-inner {
-  max-width: 1360px;
+  max-width: 1420px;
   padding: 6px 14px;
   gap: 8px 12px;
   flex-wrap: wrap;
@@ -4597,7 +4619,15 @@ body.planner-fullscreen-mode .header-actions {
   width: auto !important;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+}
+
+body.planner-fullscreen-mode .week-ideas-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 body.planner-fullscreen-mode .header-actions .btn {
@@ -4627,63 +4657,21 @@ body.planner-fullscreen-mode .header-actions .btn-chef-spin:hover {
   color: var(--primary-hover);
 }
 
-body.planner-fullscreen-mode .status-bar {
-  padding: 6px 14px;
-}
-
-body.planner-fullscreen-mode .status-bar-inner {
-  max-width: 1360px;
-  flex-direction: row !important;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 14px;
-}
-
-body.planner-fullscreen-mode .validation-progress {
-  flex: 0 1 auto;
-  min-width: 0;
-  flex-wrap: nowrap;
-  gap: 8px;
-}
-
-body.planner-fullscreen-mode .progress-text {
-  font-size: 0.84rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-body.planner-fullscreen-mode #btn-validate-all {
-  min-height: 40px;
-  padding: 8px 16px;
-  font-size: 0.92rem;
-  font-weight: 800;
-  border-radius: 11px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-body.planner-fullscreen-mode .budget-total-pill {
-  font-size: 0.78rem !important;
-  padding: 5px 10px !important;
-  white-space: nowrap;
-}
-
 body.planner-fullscreen-mode .global-controls {
   flex: 0 0 auto;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 body.planner-fullscreen-mode .week-picker-label {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 800;
   white-space: nowrap;
 }
 
 body.planner-fullscreen-mode .date-picker-input {
-  min-width: 158px;
+  min-width: 156px;
   min-height: 40px;
   height: 40px;
   padding: 6px 12px !important;
@@ -4697,8 +4685,9 @@ body.planner-fullscreen-mode .date-picker-input {
 
 body.planner-fullscreen-mode .global-controls .btn-icon-round {
   width: 38px;
-  height: 38px;
+  height: 40px;
   min-width: 38px;
+  padding: 0 !important;
   border-radius: 11px;
   font-size: 0.9rem;
   font-weight: 800;
@@ -4707,29 +4696,71 @@ body.planner-fullscreen-mode .global-controls .btn-icon-round {
   flex-shrink: 0;
 }
 
+body.planner-fullscreen-mode .status-bar {
+  padding: 5px 14px;
+}
+
+body.planner-fullscreen-mode .status-bar-inner {
+  max-width: 1420px;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+}
+
+body.planner-fullscreen-mode .validation-progress {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+body.planner-fullscreen-mode .progress-text {
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+body.planner-fullscreen-mode #btn-validate-all {
+  min-height: 38px;
+  padding: 7px 16px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border-radius: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+body.planner-fullscreen-mode .budget-total-pill {
+  font-size: 0.8rem !important;
+  padding: 5px 11px !important;
+  white-space: nowrap;
+}
+
 /* Allègement progressif des badges secondaires pour éviter tout chevauchement ou rognage */
+@media (max-width: 1460px) {
+  body.planner-fullscreen-mode .week-picker-label {
+    display: none !important;
+  }
+}
+
 @media (max-width: 1380px) {
+  body.planner-fullscreen-mode #install-pwa-header-btn,
   body.planner-fullscreen-mode .week-formatted-pill {
     display: none !important;
   }
 }
 
-@media (max-width: 1280px) {
-  body.planner-fullscreen-mode #install-pwa-header-btn,
-  body.planner-fullscreen-mode #chef-mood-badge {
-    display: none !important;
+@media (min-width: 840px) and (max-width: 1279px) {
+  body.planner-fullscreen-mode .header-actions {
+    width: 100% !important;
+    justify-content: flex-end;
   }
 }
 
-@media (min-width: 840px) and (max-width: 1150px) {
-  body.planner-fullscreen-mode .desktop-nav {
-    order: 3;
-    flex: 1 1 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 1140px) {
+@media (max-width: 980px) {
+  body.planner-fullscreen-mode #chef-mood-badge,
   body.planner-fullscreen-mode .progress-track,
   body.planner-fullscreen-mode #total-week-cost-badge {
     display: none !important;
@@ -4758,45 +4789,34 @@ body.planner-fullscreen-mode .global-controls .btn-icon-round {
   }
 }
 
-@media (max-width: 740px) {
-  body.planner-fullscreen-mode .week-picker-label,
-  body.planner-fullscreen-mode #validation-progress-text {
-    display: none !important;
-  }
-}
-
-@media (max-width: 640px) {
+@media (max-width: 699px) {
   body.planner-fullscreen-mode #local-admin-btn {
     display: none !important;
   }
 
   body.planner-fullscreen-mode .header-inner {
-    padding: 6px 10px;
-    gap: 6px 8px;
+    padding: 5px 10px;
+    gap: 5px 8px;
+  }
+
+  body.planner-fullscreen-mode .brand-icon {
+    width: 28px;
+    height: 28px;
   }
 
   body.planner-fullscreen-mode .brand-title {
-    font-size: 0.96rem;
+    font-size: 0.95rem;
   }
 
-  body.planner-fullscreen-mode .header-actions .btn-chef-spin {
-    min-height: 38px;
-    padding: 7px 13px;
-    font-size: 0.87rem;
+  body.planner-fullscreen-mode .header-actions {
+    width: 100% !important;
+    justify-content: space-between;
   }
 
-  body.planner-fullscreen-mode .status-bar {
-    padding: 5px 10px;
-  }
-
-  body.planner-fullscreen-mode .status-bar-inner {
-    gap: 6px 8px;
-  }
-
-  body.planner-fullscreen-mode #btn-validate-all {
-    min-height: 38px;
-    padding: 7px 12px;
-    font-size: 0.86rem;
+  body.planner-fullscreen-mode .week-ideas-bar {
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
   }
 
   body.planner-fullscreen-mode .global-controls {
@@ -4804,162 +4824,131 @@ body.planner-fullscreen-mode .global-controls .btn-icon-round {
   }
 
   body.planner-fullscreen-mode .global-controls .btn-icon-round {
-    width: 35px;
+    width: 34px;
     height: 38px;
-    min-width: 35px;
+    min-width: 34px;
     border-radius: 10px;
     font-size: 0.85rem;
   }
 
   body.planner-fullscreen-mode .date-picker-input {
-    min-width: 140px;
+    min-width: 136px;
     min-height: 38px;
     height: 38px;
-    padding: 5px 9px !important;
-    font-size: 0.88rem !important;
+    padding: 5px 8px !important;
+    font-size: 0.87rem !important;
     border-radius: 10px;
+  }
+
+  body.planner-fullscreen-mode .header-actions .btn-chef-spin {
+    min-height: 38px;
+    padding: 7px 12px;
+    font-size: 0.85rem;
+  }
+
+  body.planner-fullscreen-mode .status-bar {
+    padding: 4px 10px;
+  }
+
+  body.planner-fullscreen-mode .validation-progress {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  body.planner-fullscreen-mode #btn-validate-all {
+    min-height: 36px;
+    padding: 6px 13px;
+    font-size: 0.85rem;
   }
 }
 
-@media (max-width: 374px) {
+@media (max-width: 379px) {
   body.planner-fullscreen-mode .header-inner,
   body.planner-fullscreen-mode .status-bar {
     padding-left: 8px;
     padding-right: 8px;
   }
 
-  body.planner-fullscreen-mode #btn-validate-all {
-    padding: 6px 10px;
-    font-size: 0.82rem;
-  }
-
   body.planner-fullscreen-mode .global-controls .btn-icon-round {
-    width: 32px;
-    min-width: 32px;
+    width: 31px;
+    min-width: 31px;
     height: 36px;
   }
 
   body.planner-fullscreen-mode .date-picker-input {
-    min-width: 130px;
+    min-width: 128px;
     min-height: 36px;
     height: 36px;
-    padding: 4px 7px !important;
-    font-size: 0.84rem !important;
+    padding: 4px 6px !important;
+    font-size: 0.83rem !important;
+  }
+
+  body.planner-fullscreen-mode .header-actions .btn-chef-spin {
+    min-height: 36px;
+    padding: 6px 9px;
+    font-size: 0.81rem;
+  }
+
+  body.planner-fullscreen-mode .progress-text {
+    font-size: 0.78rem;
+  }
+
+  body.planner-fullscreen-mode #btn-validate-all {
+    min-height: 35px;
+    padding: 5px 10px;
+    font-size: 0.82rem;
   }
 }
 
+/* Fenêtre principale du menu ajustée à l'espace plein écran (sans la barre des 7 jours) */
 body.planner-fullscreen-mode .main-container {
   flex: 1 1 0%;
   min-height: 0;
   width: 100%;
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto !important;
-  padding: 6px 10px !important;
+  padding: 8px 12px 10px 12px !important;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow: hidden;
 }
 
 body.planner-fullscreen-mode #admin-announcement-bar,
-body.planner-fullscreen-mode .chef-cta-banner {
+body.planner-fullscreen-mode .chef-cta-banner,
+body.planner-fullscreen-mode #day-pager-container {
   display: none !important;
 }
 
 body.planner-fullscreen-mode #view-planner.active {
   flex: 1 1 0%;
   min-height: 0;
+  width: 100%;
   display: flex !important;
   flex-direction: column;
-  gap: 6px;
+  justify-content: center;
+  gap: 0;
   overflow: hidden;
   animation: none;
-}
-
-body.planner-fullscreen-mode #day-pager-container {
-  flex-shrink: 0;
-}
-
-/* Barre compacte des 7 jours en haut */
-.day-pager-card.day-pager-slim {
-  padding: 4px 6px !important;
-  margin-bottom: 0 !important;
-  border-radius: 14px;
-  border-width: 1.5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: var(--shadow-sm);
-}
-
-.day-tabs-strip.day-tabs-slim {
-  flex: 1;
-  margin-bottom: 0 !important;
-  gap: 4px;
-}
-
-.day-pager-slim .day-tab-btn {
-  padding: 3px 2px;
-  border-radius: 9px;
-  gap: 0;
-  flex-direction: column;
-  min-height: 32px;
-}
-
-.day-pager-slim .day-tab-btn.active {
-  transform: none;
-  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28);
-}
-
-.day-pager-slim .day-tab-short {
-  font-size: 0.62rem;
-  line-height: 1.05;
-}
-
-.day-pager-slim .day-tab-num {
-  font-size: 0.85rem;
-  line-height: 1.1;
-}
-
-.day-tab-sup {
-  font-family: var(--font-sans);
-  font-size: 0.62rem;
-  margin-left: 1px;
-}
-
-@media (min-width: 680px) {
-  .day-pager-slim .day-tab-btn {
-    flex-direction: row;
-    gap: 5px;
-    padding: 5px 6px;
-  }
-  .day-pager-slim .day-tab-short {
-    font-size: 0.72rem;
-  }
-  .day-pager-slim .day-tab-num {
-    font-size: 0.92rem;
-  }
-}
-
-.fs-view-toggle-btn {
-  flex-shrink: 0;
-  padding: 5px 8px !important;
-  font-size: 0.72rem !important;
-  font-weight: 800 !important;
-  border-radius: 9px !important;
-  white-space: nowrap;
 }
 
 /* Conteneur Plein Écran de la carte de menu */
 body.planner-fullscreen-mode #weekday-meals-grid,
 body.planner-fullscreen-mode #weekend-meals-grid {
   flex: 1 1 0%;
+  width: 100%;
   min-height: 0;
   gap: 0;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
 .day-group.day-group-fullscreen {
   flex: 1 1 0%;
+  width: 100%;
+  height: 100%;
   min-height: 0;
   padding: 0 !important;
   border: none !important;
@@ -4973,6 +4962,8 @@ body.planner-fullscreen-mode #weekend-meals-grid {
 
 body.planner-fullscreen-mode .day-meal-single-stage {
   flex: 1 1 0%;
+  width: 100%;
+  height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -4982,6 +4973,7 @@ body.planner-fullscreen-mode .day-meal-single-stage {
 
 .meal-card.is-fullscreen-card {
   flex: 1 1 0%;
+  width: 100%;
   min-height: 0;
   height: 100%;
   padding: 0 !important;
@@ -5001,12 +4993,12 @@ body.planner-fullscreen-mode .day-meal-single-stage {
 /* Bandeau supérieur très lisible : JOUR + DÉJEUNER / DÎNER + Flèches Gauche/Droite */
 .meal-time-banner.fullscreen-meal-header {
   margin: 0 !important;
-  padding: 7px 10px !important;
+  padding: 9px 14px !important;
   flex-shrink: 0;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: nowrap;
 }
 
@@ -5172,14 +5164,14 @@ body.planner-fullscreen-mode .day-meal-single-stage {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 11px 10px 11px;
-  gap: 7px;
+  padding: 9px 12px 11px 12px;
+  gap: 8px;
   overflow: hidden;
 }
 
 .fs-photo-col {
-  flex: 1 1 64px;
-  min-height: 56px;
+  flex: 1 1 90px;
+  min-height: 70px;
   display: flex;
   overflow: hidden;
 }
@@ -5188,9 +5180,9 @@ body.planner-fullscreen-mode .day-meal-single-stage {
   flex: 1;
   width: 100%;
   height: 100% !important;
-  min-height: 56px;
+  min-height: 70px;
   margin-top: 0 !important;
-  border-radius: 13px;
+  border-radius: 14px;
 }
 
 /* Surcouches sur la photo (Favori, WhatsApp, Ignorer, Flèches latérales) */
@@ -5591,11 +5583,20 @@ body.planner-fullscreen-mode .day-meal-single-stage {
 
 /* Mise en page Grand Écran / Tablette Paysage (2 colonnes plein écran sans scroll) */
 @media (min-width: 860px) {
+  body.planner-fullscreen-mode .main-container {
+    padding: 10px 18px 14px 18px !important;
+  }
+
+  .day-group.day-group-fullscreen {
+    max-height: 760px;
+    margin: auto 0;
+  }
+
   .fs-card-body {
     display: grid;
-    grid-template-columns: 46% 1fr;
-    gap: 20px;
-    padding: 14px 18px;
+    grid-template-columns: 48% 1fr;
+    gap: clamp(16px, 2vw, 24px);
+    padding: clamp(12px, 1.8vh, 20px) clamp(16px, 2vw, 24px);
     align-items: stretch;
   }
 
@@ -5608,34 +5609,34 @@ body.planner-fullscreen-mode .day-meal-single-stage {
     height: 100%;
     min-height: 0;
     justify-content: space-between;
-    gap: 12px;
+    gap: clamp(8px, 1.2vh, 14px);
     overflow-y: auto;
   }
 
   .fs-top-stack {
-    gap: 10px;
+    gap: clamp(7px, 1.1vh, 12px);
   }
 
   .fs-style-btn,
   .fs-shuffle-btn {
-    padding: 8px 12px !important;
-    font-size: 0.85rem !important;
+    padding: 9px 14px !important;
+    font-size: 0.88rem !important;
   }
 
   .fs-meal-title {
-    font-size: 1.38rem !important;
+    font-size: clamp(1.22rem, 2.2vh, 1.48rem) !important;
     -webkit-line-clamp: 3;
   }
 
   .fs-meal-desc {
-    font-size: 0.88rem !important;
+    font-size: clamp(0.84rem, 1.45vh, 0.94rem) !important;
     -webkit-line-clamp: 3;
     margin-top: 5px !important;
   }
 
   .fs-meta-chip {
-    font-size: 0.78rem;
-    padding: 4px 10px;
+    font-size: 0.8rem;
+    padding: 4px 11px;
   }
 
   .fs-wine-strip,
@@ -5645,12 +5646,12 @@ body.planner-fullscreen-mode .day-meal-single-stage {
 
   .fs-wine-info,
   .fs-dessert-info {
-    font-size: 0.83rem;
+    font-size: 0.84rem;
   }
 
   .fs-actions-row .btn {
-    padding: 11px 14px !important;
-    font-size: 0.9rem !important;
+    padding: clamp(9px, 1.4vh, 13px) 14px !important;
+    font-size: 0.92rem !important;
   }
 }
 
