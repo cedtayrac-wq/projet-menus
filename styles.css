@@ -431,27 +431,49 @@ body {
 .global-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .week-picker-label {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .date-picker-input {
   width: auto !important;
-  padding: 4px 10px !important;
-  font-weight: 700;
-  font-size: 0.82rem !important;
+  min-width: 158px;
+  min-height: 40px;
+  height: 40px;
+  padding: 6px 12px !important;
+  font-weight: 800 !important;
+  font-size: 0.94rem !important;
+  line-height: 1.2;
   background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 11px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.date-picker-input::-webkit-datetime-edit {
+  padding: 0;
+  overflow: visible;
+}
+
+.date-picker-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 2px;
+  flex-shrink: 0;
 }
 
 .week-formatted-pill {
-  font-size: 0.82rem !important;
-  padding: 4px 11px !important;
+  font-size: 0.84rem !important;
+  padding: 5px 12px !important;
 }
 
 /* =========================================================================
@@ -484,10 +506,51 @@ body {
 }
 
 .btn-icon-round {
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 11px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.btn-chef-spin {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: 11px;
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-chef-spin:hover {
+  border-color: var(--primary);
+  color: var(--primary-hover);
+  background: #f0fdf4;
+}
+
+#btn-validate-all {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: 11px;
+  border-color: var(--primary);
+  color: var(--primary-hover);
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#btn-validate-all:hover {
+  background: #ecfdf5;
 }
 
 .btn-primary {
@@ -2358,22 +2421,48 @@ body {
   .header-actions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .header-actions .btn {
-    flex: 1;
-    padding: 7px 8px;
-    font-size: 0.76rem;
+    flex: 1 1 auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+    white-space: nowrap;
   }
 
   .status-bar-inner {
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
+    gap: 8px;
+  }
+
+  .validation-progress {
+    min-width: 0;
+    justify-content: space-between;
+  }
+
+  #btn-validate-all {
+    min-height: 38px;
+    padding: 7px 14px;
+    font-size: 0.88rem;
   }
 
   .global-controls {
     justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .global-controls .date-picker-input {
+    flex: 1 1 auto;
+    min-width: 142px;
+    min-height: 38px;
+    height: 38px;
+    font-size: 0.9rem !important;
+    padding: 5px 10px !important;
   }
 
   .week-formatted-pill {
@@ -4460,25 +4549,32 @@ body.planner-fullscreen-mode .app-header::before {
 }
 
 body.planner-fullscreen-mode .header-inner {
-  padding: 5px 12px;
-  gap: 8px;
-  flex-wrap: nowrap;
+  max-width: 1360px;
+  padding: 6px 14px;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+
+body.planner-fullscreen-mode .brand {
+  min-width: 0;
+  gap: 9px;
 }
 
 body.planner-fullscreen-mode .brand-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
 }
 
 body.planner-fullscreen-mode .brand-chef-hat {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   top: -5px;
   right: -5px;
 }
 
 body.planner-fullscreen-mode .brand-title {
-  font-size: 1rem;
+  font-size: 1.04rem;
+  white-space: nowrap;
 }
 
 body.planner-fullscreen-mode .brand-subtitle {
@@ -4488,82 +4584,153 @@ body.planner-fullscreen-mode .brand-subtitle {
 body.planner-fullscreen-mode .desktop-nav {
   padding: 3px;
   gap: 3px;
+  flex-wrap: wrap;
 }
 
 body.planner-fullscreen-mode .desktop-nav .nav-btn {
-  padding: 5px 10px;
-  font-size: 0.8rem;
+  padding: 6px 10px;
+  font-size: 0.81rem;
+  white-space: nowrap;
 }
 
 body.planner-fullscreen-mode .header-actions {
   width: auto !important;
-  flex-wrap: nowrap;
-  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 body.planner-fullscreen-mode .header-actions .btn {
   flex: 0 0 auto;
-  padding: 4px 9px;
-  font-size: 0.74rem;
+  min-height: 38px;
+  padding: 7px 14px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  border-radius: 10px;
   white-space: nowrap;
 }
 
+body.planner-fullscreen-mode .header-actions .btn-chef-spin {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: 11px;
+  border-color: #94a3b8;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.08);
+}
+
+body.planner-fullscreen-mode .header-actions .btn-chef-spin:hover {
+  border-color: var(--primary);
+  background: #f0fdf4;
+  color: var(--primary-hover);
+}
+
 body.planner-fullscreen-mode .status-bar {
-  padding: 4px 12px;
+  padding: 6px 14px;
 }
 
 body.planner-fullscreen-mode .status-bar-inner {
+  max-width: 1360px;
   flex-direction: row !important;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 8px 14px;
 }
 
 body.planner-fullscreen-mode .validation-progress {
+  flex: 0 1 auto;
   min-width: 0;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 body.planner-fullscreen-mode .progress-text {
-  font-size: 0.75rem;
+  font-size: 0.84rem;
+  font-weight: 800;
   white-space: nowrap;
 }
 
 body.planner-fullscreen-mode #btn-validate-all {
-  padding: 3px 8px;
-  font-size: 0.72rem;
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  border-radius: 11px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 body.planner-fullscreen-mode .budget-total-pill {
-  font-size: 0.72rem !important;
-  padding: 2px 8px !important;
+  font-size: 0.78rem !important;
+  padding: 5px 10px !important;
   white-space: nowrap;
 }
 
 body.planner-fullscreen-mode .global-controls {
+  flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+}
+
+body.planner-fullscreen-mode .week-picker-label {
+  font-size: 0.88rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 body.planner-fullscreen-mode .date-picker-input {
-  padding: 2px 6px !important;
-  font-size: 0.75rem !important;
+  min-width: 158px;
+  min-height: 40px;
+  height: 40px;
+  padding: 6px 12px !important;
+  font-size: 0.94rem !important;
+  font-weight: 800 !important;
+  border-radius: 11px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  flex-shrink: 0;
 }
 
-body.planner-fullscreen-mode .btn-icon-round {
-  width: 25px;
-  height: 25px;
-  font-size: 0.7rem;
+body.planner-fullscreen-mode .global-controls .btn-icon-round {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 11px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  flex-shrink: 0;
 }
 
-@media (max-width: 980px) {
-  body.planner-fullscreen-mode #chef-mood-badge,
+/* Allègement progressif des badges secondaires pour éviter tout chevauchement ou rognage */
+@media (max-width: 1380px) {
+  body.planner-fullscreen-mode .week-formatted-pill {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  body.planner-fullscreen-mode #install-pwa-header-btn,
+  body.planner-fullscreen-mode #chef-mood-badge {
+    display: none !important;
+  }
+}
+
+@media (min-width: 840px) and (max-width: 1150px) {
+  body.planner-fullscreen-mode .desktop-nav {
+    order: 3;
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 1140px) {
   body.planner-fullscreen-mode .progress-track,
-  body.planner-fullscreen-mode .week-picker-label,
-  body.planner-fullscreen-mode .week-formatted-pill,
   body.planner-fullscreen-mode #total-week-cost-badge {
     display: none !important;
   }
@@ -4588,6 +4755,96 @@ body.planner-fullscreen-mode .btn-icon-round {
 
   body.planner-fullscreen-mode .mobile-nav-icon {
     font-size: 1.12rem;
+  }
+}
+
+@media (max-width: 740px) {
+  body.planner-fullscreen-mode .week-picker-label,
+  body.planner-fullscreen-mode #validation-progress-text {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body.planner-fullscreen-mode #local-admin-btn {
+    display: none !important;
+  }
+
+  body.planner-fullscreen-mode .header-inner {
+    padding: 6px 10px;
+    gap: 6px 8px;
+  }
+
+  body.planner-fullscreen-mode .brand-title {
+    font-size: 0.96rem;
+  }
+
+  body.planner-fullscreen-mode .header-actions .btn-chef-spin {
+    min-height: 38px;
+    padding: 7px 13px;
+    font-size: 0.87rem;
+  }
+
+  body.planner-fullscreen-mode .status-bar {
+    padding: 5px 10px;
+  }
+
+  body.planner-fullscreen-mode .status-bar-inner {
+    gap: 6px 8px;
+  }
+
+  body.planner-fullscreen-mode #btn-validate-all {
+    min-height: 38px;
+    padding: 7px 12px;
+    font-size: 0.86rem;
+  }
+
+  body.planner-fullscreen-mode .global-controls {
+    gap: 4px;
+  }
+
+  body.planner-fullscreen-mode .global-controls .btn-icon-round {
+    width: 35px;
+    height: 38px;
+    min-width: 35px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+  }
+
+  body.planner-fullscreen-mode .date-picker-input {
+    min-width: 140px;
+    min-height: 38px;
+    height: 38px;
+    padding: 5px 9px !important;
+    font-size: 0.88rem !important;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 374px) {
+  body.planner-fullscreen-mode .header-inner,
+  body.planner-fullscreen-mode .status-bar {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  body.planner-fullscreen-mode #btn-validate-all {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+
+  body.planner-fullscreen-mode .global-controls .btn-icon-round {
+    width: 32px;
+    min-width: 32px;
+    height: 36px;
+  }
+
+  body.planner-fullscreen-mode .date-picker-input {
+    min-width: 130px;
+    min-height: 36px;
+    height: 36px;
+    padding: 4px 7px !important;
+    font-size: 0.84rem !important;
   }
 }
 
