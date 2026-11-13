@@ -290,26 +290,28 @@ function setupDaySwipeGestures() {
   let lastWheelStepAt = 0;
 
   const getStageEl = () => plannerEl.querySelector('.day-meal-single-stage');
+  const isModalOpen = () => Boolean(document.querySelector('.modal-overlay.open'));
 
   const resetStageTransform = () => {
     const stageEl = getStageEl();
     if (stageEl) {
-      stageEl.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
+      stageEl.style.transition = 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease';
       stageEl.style.transform = '';
       stageEl.style.opacity = '';
       setTimeout(() => {
         if (stageEl) stageEl.style.transition = '';
-      }, 200);
+      }, 210);
     }
   };
 
   const applyLiveDragFeedback = (dx) => {
     const stageEl = getStageEl();
     if (!stageEl) return;
-    const clamped = Math.max(-110, Math.min(110, dx * 0.45));
-    const opacity = Math.max(0.72, 1 - Math.abs(clamped) / 320);
+    const clamped = Math.max(-130, Math.min(130, dx * 0.52));
+    const tilt = (clamped / 130) * 1.6;
+    const opacity = Math.max(0.7, 1 - Math.abs(clamped) / 340);
     stageEl.style.transition = 'none';
-    stageEl.style.transform = `translateX(${clamped.toFixed(1)}px)`;
+    stageEl.style.transform = `translate3d(${clamped.toFixed(1)}px, 0, 0) rotate(${tilt.toFixed(2)}deg)`;
     stageEl.style.opacity = opacity.toFixed(2);
   };
 
@@ -330,11 +332,15 @@ function setupDaySwipeGestures() {
     const dx = endX - startX;
     const dy = endY - startY;
     const wasHorizontal = isHorizontalSwipe;
+    const isFullscreen = state.plannerViewMode === 'day';
     isTracking = false;
     isHorizontalSwipe = false;
 
-    // Glissement horizontal gauche / droite pour faire défiler les 14 repas de la semaine
-    if ((Math.abs(dx) > 32 && Math.abs(dx) > Math.abs(dy) * 1.05) || (wasHorizontal && Math.abs(dx) > 24)) {
+    const ratioThreshold = isFullscreen ? 0.8 : 1.05;
+    const distThreshold = isFullscreen ? 26 : 32;
+
+    // Glissement horizontal gauche / droite pour faire défiler les 14 repas et jours de la semaine
+    if ((Math.abs(dx) > distThreshold && Math.abs(dx) > Math.abs(dy) * ratioThreshold) || (wasHorizontal && Math.abs(dx) > 22)) {
       suppressClickUntil = Date.now() + 380;
       if (state.plannerViewMode !== 'day') {
         state.plannerViewMode = 'day';
@@ -365,6 +371,7 @@ function setupDaySwipeGestures() {
   plannerEl.addEventListener(
     'touchstart',
     (e) => {
+      if (isModalOpen()) return;
       if (!e.touches || e.touches.length !== 1) return;
       if (shouldIgnoreTarget(e.target)) {
         ignoreSwipe = true;
@@ -390,8 +397,9 @@ function setupDaySwipeGestures() {
       lastY = e.touches[0].clientY;
       const dx = lastX - startX;
       const dy = lastY - startY;
+      const ratio = state.plannerViewMode === 'day' ? 0.85 : 1.1;
 
-      if (!isHorizontalSwipe && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.1) {
+      if (!isHorizontalSwipe && Math.abs(dx) > 9 && Math.abs(dx) > Math.abs(dy) * ratio) {
         isHorizontalSwipe = true;
       }
 
@@ -427,6 +435,7 @@ function setupDaySwipeGestures() {
   // 2. Glisser-déposer à la souris (PC / Pavé tactile maintenu)
   let isMouseDown = false;
   plannerEl.addEventListener('mousedown', (e) => {
+    if (isModalOpen()) return;
     if (e.button !== 0 || shouldIgnoreTarget(e.target)) return;
     isMouseDown = true;
     ignoreSwipe = false;
@@ -444,7 +453,7 @@ function setupDaySwipeGestures() {
     lastY = e.clientY;
     const dx = lastX - startX;
     const dy = lastY - startY;
-    if (!isHorizontalSwipe && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+    if (!isHorizontalSwipe && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 0.95) {
       isHorizontalSwipe = true;
     }
     if (isHorizontalSwipe) {
@@ -462,9 +471,10 @@ function setupDaySwipeGestures() {
   plannerEl.addEventListener(
     'wheel',
     (e) => {
-      if (Math.abs(e.deltaX) > 28 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+      if (isModalOpen()) return;
+      if (Math.abs(e.deltaX) > 26 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2) {
         const now = Date.now();
-        if (now - lastWheelStepAt < 420) return;
+        if (now - lastWheelStepAt < 380) return;
         lastWheelStepAt = now;
         if (state.plannerViewMode !== 'day') {
           state.plannerViewMode = 'day';
@@ -1615,6 +1625,8 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
   if (!recipe) return '';
   const info = getDishPhotoInfo(recipe, slot);
   const isModal = opts.context === 'modal';
+  const extraClass = opts.extraClass || '';
+  const overlayHTML = opts.overlayHTML || '';
   const clickHandler =
     opts.onClick ||
     (opts.context === 'planner' && opts.slotId
@@ -1627,7 +1639,7 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
 
   return `
     <div
-      class="meal-photo-banner ${isModal ? 'meal-photo-banner-modal' : ''} is-loading"
+      class="meal-photo-banner ${isModal ? 'meal-photo-banner-modal' : ''} ${extraClass} is-loading"
       data-dish-photo-wrap="${recipe.id}"
       style="background-image: url('${info.fallbackUrl}');"
       ${clickHandler ? `onclick="${clickHandler}"` : ''}
@@ -1646,6 +1658,7 @@ function buildDishPhotoBannerHTML(recipe, slot, opts = {}) {
         onload="handleDishPhotoLoad(this)"
         onerror="handleDishPhotoError(this)"
       />
+      ${overlayHTML}
     </div>
   `;
 }
@@ -2641,18 +2654,27 @@ function updateSlotServings(slotId, newServings) {
 
   const badge = document.getElementById(`servings-badge-${slotId}`);
   if (badge) {
-    badge.textContent = `${count} ${count > 1 ? 'convives' : 'convive'}`;
+    badge.textContent =
+      badge.dataset.compact === '1'
+        ? `${count} pers.`
+        : `${count} ${count > 1 ? 'convives' : 'convive'}`;
   }
 
   const costEl = document.getElementById(`cost-summary-${slotId}`);
   if (costEl) {
     const costInfo = evaluateSlotCost(slot);
-    costEl.innerHTML = buildSlotCostBadgeInnerHTML(slot, costInfo);
+    costEl.innerHTML =
+      costEl.dataset.compact === '1'
+        ? buildCompactSlotCostHTML(slot, costInfo)
+        : buildSlotCostBadgeInnerHTML(slot, costInfo);
   }
 
   const dayCostEl = document.getElementById(`day-cost-badge-${slot.dayOffset}`);
   if (dayCostEl) {
-    dayCostEl.textContent = `💶 Journée : ${formatEuro(evaluateDayCost(slot.dayOffset))}`;
+    dayCostEl.textContent =
+      dayCostEl.dataset.compact === '1'
+        ? `💶 ${formatEuro(evaluateDayCost(slot.dayOffset))}`
+        : `💶 Journée : ${formatEuro(evaluateDayCost(slot.dayOffset))}`;
   }
 
   renderValidationStatus();
@@ -2892,7 +2914,340 @@ function buildSlotCostBadgeInnerHTML(slot, costInfo) {
   `;
 }
 
+function buildCompactSlotCostHTML(slot, costInfo) {
+  if (!slot || slot.active === false) {
+    return '💶 0,00 €';
+  }
+  return `💶 <strong>${formatEuro(costInfo.totalCost)}</strong>`;
+}
+
+function buildCompactWineStripHTML(recipe, slot) {
+  const wine = getRecipeWinePairing(recipe, slot);
+  if (!wine) return '';
+
+  const shoppingLabel = `${wine.appellation || wine.name} — ${wine.color} (${wine.region}, ${wine.grape})`;
+  const inList = isWineInShoppingList(shoppingLabel) || isWineInShoppingList(wine.name);
+  const activeLabel = isWineInShoppingList(wine.name) && !isWineInShoppingList(shoppingLabel) ? wine.name : shoppingLabel;
+  const safeWineName = (activeLabel || '').replace(/'/g, "\\'");
+  const safeDayLabel =
+    slot && slot.day && slot.mealLabel
+      ? `${slot.day} (${slot.mealLabel})`.replace(/'/g, "\\'")
+      : 'Fiche Cuisine';
+
+  return `
+    <div class="fs-wine-strip">
+      <div class="fs-wine-info" title="${wine.note || ''}">
+        <span class="fs-wine-title">🍷 ${wine.appellation || wine.name}</span>
+        <span class="fs-wine-sub">${wine.color || ''}${wine.region ? ` • ${wine.region}` : ''}</span>
+      </div>
+      <div class="fs-inline-actions">
+        <button
+          type="button"
+          class="fs-mini-btn"
+          onclick="replaceWineInSlot('${slot.slotId}', false, event)"
+          title="Autre idée de vin du Sommelier"
+        >
+          🎲
+        </button>
+        <button
+          type="button"
+          class="fs-mini-btn ${inList ? 'is-added' : ''}"
+          onclick="toggleWineInShoppingList('${safeWineName}', '${safeDayLabel}', event)"
+          title="${inList ? 'Retirer la bouteille du panier' : 'Ajouter cette bouteille au panier'}"
+        >
+          ${inList ? '✓ Cave' : '+🛒'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function createFullscreenMealCardHTML(slot) {
+  const isSkipped = slot.active === false;
+  const style = getSlotStyle(slot);
+  const recipe = findRecipeById(slot.recipeId);
+  const dessert = slot.dessertId ? findDessertById(slot.dessertId) : null;
+  const isFav = state.favorites.includes(recipe.id);
+  const costInfo = evaluateSlotCost(slot);
+  const isLunch = slot.mealLabel === 'Déjeuner';
+  const dishEmoji = getDishEmoji(recipe, slot);
+
+  const dayOffset = typeof slot.dayOffset === 'number' ? slot.dayOffset : (state.selectedDayOffset || 0);
+  const d = addDaysToIso(state.weekStartDate, dayOffset);
+  const dayDateShort = `${slot.day} ${d.getDate()} ${d.toLocaleDateString('fr-FR', { month: 'long' })}`;
+
+  const curDaySlots = state.slots.filter((s) => s.dayOffset === dayOffset);
+  const lunchSlot = curDaySlots.find((s) => s.mealLabel === 'Déjeuner') || curDaySlots[0];
+  const dinnerSlot = curDaySlots.find((s) => s.mealLabel === 'Dîner') || curDaySlots[1];
+  const lunchBadge = !lunchSlot || lunchSlot.active === false ? '🚫' : lunchSlot.validated ? '✓' : '';
+  const dinnerBadge = !dinnerSlot || dinnerSlot.active === false ? '🚫' : dinnerSlot.validated ? '✓' : '';
+
+  const curMealIdx = dayOffset * 2 + (isLunch ? 0 : 1);
+  const prevMealIdx = (curMealIdx - 1 + 14) % 14;
+  const nextMealIdx = (curMealIdx + 1) % 14;
+  const prevDayShort = DAY_SHORT_LIST[Math.floor(prevMealIdx / 2)];
+  const prevMealWord = prevMealIdx % 2 === 1 ? '🌙 Dîner' : '☀️ Déj.';
+  const nextDayShort = DAY_SHORT_LIST[Math.floor(nextMealIdx / 2)];
+  const nextMealWord = nextMealIdx % 2 === 1 ? '🌙 Dîner' : '☀️ Déj.';
+
+  const cardClasses = [
+    'meal-card',
+    'is-fullscreen-card',
+    isLunch ? 'is-lunch-card' : 'is-dinner-card',
+    !isSkipped && slot.validated ? 'is-validated' : '',
+    !isSkipped && style === 'pleasure' ? 'is-pleasure' : '',
+    !isSkipped && style === 'gourmet' ? 'is-gourmet' : '',
+    isSkipped ? 'is-skipped' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const headerBannerHTML = `
+    <div class="meal-time-banner fullscreen-meal-header ${isLunch ? 'lunch-banner' : 'dinner-banner'}">
+      <button
+        type="button"
+        class="fs-meal-nav-btn"
+        onclick="stepPlannerMeal(-1)"
+        title="Menu précédent : ${prevDayShort} (${prevMealIdx % 2 === 1 ? 'Dîner' : 'Déjeuner'}) — ou glisser vers la droite"
+      >
+        <span class="fs-nav-arrow">◀</span>
+        <span class="fs-nav-sub">${prevDayShort} ${prevMealWord}</span>
+      </button>
+
+      <div class="fs-header-center">
+        <div class="fs-day-heading">
+          <span class="fs-day-name">${dayDateShort}</span>
+          <span class="fs-meal-counter">${curMealIdx + 1}/14</span>
+        </div>
+        <div class="fs-meal-type-pills" role="tablist" aria-label="Déjeuner ou Dîner">
+          <button
+            type="button"
+            class="fs-meal-type-pill is-lunch-pill ${isLunch ? 'active' : ''}"
+            onclick="selectPlannerMealPeriod('lunch', -1)"
+          >
+            ☀️ Déjeuner ${lunchBadge ? `<span class="fs-pill-state">${lunchBadge}</span>` : ''}
+          </button>
+          <button
+            type="button"
+            class="fs-meal-type-pill is-dinner-pill ${!isLunch ? 'active' : ''}"
+            onclick="selectPlannerMealPeriod('dinner', 1)"
+          >
+            🌙 Dîner ${dinnerBadge ? `<span class="fs-pill-state">${dinnerBadge}</span>` : ''}
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="fs-meal-nav-btn"
+        onclick="stepPlannerMeal(1)"
+        title="Menu suivant : ${nextDayShort} (${nextMealIdx % 2 === 1 ? 'Dîner' : 'Déjeuner'}) — ou glisser vers la gauche"
+      >
+        <span class="fs-nav-sub">${nextDayShort} ${nextMealWord}</span>
+        <span class="fs-nav-arrow">▶</span>
+      </button>
+    </div>
+  `;
+
+  if (isSkipped) {
+    return `
+      <article id="meal-card-${slot.slotId}" class="${cardClasses}">
+        ${headerBannerHTML}
+        <div class="fs-skipped-body">
+          <div class="fs-skipped-icon">🚫🍽️</div>
+          <h3 class="fs-skipped-title">Pas de cuisine prévue pour ce ${slot.mealLabel.toLowerCase()} (${slot.day})</h3>
+          <p class="fs-skipped-desc">
+            Aucun ingrédient ni budget (0,00 €) n'est ajouté à votre panier de courses.<br />
+            <small>Idée gardée de côté : <em>${recipe.title}</em></small>
+          </p>
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="toggleSlotActive('${slot.slotId}')"
+          >
+            🍽️ Remettre ce repas au menu
+          </button>
+          <div class="fs-swipe-footer-cue">
+            👆 Glissez à gauche ou à droite pour passer d'un menu et d'un jour à l'autre
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  const seas = getRecipeSeasonality(recipe, slot);
+  const nutri = getRecipeNutriScore(recipe);
+  const seasonMeta = getMonthSeasonMeta(seas.month);
+  const seasonClass =
+    seas.pct >= 85 ? 'season-pill-high' : seas.pct >= 70 ? 'season-pill-mid' : 'season-pill-low';
+
+  const photoOverlayHTML = `
+    <div class="fs-photo-top-overlay">
+      <div class="fs-photo-left-badges">
+        <span class="fs-photo-emoji">${dishEmoji}</span>
+        ${slot.validated ? '<span class="chef-stamp-badge">✓ Validé</span>' : ''}
+      </div>
+      <div class="fs-photo-right-actions">
+        <button
+          type="button"
+          class="fs-photo-icon-btn ${isFav ? 'is-fav' : ''}"
+          onclick="event.stopPropagation(); toggleFavorite('${recipe.id}', event)"
+          title="Ajouter ou retirer des favoris"
+        >
+          ${isFav ? '❤️' : '🤍'}
+        </button>
+        <button
+          type="button"
+          class="fs-photo-icon-btn is-whatsapp"
+          onclick="event.stopPropagation(); shareRecipeFicheOnWhatsApp({ slotId: '${slot.slotId}' }, event)"
+          title="Partager la fiche cuisine sur WhatsApp"
+          aria-label="Partager sur WhatsApp"
+        >
+          ${getWhatsAppIconSvg(15)}
+        </button>
+        <button
+          type="button"
+          class="fs-photo-icon-btn is-ignore"
+          onclick="event.stopPropagation(); toggleSlotActive('${slot.slotId}')"
+          title="Ignorer ce repas (extérieur / restes)"
+        >
+          🚫
+        </button>
+      </div>
+    </div>
+    <button
+      type="button"
+      class="fs-photo-edge-arrow is-left"
+      onclick="event.stopPropagation(); stepPlannerMeal(-1)"
+      title="Menu précédent (Swipe droite)"
+      aria-label="Menu précédent"
+    >‹</button>
+    <button
+      type="button"
+      class="fs-photo-edge-arrow is-right"
+      onclick="event.stopPropagation(); stepPlannerMeal(1)"
+      title="Menu suivant (Swipe gauche)"
+      aria-label="Menu suivant"
+    >›</button>
+    <div class="fs-photo-bottom-cue" aria-hidden="true">
+      ⇄ Swipe gauche / droite
+    </div>
+  `;
+
+  const compactWineHTML = buildCompactWineStripHTML(recipe, slot);
+
+  const compactDessertHTML = dessert
+    ? `
+      <div class="fs-dessert-strip">
+        <div class="fs-dessert-info">
+          <span class="fs-dessert-title">🍰 ${dessert.title}</span>
+          <span class="fs-dessert-sub">(${dessert.prepTime})</span>
+        </div>
+        <div class="fs-inline-actions">
+          <button type="button" class="fs-mini-btn" onclick="openCatalogModal('${slot.slotId}', 'dessert')" title="Choisir un dessert au catalogue">📚</button>
+          <button type="button" class="fs-mini-btn" onclick="replaceDessertInSlot('${slot.slotId}')" title="Autre idée de dessert">🎲</button>
+          <button type="button" class="fs-mini-btn is-danger" onclick="toggleDessertInSlot('${slot.slotId}')" title="Retirer la note sucrée">✕</button>
+        </div>
+      </div>
+    `
+    : `
+      <button
+        type="button"
+        class="fs-add-dessert-btn"
+        onclick="toggleDessertInSlot('${slot.slotId}')"
+        title="Ajouter une note sucrée à ce repas"
+      >
+        🍰 ${slot.lastRemovedDessertId ? 'Remettre la note sucrée' : '+ Ajouter une note sucrée'}
+      </button>
+    `;
+
+  return `
+    <article id="meal-card-${slot.slotId}" class="${cardClasses}">
+      ${headerBannerHTML}
+
+      <div class="fs-card-body">
+        <div class="fs-photo-col">
+          ${buildDishPhotoBannerHTML(recipe, slot, {
+            context: 'planner',
+            slotId: slot.slotId,
+            extraClass: 'fs-photo-banner',
+            overlayHTML: photoOverlayHTML
+          })}
+        </div>
+
+        <div class="fs-details-col">
+          <div class="fs-top-stack">
+            <!-- Barre compacte 1 ligne : Style + Autre idée + Convives -->
+            <div class="fs-toolbar-row">
+              <button
+                type="button"
+                class="style-pill-btn fs-style-btn ${style === 'gourmet' ? 'active-gourmet' : style === 'pleasure' ? 'active-pleasure' : 'active-balanced'}"
+                onclick="togglePleasureMode('${slot.slotId}', event)"
+                title="Changer de style : Équilibré 🥗 → Plaisir 🌟 → Gourmet 🍷"
+              >
+                ${style === 'gourmet' ? '🍷 Gourmet ↻' : style === 'pleasure' ? '🌟 Plaisir ↻' : '🥗 Équilibré ↻'}
+              </button>
+              <button
+                type="button"
+                class="style-pill-btn fs-shuffle-btn"
+                onclick="replaceMealInSlot('${slot.slotId}', event)"
+                title="Proposer une autre idée de plat"
+              >
+                🎲 Autre idée
+              </button>
+              <div class="fs-servings-inline" title="Nombre de convives">
+                <button type="button" class="fs-step-btn" onclick="stepSlotServings('${slot.slotId}', -1)" aria-label="Moins un convive">−</button>
+                <span id="servings-badge-${slot.slotId}" data-compact="1" class="fs-servings-val">${slot.servings} pers.</span>
+                <button type="button" class="fs-step-btn" onclick="stepSlotServings('${slot.slotId}', 1)" aria-label="Plus un convive">+</button>
+              </div>
+            </div>
+
+            <!-- Intitulé & Description concise -->
+            <div class="fs-title-block">
+              <h3 class="meal-title fs-meal-title" onclick="openRecipeModal('${slot.slotId}')">${recipe.title}</h3>
+              <p class="meal-desc fs-meal-desc">${recipe.description || ''}</p>
+            </div>
+
+            <!-- Ligne unique Temps • Saisonnalité • Équilibre • Coût -->
+            <div class="fs-meta-strip">
+              <span class="fs-meta-chip">⏱️ ${recipe.prepTime} + ${recipe.cookTime}</span>
+              <span class="fs-meta-chip ${seasonClass}">${seasonMeta.icon} ${seas.pct}% saison</span>
+              <span class="fs-meta-chip" style="color:${nutri.color}; background:${nutri.bg || '#f1f5f9'};">Équilibre ${nutri.shortLabel}</span>
+              <span id="cost-summary-${slot.slotId}" data-compact="1" class="fs-meta-chip fs-cost-chip">
+                ${buildCompactSlotCostHTML(slot, costInfo)}
+              </span>
+            </div>
+
+            ${compactWineHTML}
+            ${compactDessertHTML}
+          </div>
+
+          <!-- Actions pied de carte sur une seule ligne -->
+          <div class="fs-actions-row">
+            <button type="button" class="btn btn-outline fs-btn-fiche" onclick="openRecipeModal('${slot.slotId}')">
+              📖 Recette
+            </button>
+            <button type="button" class="btn btn-outline fs-btn-cat" onclick="openCatalogModal('${slot.slotId}')" title="Choisir dans le catalogue">
+              📚 Catalogue
+            </button>
+            <button
+              type="button"
+              class="btn btn-validate fs-btn-val ${slot.validated ? 'validated' : ''}"
+              onclick="toggleValidateSlot('${slot.slotId}', event)"
+            >
+              ${slot.validated ? '✅ Validé' : '👩‍🍳 Valider'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
 function createMealCardHTML(slot) {
+  if (state.plannerViewMode === 'day') {
+    return createFullscreenMealCardHTML(slot);
+  }
   const isSkipped = slot.active === false;
   const style = getSlotStyle(slot);
   const recipe = findRecipeById(slot.recipeId);
@@ -3165,13 +3520,22 @@ function stepPlannerDay(delta) {
   renderPlannerCards();
 }
 
+function syncPlannerFullscreenClass() {
+  const plannerSec = document.getElementById('view-planner');
+  const isPlannerActive = Boolean(plannerSec && plannerSec.classList.contains('active'));
+  const isFullscreen = isPlannerActive && state.plannerViewMode === 'day';
+  document.body.classList.toggle('planner-fullscreen-mode', isFullscreen);
+  document.documentElement.classList.toggle('planner-fullscreen-html', isFullscreen);
+}
+
 function togglePlannerViewMode() {
   state.plannerViewMode = state.plannerViewMode === 'day' ? 'week' : 'day';
+  window.scrollTo(0, 0);
   renderPlannerCards();
   showToast(
     state.plannerViewMode === 'day'
-      ? '📱 Navigation horizontale Midi ☀️ / Soir 🌙 activée'
-      : '🗓️ Vue Semaine complète : les 7 jours d\'un coup d\'œil'
+      ? '📱 Mode plein écran sans scroll (Swipe gauche / droite)'
+      : '🗓️ Vue Semaine complète : les 7 jours en liste'
   );
 }
 
@@ -3224,25 +3588,6 @@ function renderDayPager() {
 
   const isDayMode = state.plannerViewMode === 'day';
   const curOffset = state.selectedDayOffset || 0;
-  const curDayName = DAY_NAMES_LIST[curOffset];
-  const curFullTitle = formatFullDayTitle(curDayName, curOffset);
-  const curPeriod = state.selectedMealPeriod || 'lunch';
-  const dayCost = evaluateDayCost(curOffset);
-
-  const curDaySlots = state.slots.filter((s) => s.dayOffset === curOffset);
-  const lunchSlot = curDaySlots.find((s) => s.mealLabel === 'Déjeuner') || curDaySlots[0];
-  const dinnerSlot = curDaySlots.find((s) => s.mealLabel === 'Dîner') || curDaySlots[1];
-
-  const lunchBadge = !lunchSlot || lunchSlot.active === false ? '🚫' : lunchSlot.validated ? '✅' : '';
-  const dinnerBadge = !dinnerSlot || dinnerSlot.active === false ? '🚫' : dinnerSlot.validated ? '✅' : '';
-
-  const curMealIdx = curOffset * 2 + (curPeriod === 'dinner' ? 1 : 0);
-  const prevMealIdx = (curMealIdx - 1 + 14) % 14;
-  const nextMealIdx = (curMealIdx + 1) % 14;
-  const prevDayShort = DAY_SHORT_LIST[Math.floor(prevMealIdx / 2)];
-  const prevPeriodIcon = prevMealIdx % 2 === 1 ? '🌙' : '☀️';
-  const nextDayShort = DAY_SHORT_LIST[Math.floor(nextMealIdx / 2)];
-  const nextPeriodIcon = nextMealIdx % 2 === 1 ? '🌙' : '☀️';
 
   const tabsHTML = [0, 1, 2, 3, 4, 5, 6]
     .map((offset) => {
@@ -3253,13 +3598,13 @@ function renderDayPager() {
       const validatedCount = activeSlots.filter((s) => s.validated).length;
       const isComplete = activeSlots.length > 0 && validatedCount === activeSlots.length;
 
-      let statusIcon = '⚪';
+      let statusDot = '';
       if (activeSlots.length === 0) {
-        statusIcon = '➖';
+        statusDot = '➖';
       } else if (isComplete) {
-        statusIcon = '✅';
+        statusDot = '✓';
       } else if (validatedCount > 0) {
-        statusIcon = '🥘';
+        statusDot = '•';
       }
 
       const isWeekend = offset >= 5;
@@ -3272,85 +3617,49 @@ function renderDayPager() {
           onclick="if(state.plannerViewMode!=='day'){state.plannerViewMode='day';} selectPlannerDay(${offset})"
           title="${DAY_NAMES_LIST[offset]} ${dayNum}"
         >
-          <span class="day-tab-short">${DAY_SHORT_LIST[offset]}${isWeekend ? '🌟' : ''}</span>
-          <span class="day-tab-num">${dayNum}</span>
-          <span class="day-tab-status">${statusIcon}</span>
+          <span class="day-tab-short">${DAY_SHORT_LIST[offset]}</span>
+          <span class="day-tab-num">${dayNum}${statusDot ? `<sup class="day-tab-sup">${statusDot}</sup>` : ''}</span>
         </button>
       `;
     })
     .join('');
 
+  if (isDayMode) {
+    container.innerHTML = `
+      <div class="day-pager-card day-pager-slim">
+        <div class="day-tabs-strip day-tabs-slim" role="tablist" aria-label="Jours de la semaine">
+          ${tabsHTML}
+        </div>
+        <button
+          type="button"
+          class="btn btn-outline btn-sm fs-view-toggle-btn"
+          onclick="togglePlannerViewMode()"
+          title="Afficher la liste complète des 7 jours"
+        >
+          🗓️ 7j
+        </button>
+      </div>
+    `;
+    return;
+  }
+
   container.innerHTML = `
     <div class="day-pager-card">
-      <div class="day-pager-top-row">
-        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-          <span style="font-size: 0.86rem; font-weight: 800; color: var(--primary-hover);">
-            ${isDayMode ? `🍽️ ${curFullTitle}` : '🗓️ Vue des 7 jours'}
-          </span>
-          ${isDayMode ? `<span id="day-cost-badge-${curOffset}" class="meta-pill healthy-pill" style="font-size: 0.72rem; padding: 2px 7px;">💶 ${formatEuro(dayCost)}</span>` : ''}
-        </div>
+      <div class="day-pager-top-row" style="margin-bottom: 8px;">
+        <span style="font-size: 0.9rem; font-weight: 800; color: var(--primary-hover);">
+          🗓️ Vue complète des 7 jours
+        </span>
         <button
           type="button"
-          class="btn btn-outline btn-sm"
+          class="btn btn-primary btn-sm"
           onclick="togglePlannerViewMode()"
-          style="font-weight: 800; font-size: 0.74rem; padding: 4px 8px;"
+          style="font-weight: 800;"
         >
-          ${isDayMode ? '🗓️ 7 jours' : '📱 Vue Swipe'}
+          📱 Mode Plein Écran (Swipe)
         </button>
       </div>
-
       <div class="day-tabs-strip" role="tablist" aria-label="Jours de la semaine">
         ${tabsHTML}
-      </div>
-
-      <!-- Sélecteur Horizontal Déjeuner (Midi) <-> Dîner (Soir) avec Swipe Gauche / Droite -->
-      <div class="meal-period-swipe-bar">
-        <button
-          type="button"
-          class="btn btn-outline btn-sm meal-nav-arrow"
-          onclick="stepPlannerMeal(-1)"
-          title="Repas précédent : ${prevDayShort} ${prevPeriodIcon} (Glisser vers la droite)"
-        >
-          ◀
-        </button>
-
-        <div class="meal-period-tabs" role="tablist" aria-label="Choisir Déjeuner ou Dîner">
-          <button
-            type="button"
-            class="meal-period-tab lunch-tab ${isDayMode && curPeriod === 'lunch' ? 'active' : ''}"
-            onclick="selectPlannerMealPeriod('lunch', -1)"
-          >
-            ☀️ Déjeuner ${lunchBadge}
-          </button>
-          <button
-            type="button"
-            class="meal-period-tab dinner-tab ${isDayMode && curPeriod === 'dinner' ? 'active' : ''}"
-            onclick="selectPlannerMealPeriod('dinner', 1)"
-          >
-            🌙 Dîner ${dinnerBadge}
-          </button>
-        </div>
-
-        <button
-          type="button"
-          class="btn btn-outline btn-sm meal-nav-arrow"
-          onclick="stepPlannerMeal(1)"
-          title="Repas suivant : ${nextDayShort} ${nextPeriodIcon} (Glisser vers la gauche)"
-        >
-          ▶
-        </button>
-      </div>
-
-      <div class="swipe-gesture-hint-row">
-        <button type="button" class="swipe-hint-step-pill" onclick="stepPlannerMeal(-1)" title="Repas précédent">
-          ◀ ${prevDayShort} ${prevPeriodIcon}
-        </button>
-        <span class="swipe-hint-center-text">
-          👆 Glissez <strong>gauche / droite</strong> • Repas <strong>${curMealIdx + 1}/14</strong>
-        </span>
-        <button type="button" class="swipe-hint-step-pill" onclick="stepPlannerMeal(1)" title="Repas suivant">
-          ${nextDayShort} ${nextPeriodIcon} ▶
-        </button>
       </div>
     </div>
   `;
@@ -3380,71 +3689,10 @@ function createDayGroupHTML(dayOffset) {
         : '';
     state.lastMealSlideDir = 0;
 
-    const isAtVeryEnd = dayOffset === 6 && curPeriod === 'dinner';
-    const prevBtnLabel =
-      curPeriod === 'dinner'
-        ? '☀️ Midi'
-        : dayOffset > 0
-        ? `${DAY_SHORT_LIST[dayOffset - 1]} 🌙`
-        : 'Dim 🌙';
-    const nextBtnLabel =
-      curPeriod === 'lunch'
-        ? '🌙 Soir'
-        : dayOffset < 6
-        ? `${DAY_SHORT_LIST[dayOffset + 1]} ☀️`
-        : 'Lun ☀️';
-
     return `
-      <div class="day-group day-group-compact ${allDayValidated ? 'day-fully-validated' : ''}">
+      <div class="day-group day-group-fullscreen ${allDayValidated ? 'day-fully-validated' : ''}">
         <div class="day-meal-single-stage ${slideClass}">
           ${createMealCardHTML(activeSlot)}
-        </div>
-
-        <div class="day-bottom-pager">
-          <button
-            type="button"
-            class="btn btn-outline btn-sm"
-            onclick="stepPlannerMeal(-1)"
-          >
-            ◀ ${prevBtnLabel}
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-day-validate-next ${allDayValidated ? 'is-done' : ''}"
-            onclick="validateDayAndNext(${dayOffset}, event)"
-          >
-            ${
-              allDayValidated
-                ? dayOffset < 6
-                  ? `🎉 ${dayName} validé • ${DAY_SHORT_LIST[dayOffset + 1]} ▶`
-                  : `🎉 ${dayName} validé !`
-                : `✨ Valider ${dayName} (Midi & Soir)`
-            }
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            onclick="stepPlannerMeal(1)"
-          >
-            ${nextBtnLabel} ▶
-          </button>
-
-          ${
-            isAtVeryEnd
-              ? `
-            <button
-              type="button"
-              class="btn btn-keep btn-sm"
-              style="width: 100%; justify-content: center;"
-              onclick="handleGenerateShoppingListClick()"
-            >
-              🧺 Voir mon panier de courses ▶
-            </button>
-          `
-              : ''
-          }
         </div>
       </div>
     `;
@@ -3477,6 +3725,7 @@ function createDayGroupHTML(dayOffset) {
 }
 
 function renderPlannerCards() {
+  syncPlannerFullscreenClass();
   renderDayPager();
 
   const weekdayBanner = document.getElementById('weekday-section-banner');
@@ -3488,7 +3737,6 @@ function renderPlannerCards() {
     const curOffset = state.selectedDayOffset || 0;
     const isWeekendDay = curOffset >= 5;
 
-    // En mode navigation horizontale (1 repas à l'écran), masquer les grands bandeaux d'explication pour optimiser l'affichage mobile
     if (weekdayBanner) weekdayBanner.style.display = 'none';
     if (weekendBanner) weekendBanner.style.display = 'none';
 
@@ -4890,6 +5138,9 @@ function renderShoppingList() {
 // FAVORIS & HISTORIQUE DES SEMAINES
 // ============================================================================
 function toggleFavorite(recipeId, evt) {
+  if (evt && typeof evt.stopPropagation === 'function') {
+    evt.stopPropagation();
+  }
   const idx = state.favorites.indexOf(recipeId);
   if (idx === -1) {
     state.favorites.push(recipeId);
@@ -5247,6 +5498,9 @@ function switchView(viewName) {
   });
   const target = document.getElementById(`view-${normalizedView}`);
   if (target) target.classList.add('active');
+
+  syncPlannerFullscreenClass();
+  window.scrollTo(0, 0);
 
   document.querySelectorAll('.nav-btn, .mobile-nav-item').forEach((btn) => {
     if (btn.getAttribute('data-view') === normalizedView) {
