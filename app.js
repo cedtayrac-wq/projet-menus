@@ -174,11 +174,16 @@ function formatSlotDayHeader(slot) {
 
 function handleWeekStartDateChange(newDateValue) {
   if (!newDateValue) return;
-  const mondayIso = getMondayOfDate(newDateValue);
+  const pickedDate = parseIsoLocal(newDateValue);
+  const jsDay = pickedDate.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+  const chosenOffset = jsDay === 0 ? 6 : jsDay - 1;
+  const mondayIso = getMondayOfDate(pickedDate);
   state.weekStartDate = mondayIso;
+  state.selectedDayOffset = chosenOffset;
   saveStateToStorage();
   renderAll();
-  showToast(`Début de semaine fixé au ${formatMondayFullLabel(mondayIso)}`);
+  const chosenDayName = DAY_NAMES_LIST[chosenOffset] || 'Lundi';
+  showToast(`📅 ${formatFullDayTitle(chosenDayName, chosenOffset)}`);
 }
 
 function shiftWeekStart(daysDelta) {
@@ -2814,7 +2819,12 @@ function renderDateHeaders() {
   const weekendRangeLabel = `Samedi ${satDate.getDate()} et Dimanche ${sunDate.getDate()} ${sunDate.toLocaleDateString('fr-FR', { month: 'long' })} ${sunDate.getFullYear()}`;
 
   const dateInput = document.getElementById('week-start-date');
-  if (dateInput) dateInput.value = state.weekStartDate;
+  if (dateInput) {
+    dateInput.value =
+      state.plannerViewMode === 'day'
+        ? toIsoDateString(addDaysToIso(state.weekStartDate, state.selectedDayOffset || 0))
+        : state.weekStartDate;
+  }
 
   const topFormatted = document.getElementById('week-start-formatted');
   if (topFormatted) topFormatted.textContent = mondayFull;
@@ -3625,23 +3635,12 @@ function renderDayPager() {
     .join('');
 
   if (isDayMode) {
-    container.innerHTML = `
-      <div class="day-pager-card day-pager-slim">
-        <div class="day-tabs-strip day-tabs-slim" role="tablist" aria-label="Jours de la semaine">
-          ${tabsHTML}
-        </div>
-        <button
-          type="button"
-          class="btn btn-outline btn-sm fs-view-toggle-btn"
-          onclick="togglePlannerViewMode()"
-          title="Afficher la liste complète des 7 jours"
-        >
-          🗓️ 7j
-        </button>
-      </div>
-    `;
+    container.innerHTML = '';
+    container.style.display = 'none';
     return;
   }
+
+  container.style.display = '';
 
   container.innerHTML = `
     <div class="day-pager-card">
@@ -3726,6 +3725,7 @@ function createDayGroupHTML(dayOffset) {
 
 function renderPlannerCards() {
   syncPlannerFullscreenClass();
+  renderDateHeaders();
   renderDayPager();
 
   const weekdayBanner = document.getElementById('weekday-section-banner');
