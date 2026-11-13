@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=310" />
+  <link rel="stylesheet" href="styles.css?v=314" />
 </head>
 <body>
 
@@ -61,16 +61,31 @@
         <button id="install-pwa-header-btn" class="btn btn-primary btn-sm" onclick="handleInstallAppClick()" title="Installer l'application sur l'écran d'accueil">
           📲 Installer l'App
         </button>
-        <button class="btn btn-outline btn-sm btn-chef-spin" onclick="regenerateUnvalidatedMeals()" title="Proposer de nouvelles idées pour les repas non validés">
-          🎲 Nouvelles idées
-        </button>
+        <div class="week-ideas-bar">
+          <div class="global-controls" title="Choisir la date ou la semaine">
+            <label for="week-start-date" class="week-picker-label">
+              🗓️ Semaine :
+            </label>
+            <button class="btn btn-outline btn-sm btn-icon-round" onclick="shiftWeekStart(-7)" title="Semaine précédente">◀</button>
+            <input
+              type="date"
+              id="week-start-date"
+              class="input-field date-picker-input"
+              onchange="handleWeekStartDateChange(this.value)"
+            />
+            <button class="btn btn-outline btn-sm btn-icon-round" onclick="shiftWeekStart(7)" title="Semaine suivante">▶</button>
+          </div>
+          <button class="btn btn-outline btn-sm btn-chef-spin" onclick="regenerateUnvalidatedMeals()" title="Proposer de nouvelles idées pour les repas non validés">
+            🎲 Nouvelles idées
+          </button>
+        </div>
         <button class="btn btn-keep btn-sm" onclick="handleGenerateShoppingListClick()">
           🧺 Mon Panier
         </button>
       </div>
     </div>
 
-    <!-- Barre de statut : Jauge du Chef & Sélecteur de Semaine -->
+    <!-- Barre de statut : Jauge du Chef & Validation globale -->
     <div class="status-bar">
       <div class="status-bar-inner">
         <div class="validation-progress">
@@ -86,23 +101,9 @@
             💶 Total semaine : -- €
           </span>
         </div>
-
-        <div class="global-controls">
-          <label for="week-start-date" class="week-picker-label">
-            🗓️ Semaine :
-          </label>
-          <button class="btn btn-outline btn-sm btn-icon-round" onclick="shiftWeekStart(-7)" title="Semaine précédente">◀</button>
-          <input
-            type="date"
-            id="week-start-date"
-            class="input-field date-picker-input"
-            onchange="handleWeekStartDateChange(this.value)"
-          />
-          <button class="btn btn-outline btn-sm btn-icon-round" onclick="shiftWeekStart(7)" title="Semaine suivante">▶</button>
-          <span id="week-start-formatted" class="meta-pill healthy-pill week-formatted-pill">
-            Lundi 19 octobre 2026
-          </span>
-        </div>
+        <span id="week-start-formatted" class="meta-pill healthy-pill week-formatted-pill">
+          Lundi 19 octobre 2026
+        </span>
       </div>
     </div>
   </header>
@@ -768,8 +769,8 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <!-- SCRIPTS -->
-  <script src="data/config.js?v=310"></script>
-  <script src="data/recipes.js?v=310"></script>
-  <script src="app.js?v=310"></script>
+  <script src="data/config.js?v=314"></script>
+  <script src="data/recipes.js?v=314"></script>
+  <script src="app.js?v=314"></script>
 </body>
 </html>
